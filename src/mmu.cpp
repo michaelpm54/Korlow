@@ -50,7 +50,16 @@ uint16_t MMU::read16(uint16_t addr)
 
 void MMU::ioWrite8(uint16_t addr, uint8_t val)
 {
-	if (addr > 0xFF0F && addr < 0xFF40)
+	if (addr == 0xFF01)
+	{
+		mSerialData.push_back(val);
+		printf("\nSerial data:\n{\n%s\n}\n\n", mSerialData.c_str());
+	}
+	else if (addr == 0xFF02)
+	{
+		// Serial transfer control
+	}
+	else if (addr > 0xFF0F && addr < 0xFF40)
 	{
 		switch (addr & 0xFF)
 		{

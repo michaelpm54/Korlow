@@ -6,6 +6,16 @@
 
 class MMU;
 
+struct registers_t
+{
+	uint16_t pc;
+	uint16_t sp;
+	uint16_t af;
+	uint16_t bc;
+	uint16_t de;
+	uint16_t hl;
+};
+
 class CPU
 {
 public:
@@ -13,9 +23,13 @@ public:
 	void frame();
 	void setPc(uint16_t addr);
 	instruction_t fetch();
+	void executeRegular(instruction_t &i, int &cycles);
+	void executeCB(instruction_t &i, int &cycles);
 	int executeInstruction();
 	void doBreak();
 	bool didBreak() const;
+	void printRegisters(uint8_t opcode, bool newline, bool saved);
+	void printInstruction(const instruction_t &i, bool cb);
 
 public:
 	MMU *mmu { nullptr };
@@ -27,6 +41,7 @@ public:
 	uint16_t hl { 0 };
 
 private:
+	registers_t mRegisters;
 	bool mBreak { false };
 	bool mInBios { true };
 };

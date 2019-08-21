@@ -99,7 +99,7 @@ int Emulator::loop()
 		// mGpu->frame();
 		mWindow->refresh();
 
-		// std::this_thread::sleep_for(std::chrono::milliseconds(16));
+		std::this_thread::sleep_for(std::chrono::milliseconds(16));
 	}
 
 	return 0;

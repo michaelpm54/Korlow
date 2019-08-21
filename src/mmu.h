@@ -2,6 +2,7 @@
 #define MMU_H
 
 #include <cstdint>
+#include <string>
 
 class MMU
 {
@@ -27,6 +28,7 @@ private:
 	uint8_t *mMem { nullptr };
 	uint8_t *mBios { nullptr };
 	bool mInBios { true };
+	std::string mSerialData;
 };
 
 #endif // MMU_H
