@@ -148,6 +148,25 @@ void MMU::write8(uint16_t addr, uint8_t val)
 	{
 		ioWrite8(addr, val);
 	}
+	if (val)
+	{
+		if (addr >= 0x8000 && addr < 0x9000)
+		{
+			printf("BG Data 1 write\n");
+		}
+		else if (addr >= 0x8800 && addr < 0x9800)
+		{
+			printf("BG Data 2 write\n");
+		}
+		else if (addr >= 0x9800 && addr < 0x9C00)
+		{
+			printf("BG tile map write 1\n");
+		}
+		else if (addr >= 0x9C00 && addr < 0xA000)
+		{
+			printf("BG tile map write 2\n");
+		}
+	}
 	mMem[addr] = val;
 }
 

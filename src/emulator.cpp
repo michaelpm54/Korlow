@@ -31,17 +31,15 @@ Emulator::~Emulator()
 
 int Emulator::run()
 {
-	// Window setup
-	const int screenScale = 3;
+	const int screenScale = 4;
 	mWindow = new Window();
 	mWindow->setTitle("Korlow2");
-	mWindow->setSize(160 * screenScale, 144 * screenScale);
+	mWindow->setSize(16*8 * screenScale, 12*8 * screenScale);
 	mWindow->create();
 
 	std::unique_ptr<uint8_t[]> biosData;
 	std::unique_ptr<uint8_t[]> romData;
 
-	// BIOS state setup
 	if (mBiosPath.empty())
 	{
 		std::cerr << "Please provide a BIOS file." << std::endl;
@@ -81,8 +79,8 @@ int Emulator::run()
 	mMmu->setBios(biosData.get());
 	mMmu->setRom(romData.get(), romSize);
 
-	// Init GPU state
 	mGpu->reset();
+	mGpu->mmu = mMmu;
 
 	mCpu->setMmu(mMmu);
 
@@ -96,7 +94,7 @@ int Emulator::loop()
 		mCpu->frame();
 
 		mWindow->events();
-		// mGpu->frame();
+		mGpu->frame();
 		mWindow->refresh();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));

@@ -1,10 +1,16 @@
 #include <cmath>
 #include <algorithm>
 #include "gpu.h"
+#include "mmu.h"
+
+const int kWidth = 16*8;
+const int kHeight = 12*8;
+const int kComponents = 1;
+const int kNumPixels = kWidth * kHeight * kComponents;
 
 GPU::GPU()
 	:
-	mPixels(new uint8_t[160*144])
+	mPixels(new uint8_t[kNumPixels])
 {}
 
 GPU::~GPU()
@@ -15,8 +21,8 @@ GPU::~GPU()
 
 void GPU::reset()
 {
+	std::fill_n(mPixels, kNumPixels, 0x00);
 	createGLObjects();
-	std::fill_n(mPixels, 160*144, 0);
 }
 
 void GPU::destroyGLObjects()
@@ -55,7 +61,7 @@ void GPU::createGLObjects()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 160, 144, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, kWidth, kHeight, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
 
 	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -66,17 +72,18 @@ void GPU::createGLObjects()
 	 	out vec2 texCoord;\
 	 	void main()\
 	 	{\
-		 	gl_Position=aPos;\
+		 	gl_Position = aPos;\
 		 	texCoord = aTexCoord;\
 		}";
 	const char *fsSrc = "\
 		#version 460 core\n\
-	 	in vec2 texCoord;\
-	 	out vec4 colour;\
-	 	uniform sampler2D tex;\
-	 	void main()\
-	 	{\
-	 		colour = texture(tex, texCoord);\
+	 	in vec2 texCoord;\n\
+	 	out vec4 colour;\n\
+	 	uniform usampler2D tex;\n\
+	 	void main()\n\
+	 	{\n\
+	 		uint c = texture(tex, texCoord).r;\n\
+	 		colour = vec4(0, float(c)/255.0f, 0, 1);\n\
 		}";
 	glShaderSource(vs, 1, &vsSrc, nullptr);
 	glShaderSource(fs, 1, &fsSrc, nullptr);
@@ -112,24 +119,61 @@ void GPU::createGLObjects()
 
 void GPU::updatePixels()
 {
-	static int x = 0;
-	static int y = 0;
+	uint8_t lcdc = mmu->mMem[0xFF40];
 
-	int idx = y*160+x;
-	mPixels[idx] = 0xFF;
+	if (!(lcdc & 0x80))
+		return;
 
-	if (x == 160)
+	bool signedIdx = true;
+
+	uint8_t *bgData = &mmu->mMem[0x9000]; // 0x8800
+	if (lcdc & 0b0001'0000)
 	{
-		x = 0;
-		y++;
+		bgData = &mmu->mMem[0x8000];
+		signedIdx = false;
 	}
-	if (y == 144)
-	{
-		y = 0;
-	}
-	x++;
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 160, 144, GL_RED, GL_UNSIGNED_BYTE, mPixels);
+	uint8_t *bgMap = &mmu->mMem[0x9800];
+	if (lcdc & 0b0000'1000)
+		bgMap = &mmu->mMem[0x9C00];
+
+	static constexpr uint8_t palette[4] =
+	{
+		0x15,
+		0x75,
+		0xB0,
+		0xF5
+	};
+
+	/*
+		192 tiles
+
+		16 bytes per tile
+		2 bytes per line
+		8 lines
+	*/
+
+	int i = 0;
+	for (int tile = 0; tile < 192; tile++)
+	{
+		int tileOffset = tile * 16;
+		for (int line = 0; line < 8; line++)
+		{
+			int lineOffset = tileOffset + (line * 2);
+			for (int px = 0; px < 8; px++)
+			{
+				uint8_t c = 0;
+				uint8_t lo = bgData[lineOffset];
+				uint8_t hi = bgData[lineOffset+1];
+				c |= !!(lo & (0x80 >> px));
+				c |= (!!(hi & (0x80 >> px))) << 1;
+				mPixels[i++] = palette[c];
+			}
+		}
+	}
+
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kWidth, kHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
+
 }
 
 void GPU::frame()

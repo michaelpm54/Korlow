@@ -3,6 +3,8 @@
 
 #include <epoxy/gl.h>
 
+class MMU;
+
 class GPU
 {
 public:
@@ -13,6 +15,9 @@ public:
 	void reset();
 	void createGLObjects();
 	void destroyGLObjects();
+
+public:
+	MMU *mmu { nullptr };
 
 private:
 	GLuint mProgram { 0 };

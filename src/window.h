@@ -20,8 +20,8 @@ public:
 private:
 	GLFWwindow *mHandle { nullptr };
 	std::string mTitle { "" };
-	int mWidth { 160 };
-	int mHeight { 144 };
+	int mWidth { 256 };
+	int mHeight { 256 };
 	bool mClosed { false };
 
 	inline static void KeyCallback(GLFWwindow *handle, int key, int scancode, int action, int mods)

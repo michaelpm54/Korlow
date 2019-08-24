@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+class GPU;
+
 class MMU
 {
 public:
@@ -29,6 +31,8 @@ private:
 	uint8_t *mBios { nullptr };
 	bool mInBios { true };
 	std::string mSerialData;
+
+	friend class GPU;
 };
 
 #endif // MMU_H
