@@ -1,3 +1,4 @@
+#include "gpu.h"
 #include "mmu.h"
 #include "memory_map.h"
 
@@ -120,8 +121,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 	else if (addr == kBgPalette)
 	{
-		// BGP - BG Palette Data (R/W) - Non CGB Mode Only
-		// printf("Palette write: %02X\n", val);
+		gpu->setBgPalette(val);
 	}
 	else
 	{
@@ -141,15 +141,15 @@ void MMU::write8(uint16_t addr, uint8_t val)
 		{
 			// printf("BG Data 1 write\n");
 		}
-		else if (addr >= kTileRamSigned && addr < kBgMapUnsigned)
+		else if (addr >= kTileRamSigned && addr < kBgMap0)
 		{
 			// printf("BG Data 2 write\n");
 		}
-		else if (addr >= kBgMapUnsigned && addr < kBgMapSigned)
+		else if (addr >= kBgMap0 && addr < kBgMap1)
 		{
 			// printf("BG tile map write 1\n");
 		}
-		else if (addr >= kBgMapSigned && addr < kCartRam)
+		else if (addr >= kBgMap1 && addr < kCartRam)
 		{
 			// printf("BG tile map write 2\n");
 		}

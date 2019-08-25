@@ -6,8 +6,8 @@ constexpr inline uint16_t kRomBank0        = 0x150;
 constexpr inline uint16_t kRomBanksXX      = 0x4000;
 constexpr inline uint16_t kTileRamUnsigned = 0x8000;
 constexpr inline uint16_t kTileRamSigned   = 0x8800;
-constexpr inline uint16_t kBgMapUnsigned   = 0x9800;
-constexpr inline uint16_t kBgMapSigned     = 0x9C00;
+constexpr inline uint16_t kBgMap0          = 0x9800;
+constexpr inline uint16_t kBgMap1          = 0x9C00;
 constexpr inline uint16_t kCartRam         = 0xA000;
 constexpr inline uint16_t kWram            = 0xC000;
 constexpr inline uint16_t kEchoRam         = 0xE000;
@@ -27,7 +27,6 @@ constexpr inline uint16_t kWy              = 0xFF4A;
 constexpr inline uint16_t kWx              = 0xFF4B;
 constexpr inline uint16_t kZeroPage        = 0xFF80;
 constexpr inline uint16_t kIeFlag          = 0xFFFF;
-
 
 struct Header
 {

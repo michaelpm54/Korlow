@@ -1,5 +1,7 @@
 #include <cmath>
+#include <cstring>
 #include <algorithm>
+#include <iostream>
 #include "gpu.h"
 #include "mmu.h"
 #include "memory_map.h"
@@ -12,8 +14,8 @@ constexpr uint8_t kShades[4] =
 	0xFF
 };
 
-const int kWidth = 16*8;
-const int kHeight = 12*8;
+const int kWidth = 256;
+const int kHeight = 256;
 const int kComponents = 1;
 const int kNumPixels = kWidth * kHeight * kComponents;
 
@@ -128,6 +130,28 @@ void GPU::createGLObjects()
 	glBindVertexArray(0);
 }
 
+uint8_t paletteIndex(uint8_t byte0, uint8_t byte1, uint8_t pxIndex)
+{
+	return ((!!(byte1 & (0x80 >> pxIndex))) << 1) | (!!(byte0 & (0x80 >> pxIndex)));
+}
+
+void tileToPixels(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
+{
+	int b = 0;
+	for (int byte = 0; byte < 16; byte++)
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			uint8_t mask = 0x80 >> i;
+			uint8_t upper = !!(tile[byte] & mask);
+			uint8_t lower = !!(tile[byte+1] & mask);
+			uint8_t combined = (lower << 1) | upper;
+			pixels[b++] = palette[combined];
+		}
+		byte++;
+	}
+}
+
 void GPU::updatePixels()
 {
 	uint8_t lcdc = mmu->mem[kLcdc];
@@ -141,37 +165,35 @@ void GPU::updatePixels()
 		tileData = kTileRamUnsigned;
 	}
 
-	uint16_t bgMap = kBgMapUnsigned;
+	uint16_t bgMap = kBgMap0;
 	if (lcdc & 0b0000'1000)
 	{
-		bgMap = kBgMapSigned;
+		bgMap = kBgMap1;
 	}
 
-	/*
-		192 tiles
-
-		16 bytes per tile
-		2 bytes per line
-		8 lines
-	*/
-
-	tileData = 0xC000;
-
-	int i = 0;
-	for (int tile = 0; tile < 192; tile++)
+	for (int tiley = 0; tiley < 32; tiley++)
 	{
-		int tileOffset = tile * 16;
-		for (int line = 0; line < 8; line++)
+		for (int tilex = 0; tilex < 32; tilex++)
 		{
-			int lineOffset = tileOffset + (line * 2);
-			uint8_t d0 = mmu->mem[tileData + lineOffset];
-			uint8_t d1 = mmu->mem[tileData + lineOffset + 1];
-			for (int px = 0; px < 8; px++)
+			uint8_t tile[16];
+			uint8_t pixels[64];
+
+			int patternIdx = mmu->mem[bgMap + (tiley * 32) + tilex];
+			patternIdx = tileData == kTileRamSigned ? int8_t(patternIdx) : uint8_t(patternIdx);
+			memcpy(tile, &mmu->mem[tileData + (patternIdx * 16)], 16);
+			tileToPixels(mBgPalette, tile, pixels);
+
+			int pxIdx = 0;
+			for (int px_y = 0; px_y < 8; px_y++)
 			{
-				uint8_t c = 0;
-				c |= !!(d0 & (0x80 >> px));
-				c |= (!!(d1 & (0x80 >> px))) << 1;
-				mPixels[i++] = mBgPalette[c];
+				for (int px_x = 0; px_x < 8; px_x++)
+				{
+					int xoffs = tilex * 8;
+					int abs_x = xoffs + px_x;
+					int yoffs = tiley * 8;
+					int abs_y = yoffs + px_y;
+					mPixels[abs_y * kWidth + abs_x] = pixels[pxIdx++];
+				}
 			}
 		}
 	}
@@ -198,7 +220,7 @@ void GPU::tick(int cycles)
 void GPU::setBgPalette(uint8_t val)
 {
 	mBgPalette[0] = kShades[val & 0x3];
-	mBgPalette[1] = kShades[val & 0xC];
-	mBgPalette[2] = kShades[val & 0x30];
-	mBgPalette[3] = kShades[val & 0xC0];
+	mBgPalette[1] = kShades[(val & 0xC) >> 2];
+	mBgPalette[2] = kShades[(val & 0x30) >> 4];
+	mBgPalette[3] = kShades[(val & 0xC0) >> 6];
 }

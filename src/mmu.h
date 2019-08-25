@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+class GPU;
+
 struct MMU
 {
 // data
@@ -12,6 +14,7 @@ struct MMU
 	uint8_t *bios { nullptr };
 	bool inBios { true };
 	std::string serialData;
+	GPU *gpu { nullptr };
 
 // functions
 	void init();

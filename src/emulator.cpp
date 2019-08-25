@@ -1,6 +1,5 @@
 #include <cstring>  // strerror
 #include <algorithm>
-#include <chrono>
 #include <iomanip>
 #include <locale>
 #include <iostream>
@@ -11,6 +10,7 @@
 #include "gpu.h"
 #include "mmu.h"
 #include "window.h"
+#include <GLFW/glfw3.h>
 
 bool readFileBytes(const std::string &filePath, std::unique_ptr<uint8_t[]> &bytes, int &size);
 
@@ -21,7 +21,8 @@ Emulator::Emulator(std::string biosPath, std::string romPath, uint8_t verbosityF
 	mVerbosityFlags(verbosityFlags),
 	mMmu(new MMU()),
 	mCpu(new CPU()),
-	mGpu(new GPU())
+	mGpu(new GPU()),
+	mLastDumpTime(std::chrono::system_clock::now() - std::chrono::seconds(2))
 {}
 
 Emulator::~Emulator()
@@ -34,11 +35,12 @@ Emulator::~Emulator()
 
 int Emulator::run()
 {
-	const int screenScale = 4;
+	const int screenScale = 3;
 	mWindow = new Window();
 	mWindow->setTitle("Korlow2");
-	mWindow->setSize(16*8 * screenScale, 12*8 * screenScale);
+	mWindow->setSize(256 * screenScale, 256 * screenScale);
 	mWindow->create();
+	mWindow->addReceiver(this);
 
 	std::unique_ptr<uint8_t[]> biosData;
 	std::unique_ptr<uint8_t[]> romData;
@@ -77,6 +79,7 @@ int Emulator::run()
 	}
 
 	mMmu->init();
+	mMmu->gpu = mGpu;
 	mMmu->bios = biosData.get();
 	std::copy_n(romData.get(), romSize, &mMmu->mem[0]);
 
@@ -129,4 +132,37 @@ bool readFileBytes(const std::string &filePath, std::unique_ptr<uint8_t[]> &byte
 	fclose(file);
 
 	return true;
+}
+
+void Emulator::sendKey(int key, int scancode, int action, int mods)
+{
+	if (action == GLFW_PRESS)
+	{
+		if (key == GLFW_KEY_D)
+		{
+			dumpRam();
+		}
+	}
+}
+
+void Emulator::dumpRam()
+{
+	auto now = std::chrono::system_clock::now();
+	if (now - mLastDumpTime < std::chrono::seconds(2))
+	{
+		std::cout << "Tried to dump RAM too soon after last time" << std::endl;
+		return;
+	}
+	std::cout << "Dumping RAM... ";
+	mLastDumpTime = now;
+
+	FILE *f = fopen("ramdump.bin", "wb+");
+	if (!f)
+	{
+		std::cerr << "Failed to open ramdump.bin" << std::endl;
+		return;
+	}
+	fwrite(mMmu->mem.get(), 0x10000, 1, f);
+	fclose(f);
+	std::cout << "Dumped RAM" << std::endl;
 }

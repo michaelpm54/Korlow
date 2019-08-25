@@ -2,7 +2,10 @@
 #define WINDOW_H
 
 #include <string>
+#include <vector>
 #include <GLFW/glfw3.h>
+
+class KeyReceiver;
 
 class Window
 {
@@ -16,6 +19,7 @@ public:
 	void refresh();
 	bool closed() const;
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
+	void addReceiver(KeyReceiver *r);
 
 private:
 	GLFWwindow *mHandle { nullptr };
@@ -23,6 +27,8 @@ private:
 	int mWidth { 256 };
 	int mHeight { 256 };
 	bool mClosed { false };
+
+	std::vector<KeyReceiver*> mReceivers;
 
 	inline static void KeyCallback(GLFWwindow *handle, int key, int scancode, int action, int mods)
 	{

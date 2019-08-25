@@ -27,6 +27,7 @@ set(KORLOW_HEADERS
 	src/types.h
 	src/inst_data.h
 	src/memory_map.h
+	src/key_receiver.h
 )
 
 add_library(Korlow

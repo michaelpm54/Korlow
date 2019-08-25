@@ -1,4 +1,11 @@
+#include <epoxy/gl.h>
+#include "key_receiver.h"
 #include "window.h"
+
+void resizeCallback(GLFWwindow *window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
 
 Window::~Window()
 {
@@ -44,6 +51,7 @@ void Window::create()
 	glfwMakeContextCurrent(mHandle);
 	glfwSetWindowUserPointer(mHandle, this);
 	glfwSetKeyCallback(mHandle, KeyCallback);
+	glfwSetFramebufferSizeCallback(mHandle, resizeCallback);
 }
 
 void Window::keyCallback(GLFWwindow *handle, int key, int scancode, int action, int mods)
@@ -51,6 +59,11 @@ void Window::keyCallback(GLFWwindow *handle, int key, int scancode, int action, 
 	if ((key == GLFW_KEY_Q || key == GLFW_KEY_ESCAPE) && action == GLFW_PRESS)
 	{
 		mClosed = true;
+	}
+
+	for (auto &r : mReceivers)
+	{
+		r->sendKey(key, scancode, action, mods);
 	}
 }
 
@@ -71,4 +84,9 @@ void Window::refresh()
 bool Window::closed() const
 {
 	return mClosed;
+}
+
+void Window::addReceiver(KeyReceiver *r)
+{
+	mReceivers.push_back(r);
 }
