@@ -4,20 +4,8 @@
 #include <cstdint>
 #include "types.h"
 
-extern instructionFunc_t InstructionList[0x100];
-extern int InstructionSizes[0x100];
-extern int InstructionCycles[0x100];
-extern int InstructionCyclesAlt[0x100];
-
-extern instructionFunc_t ExtInstructions[0x100];
-extern int ExtInstructionSizes[0x100];
-extern int ExtInstructionCycles[0x100];
-
-extern const char *FormatStrings[0x100];
-extern int FormatStringOperandSize[0x100];
-
-extern const char *ExtFormatStrings[0x100];
-extern int ExtFormatStringOperandSize[0x100];
+extern const instructionFunc_t kInstructions[0x100];
+extern const instructionFunc_t kCbInstructions[0x100];
 
 // Generic
 
@@ -52,7 +40,7 @@ void INC_DE(CPU *cpu, instruction_t &i);
 void INC_D(CPU *cpu, instruction_t &i);
 void DEC_D(CPU *cpu, instruction_t &i);
 void LD_D_IMM8(CPU *cpu, instruction_t &i);
-void RL_A(CPU *cpu, instruction_t &i);
+void RLA(CPU *cpu, instruction_t &i);
 void JR_IMM8(CPU *cpu, instruction_t &i);
 void ADD_HL_DE(CPU *cpu, instruction_t &i);
 void LD_A_ADE(CPU *cpu, instruction_t &i);

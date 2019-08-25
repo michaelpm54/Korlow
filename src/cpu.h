@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "types.h"
 
+class GPU;
 class MMU;
 
 struct registers_t
@@ -31,8 +32,12 @@ public:
 	void printRegisters(uint8_t opcode, bool newline, bool saved);
 	void printInstruction(const instruction_t &i, bool cb);
 
+	int numInstructionsExecuted() const;
+
 public:
+	GPU *gpu { nullptr };
 	MMU *mmu { nullptr };
+
 	uint16_t pc { 0 };
 	uint16_t sp { 0 };
 	uint16_t af { 0 };
@@ -43,7 +48,7 @@ public:
 private:
 	registers_t mRegisters;
 	bool mBreak { false };
-	bool mInBios { true };
+	int mInstructionCounter { 0 };
 };
 
 #endif // CPU_H

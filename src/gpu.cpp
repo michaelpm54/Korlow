@@ -2,6 +2,15 @@
 #include <algorithm>
 #include "gpu.h"
 #include "mmu.h"
+#include "memory_map.h"
+
+constexpr uint8_t kShades[4] =
+{
+	0x00,
+	0x3F,
+	0x7E,
+	0xFF
+};
 
 const int kWidth = 16*8;
 const int kHeight = 12*8;
@@ -11,7 +20,9 @@ const int kNumPixels = kWidth * kHeight * kComponents;
 GPU::GPU()
 	:
 	mPixels(new uint8_t[kNumPixels])
-{}
+{
+	memcpy(mBgPalette, kShades, 4);
+}
 
 GPU::~GPU()
 {
@@ -119,31 +130,22 @@ void GPU::createGLObjects()
 
 void GPU::updatePixels()
 {
-	uint8_t lcdc = mmu->mMem[0xFF40];
+	uint8_t lcdc = mmu->mem[kLcdc];
 
 	if (!(lcdc & 0x80))
 		return;
 
-	bool signedIdx = true;
-
-	uint8_t *bgData = &mmu->mMem[0x9000]; // 0x8800
+	uint16_t tileData = kTileRamSigned;
 	if (lcdc & 0b0001'0000)
 	{
-		bgData = &mmu->mMem[0x8000];
-		signedIdx = false;
+		tileData = kTileRamUnsigned;
 	}
 
-	uint8_t *bgMap = &mmu->mMem[0x9800];
+	uint16_t bgMap = kBgMapUnsigned;
 	if (lcdc & 0b0000'1000)
-		bgMap = &mmu->mMem[0x9C00];
-
-	static constexpr uint8_t palette[4] =
 	{
-		0x15,
-		0x75,
-		0xB0,
-		0xF5
-	};
+		bgMap = kBgMapSigned;
+	}
 
 	/*
 		192 tiles
@@ -153,6 +155,8 @@ void GPU::updatePixels()
 		8 lines
 	*/
 
+	tileData = 0xC000;
+
 	int i = 0;
 	for (int tile = 0; tile < 192; tile++)
 	{
@@ -160,14 +164,14 @@ void GPU::updatePixels()
 		for (int line = 0; line < 8; line++)
 		{
 			int lineOffset = tileOffset + (line * 2);
+			uint8_t d0 = mmu->mem[tileData + lineOffset];
+			uint8_t d1 = mmu->mem[tileData + lineOffset + 1];
 			for (int px = 0; px < 8; px++)
 			{
 				uint8_t c = 0;
-				uint8_t lo = bgData[lineOffset];
-				uint8_t hi = bgData[lineOffset+1];
-				c |= !!(lo & (0x80 >> px));
-				c |= (!!(hi & (0x80 >> px))) << 1;
-				mPixels[i++] = palette[c];
+				c |= !!(d0 & (0x80 >> px));
+				c |= (!!(d1 & (0x80 >> px))) << 1;
+				mPixels[i++] = mBgPalette[c];
 			}
 		}
 	}
@@ -185,4 +189,16 @@ void GPU::frame()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glUseProgram(0);
 	glBindVertexArray(0);
+}
+
+void GPU::tick(int cycles)
+{
+}
+
+void GPU::setBgPalette(uint8_t val)
+{
+	mBgPalette[0] = kShades[val & 0x3];
+	mBgPalette[1] = kShades[val & 0xC];
+	mBgPalette[2] = kShades[val & 0x30];
+	mBgPalette[3] = kShades[val & 0xC0];
 }

@@ -1,5 +1,8 @@
 #include <cstring>  // strerror
+#include <algorithm>
 #include <chrono>
+#include <iomanip>
+#include <locale>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -44,7 +47,6 @@ int Emulator::run()
 	{
 		std::cerr << "Please provide a BIOS file." << std::endl;
 		return 1;
-		mMmu->reset();
 	}
 	else
 	{
@@ -60,8 +62,6 @@ int Emulator::run()
 			std::cerr << "BIOS file size is wrong (! 0x100 bytes)" << std::endl;
 			return 1;
 		}
-
-		mMmu->reset(biosData.get());
 	}
 
 	// Load ROM
@@ -76,13 +76,15 @@ int Emulator::run()
 		std::cerr << "ROM file size is too big (> 8 MiB)" << std::endl;
 	}
 
-	mMmu->setBios(biosData.get());
-	mMmu->setRom(romData.get(), romSize);
+	mMmu->init();
+	mMmu->bios = biosData.get();
+	std::copy_n(romData.get(), romSize, &mMmu->mem[0]);
 
 	mGpu->reset();
 	mGpu->mmu = mMmu;
 
-	mCpu->setMmu(mMmu);
+	mCpu->mmu = mMmu;
+	mCpu->gpu = mGpu;
 
 	return loop();
 }
@@ -99,6 +101,14 @@ int Emulator::loop()
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));
 	}
+
+	std::string numWithCommas = std::to_string(mCpu->numInstructionsExecuted());
+	int insertPosition = numWithCommas.length() - 3;
+	while (insertPosition > 0) {
+	    numWithCommas.insert(insertPosition, ",");
+	    insertPosition-=3;
+	}
+	std::cerr << "\n" << numWithCommas << " instructions executed" << std::endl;
 
 	return 0;
 }

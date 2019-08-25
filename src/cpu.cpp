@@ -1,17 +1,14 @@
 #include <cstdio>
 #include "cpu.h"
 #include "cpu_instructions.h"
+#include "inst_data.h"
+#include "gpu.h"
 #include "mmu.h"
 
-#define DEBUG
+// #define DEBUG
 
 static constexpr int kCpuFreq = 4194304;
-static constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
-
-void CPU::setMmu(MMU *mmu)
-{
-	this->mmu = mmu;
-}
+static constexpr int kMaxCyclesPerFrame = kCpuFreq / 240;
 
 void CPU::frame()
 {
@@ -24,6 +21,7 @@ void CPU::frame()
 	while (cycles < kMaxCyclesPerFrame && !mBreak)
 	{
 		cycles += executeInstruction();
+		gpu->tick(cycles);
 	}
 }
 
@@ -39,7 +37,7 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 		printf("%04X: ", mRegisters.pc);
 		printf("[%04X] ", mRegisters.sp);
 		printf("[%02X] ", opcode);
-		printf("AF:%04X ", mRegisters.af);
+		printf("AF:%04X %d%d%d%d ", mRegisters.af, mRegisters.af & 0x80, mRegisters.af & 0x40, mRegisters.af & 0x20, mRegisters.af & 0x10);
 		printf("BC:%04X ", mRegisters.bc);
 		printf("DE:%04X ", mRegisters.de);
 		printf("HL:%04X%c", mRegisters.hl, n);
@@ -58,14 +56,14 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 
 void CPU::printInstruction(const instruction_t &i, bool cb)
 {
-	instructionFunc_t *instructions = InstructionList;
-	int *operandSizes = FormatStringOperandSize;
-	const char **formatStrings = FormatStrings;
+	const instructionFunc_t *instructions = kInstructions;
+	const int *operandSizes = kInstFmtSizes;
+	auto formatStrings = kInstFmts;
 	if (cb)
 	{
-		instructions = ExtInstructions;
-		operandSizes = ExtFormatStringOperandSize;
-		formatStrings = ExtFormatStrings;
+		instructions = kCbInstructions;
+		operandSizes = kCbInstFmtSizes;
+		formatStrings = kCbInstFmts;
 	}
 	printf(" | ");
 	if (operandSizes[i.code] == 0)
@@ -107,9 +105,9 @@ void CPU::executeRegular(instruction_t &i, int &cycles)
 	};
 #endif
 
-	pc += InstructionSizes[i.code];
-	(*InstructionList[i.code])(this, i);
-	cycles += i.didAction ? InstructionCycles[i.code] : InstructionCyclesAlt[i.code];
+	pc += kInstSizes[i.code];
+	(*kInstructions[i.code])(this, i);
+	cycles += i.didAction ? kInstCycles[i.code] : kInstCyclesAlt[i.code];
 
 #ifdef DEBUG
 	printInstruction(i, false);
@@ -121,10 +119,9 @@ void CPU::executeRegular(instruction_t &i, int &cycles)
 	}
 #endif
 
-	if (mInBios && pc > 0xFF)
+	if (mmu->inBios && pc > 0xFF)
 	{
-		mmu->switchToRom();
-		mInBios = false;
+		mmu->inBios = false;
 	}
 }
 
@@ -140,7 +137,7 @@ void CPU::executeCB(instruction_t &i, int &cycles)
 #else
 	mRegisters =
 	{
-		pc-1, // -1 to get the original CB pc
+		static_cast<uint16_t>(pc-static_cast<uint16_t>(1)), // -1 to get the original CB pc
 		sp,
 		af,
 		bc,
@@ -149,9 +146,9 @@ void CPU::executeCB(instruction_t &i, int &cycles)
 	};
 #endif
 
-	pc += ExtInstructionSizes[i.code];
-	(*ExtInstructions[i.code])(this, i);
-	cycles += ExtInstructionCycles[i.code];
+	pc += kCbInstSizes[i.code];
+	(*kCbInstructions[i.code])(this, i);
+	cycles += kCbInstCycles[i.code];
 
 #ifdef DEBUG
 	printInstruction(i, true);
@@ -166,8 +163,6 @@ void CPU::executeCB(instruction_t &i, int &cycles)
 
 int CPU::executeInstruction()
 {
-	static int counter = 0;
-
 	int cycles = 0;
 	instruction_t i = fetch();
 
@@ -180,7 +175,7 @@ int CPU::executeInstruction()
 		executeRegular(i, cycles);
 	}
 
-	counter++;
+	mInstructionCounter++;
 
 	return cycles;
 }
@@ -206,4 +201,9 @@ void CPU::doBreak()
 bool CPU::didBreak() const
 {
 	return mBreak;
+}
+
+int CPU::numInstructionsExecuted() const
+{
+	return mInstructionCounter;
 }

@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <cstdint>
+
 struct instruction_t
 {
 	uint8_t code;

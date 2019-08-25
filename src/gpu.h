@@ -16,6 +16,10 @@ public:
 	void createGLObjects();
 	void destroyGLObjects();
 
+	void tick(int cycles);
+
+	void setBgPalette(uint8_t val);
+
 public:
 	MMU *mmu { nullptr };
 
@@ -25,6 +29,7 @@ private:
 	GLuint mVao { 0 };
 	GLuint mVbo { 0 };
 	uint8_t *mPixels { nullptr };
+	uint8_t mBgPalette[4];
 };
 
 #endif // GPU_H

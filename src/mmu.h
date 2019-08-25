@@ -2,37 +2,31 @@
 #define MMU_H
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
-class GPU;
-
-class MMU
+struct MMU
 {
-public:
-	MMU() = default;
-	~MMU();
+// data
+	std::shared_ptr<uint8_t[]> mem { nullptr };
+	uint8_t *bios { nullptr };
+	bool inBios { true };
+	std::string serialData;
 
-	void reset(uint8_t *biosData = nullptr);
-	void setBios(uint8_t *biosData);
-	void setRom(uint8_t *romData, int romSize);
+// functions
+	void init();
 
 	uint8_t read8(uint16_t addr);
 	uint16_t read16(uint16_t addr);
-
 	void write8(uint16_t addr, uint8_t val);
 	void write16(uint16_t addr, uint16_t val);
-
-	void ioWrite8(uint16_t addr, uint8_t val);
-
-	void switchToRom();
+	void or8(uint16_t addr, uint8_t val);
+	void or16(uint16_t addr, uint16_t val);
+	void and8(uint16_t addr, uint8_t val);
+	void and16(uint16_t addr, uint16_t val);
 
 private:
-	uint8_t *mMem { nullptr };
-	uint8_t *mBios { nullptr };
-	bool mInBios { true };
-	std::string mSerialData;
-
-	friend class GPU;
+	void io_write8(uint16_t addr, uint8_t val);
 };
 
 #endif // MMU_H
