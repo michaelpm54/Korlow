@@ -66,7 +66,6 @@ int Emulator::run()
 		}
 	}
 
-	// Load ROM
 	int romSize;
 	if (!readFileBytes(mRomPath, romData, romSize))
 	{
