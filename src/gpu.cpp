@@ -14,8 +14,8 @@ constexpr uint8_t kShades[4] =
 	0xFF
 };
 
-const int kWidth = 256;
-const int kHeight = 256;
+const int kWidth = 160;
+const int kHeight = 144;
 const int kComponents = 1;
 const int kNumPixels = kWidth * kHeight * kComponents;
 
@@ -80,13 +80,13 @@ void GPU::createGLObjects()
 	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
 	const char *vsSrc = "\
 		#version 460 core\n\
-		layout(location=0) in vec4 aPos;\
-	 	layout(location=1) in vec2 aTexCoord;\
-	 	out vec2 texCoord;\
-	 	void main()\
-	 	{\
-		 	gl_Position = aPos;\
-		 	texCoord = aTexCoord;\
+		layout(location=0) in vec4 aPos;\n\
+	 	layout(location=1) in vec2 aTexCoord;\n\
+	 	out vec2 texCoord;\n\
+	 	void main()\n\
+	 	{\n\
+		 	gl_Position = aPos;\n\
+		 	texCoord = aTexCoord;\n\
 		}";
 	const char *fsSrc = "\
 		#version 460 core\n\
@@ -95,8 +95,10 @@ void GPU::createGLObjects()
 	 	uniform usampler2D tex;\n\
 	 	void main()\n\
 	 	{\n\
-	 		uint c = texture(tex, texCoord).r;\n\
-	 		colour = vec4(0, float(c)/255.0f, 0, 1);\n\
+	 		float c = texture(tex, texCoord).r;\n\
+	 		c = float(c) / 255.0f;\n\
+	 		c = 0.8f - c;\n\
+	 		colour = vec4(c,c,c, 1);\n\
 		}";
 	glShaderSource(vs, 1, &vsSrc, nullptr);
 	glShaderSource(fs, 1, &fsSrc, nullptr);
@@ -113,11 +115,11 @@ void GPU::createGLObjects()
 	GLfloat vertices[] =
 	{
 		/* xyzw */ -1.0f, -1.0f, 0.0f, 1.0f, /* uv */ 0.0f, 1.0f,
-		/* xyzw */ 1.0f, -1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 1.0f,
-		/* xyzw */ 1.0f, 1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 0.0f,
+		/* xyzw */  1.0f, -1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 1.0f,
+		/* xyzw */  1.0f,  1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 0.0f,
 		/* xyzw */ -1.0f, -1.0f, 0.0f, 1.0f, /* uv */ 0.0f, 1.0f,
-		/* xyzw */ 1.0f, 1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 0.0f,
-		/* xyzw */ -1.0f, 1.0f, 0.0f, 1.0f, /* uv */ 0.0f, 0.0f,
+		/* xyzw */  1.0f,  1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 0.0f,
+		/* xyzw */ -1.0f,  1.0f, 0.0f, 1.0f, /* uv */ 0.0f, 0.0f,
 	};
 
 	glBindVertexArray(mVao);
@@ -135,7 +137,7 @@ uint8_t paletteIndex(uint8_t byte0, uint8_t byte1, uint8_t pxIndex)
 	return ((!!(byte1 & (0x80 >> pxIndex))) << 1) | (!!(byte0 & (0x80 >> pxIndex)));
 }
 
-void tileToPixels(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
+void decodeTile(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
 {
 	int b = 0;
 	for (int byte = 0; byte < 16; byte++)
@@ -152,54 +154,76 @@ void tileToPixels(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
 	}
 }
 
+int getPatternIndex(uint8_t *map, int xtile, int ytile, bool signedIdx)
+{
+	// 32 rows of 32 bytes
+	int patternIdx = map[ytile * 32 + xtile];
+	if (signedIdx)
+		patternIdx = int8_t(patternIdx);
+	return patternIdx;
+}
+
+void getTile(uint8_t *tileData, int patternIdx, uint8_t *tile)
+{
+	memcpy(tile, &tileData[patternIdx * 16], 16);
+}
+
+void GPU::drawTile8x8(uint8_t *pixels, int x, int y)
+{
+	int pxIdx = 0;
+	for (int px_y = 0; px_y < 8; px_y++)
+	{
+		for (int px_x = 0; px_x < 8; px_x++)
+		{
+			int absY = ((y+px_y) * kWidth);
+			int absX = (x + px_x);
+			int pxIdx = absY + absX;
+			mPixels[pxIdx] = pixels[px_y * 8 + px_x];
+		}
+	}
+}
+
 void GPU::updatePixels()
 {
 	uint8_t lcdc = mmu->mem[kLcdc];
 
-	if (!(lcdc & 0x80))
-		return;
+	// if (!(lcdc & 0x80))
+		// return;
 
 	uint16_t tileData = kTileRamSigned;
-	if (lcdc & 0b0001'0000)
+	if (lcdc & 0x10)
 	{
 		tileData = kTileRamUnsigned;
 	}
 
 	uint16_t bgMap = kBgMap0;
-	if (lcdc & 0b0000'1000)
+	if (lcdc & 0x8)
 	{
 		bgMap = kBgMap1;
 	}
 
-	for (int tiley = 0; tiley < 32; tiley++)
+	int startTileX = mmu->mem[kScx] / 32;
+	int startTileY = mmu->mem[kScy] / 32;
+	int endTileX = startTileX + (kWidth / 8);
+	int endTileY = startTileY + (kHeight / 8);
+
+	for (int tiley = startTileY; tiley < endTileY; tiley++)
 	{
-		for (int tilex = 0; tilex < 32; tilex++)
+		for (int tilex = startTileX; tilex < endTileX; tilex++)
 		{
+			int patternIdx = getPatternIndex(&mmu->mem[bgMap], tilex, tiley, tileData == kTileRamSigned);
+
 			uint8_t tile[16];
+			getTile(&mmu->mem[tileData], patternIdx, tile);
+
 			uint8_t pixels[64];
+			decodeTile(mBgPalette, tile, pixels);
 
-			int patternIdx = mmu->mem[bgMap + (tiley * 32) + tilex];
-			patternIdx = tileData == kTileRamSigned ? int8_t(patternIdx) : uint8_t(patternIdx);
-			memcpy(tile, &mmu->mem[tileData + (patternIdx * 16)], 16);
-			tileToPixels(mBgPalette, tile, pixels);
-
-			int pxIdx = 0;
-			for (int px_y = 0; px_y < 8; px_y++)
-			{
-				for (int px_x = 0; px_x < 8; px_x++)
-				{
-					int xoffs = tilex * 8;
-					int abs_x = xoffs + px_x;
-					int yoffs = tiley * 8;
-					int abs_y = yoffs + px_y;
-					mPixels[abs_y * kWidth + abs_x] = pixels[pxIdx++];
-				}
-			}
+			drawTile8x8(pixels, (tilex - startTileX)*8, (tiley - startTileY)*8);
 		}
 	}
 
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kWidth, kHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
-
 }
 
 void GPU::frame()
@@ -215,6 +239,28 @@ void GPU::frame()
 
 void GPU::tick(int cycles)
 {
+	mClock += cycles;
+	if (mClock >= 77 && mClock <= 83)
+	{
+		mode = 2;
+	}
+	else if (mClock >= 169 && mClock <= 175)
+	{
+		mode = 3;
+	}
+	else if (mClock >= 201 && mClock <= 207)
+	{
+		mode = 0;
+	}
+	else if (mClock >= 456 && mClock < 4560)
+	{
+		mode = 1;
+	}
+	else if (mClock >= 4560)
+	{
+		mode = 2;
+		mClock = 0;
+	}
 }
 
 void GPU::setBgPalette(uint8_t val)

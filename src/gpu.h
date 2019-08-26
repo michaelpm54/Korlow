@@ -20,8 +20,12 @@ public:
 
 	void setBgPalette(uint8_t val);
 
+private:
+	void drawTile8x8(uint8_t *pixels, int x, int y);
+
 public:
 	MMU *mmu { nullptr };
+	int mode { 0 };
 
 private:
 	GLuint mProgram { 0 };
@@ -30,6 +34,7 @@ private:
 	GLuint mVbo { 0 };
 	uint8_t *mPixels { nullptr };
 	uint8_t mBgPalette[4];
+	int mClock { 0 };
 };
 
 #endif // GPU_H

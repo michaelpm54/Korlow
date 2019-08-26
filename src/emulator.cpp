@@ -38,7 +38,7 @@ int Emulator::run()
 	const int screenScale = 3;
 	mWindow = new Window();
 	mWindow->setTitle("Korlow2");
-	mWindow->setSize(256 * screenScale, 256 * screenScale);
+	mWindow->setSize(160 * screenScale, 144 * screenScale);
 	mWindow->create();
 	mWindow->addReceiver(this);
 
