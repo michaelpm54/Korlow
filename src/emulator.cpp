@@ -73,7 +73,7 @@ int Emulator::run()
 		std::cerr << "Failed to open ROM file '" << mRomPath << "'" << std::endl;
 	}
 
-	if (romSize > 8388608)
+	if (romSize <= 0x100 || romSize > 8388608)
 	{
 		std::cerr << "ROM file size is too big (> 8 MiB)" << std::endl;
 	}
