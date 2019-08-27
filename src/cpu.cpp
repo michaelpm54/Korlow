@@ -8,7 +8,7 @@
 // #define DEBUG
 
 static constexpr int kCpuFreq = 4194304;
-static constexpr int kMaxCyclesPerFrame = kCpuFreq / 240;
+static constexpr int kMaxCyclesPerFrame = kCpuFreq / 960;
 
 void CPU::frame()
 {

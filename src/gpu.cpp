@@ -240,26 +240,35 @@ void GPU::frame()
 void GPU::tick(int cycles)
 {
 	mClock += cycles;
+	uint8_t stat = mmu->mem[kStat];
 	if (mClock >= 77 && mClock <= 83)
 	{
 		mode = 2;
+		stat = (stat & 0b1111'1100) | 0x2;
 	}
 	else if (mClock >= 169 && mClock <= 175)
 	{
 		mode = 3;
+		stat = (stat & 0b1111'1100) | 0x3;
 	}
 	else if (mClock >= 201 && mClock <= 207)
 	{
 		mode = 0;
+		stat = (stat & 0b1111'1100);
 	}
 	else if (mClock >= 456 && mClock < 4560)
 	{
 		mode = 1;
+		stat = (stat & 0b1111'1100) | 0x1;
 	}
 	else if (mClock >= 4560)
 	{
 		mode = 2;
 		mClock = 0;
+	}
+	if (stat != mmu->mem[kStat])
+	{
+		mmu->mem[kStat] = stat;
 	}
 }
 
