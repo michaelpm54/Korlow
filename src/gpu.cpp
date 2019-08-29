@@ -2,9 +2,11 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
+#include <GL/glew.h>
 #include "gpu.h"
 #include "mmu.h"
 #include "memory_map.h"
+#include "util.h"
 
 constexpr uint8_t kShades[4] =
 {
@@ -58,11 +60,17 @@ void GPU::destroyGLObjects()
 	}
 }
 
+void GPU::initOpenGL()
+{
+	glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+}
+
 void GPU::createGLObjects()
 {
 	destroyGLObjects();
-
-	glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
 
 	mProgram = glCreateProgram();
 	glGenTextures(1, &mFrameTexture);
@@ -76,41 +84,7 @@ void GPU::createGLObjects()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, kWidth, kHeight, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
 
-	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-	const char *vsSrc = "\
-		#version 460 core\n\
-		layout(location=0) in vec4 aPos;\n\
-	 	layout(location=1) in vec2 aTexCoord;\n\
-	 	out vec2 texCoord;\n\
-	 	void main()\n\
-	 	{\n\
-		 	gl_Position = aPos;\n\
-		 	texCoord = aTexCoord;\n\
-		}";
-	const char *fsSrc = "\
-		#version 460 core\n\
-	 	in vec2 texCoord;\n\
-	 	out vec4 colour;\n\
-	 	uniform usampler2D tex;\n\
-	 	void main()\n\
-	 	{\n\
-	 		float c = texture(tex, texCoord).r;\n\
-	 		c = float(c) / 255.0f;\n\
-	 		c = 0.8f - c;\n\
-	 		colour = vec4(c,c,c, 1);\n\
-		}";
-	glShaderSource(vs, 1, &vsSrc, nullptr);
-	glShaderSource(fs, 1, &fsSrc, nullptr);
-	glCompileShader(vs);
-	glCompileShader(fs);
-	glAttachShader(mProgram, vs);
-	glAttachShader(mProgram, fs);
-	glLinkProgram(mProgram);
-	glDetachShader(mProgram, vs);
-	glDetachShader(mProgram, fs);
-	glDeleteShader(vs);
-	glDeleteShader(fs);
+	loadShaders(mProgram, "../assets/shaders/ssquad.vs", "../assets/shaders/ssquad.fs");
 
 	GLfloat vertices[] =
 	{
@@ -130,6 +104,8 @@ void GPU::createGLObjects()
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (GLvoid *)(sizeof(GLfloat) * 0));
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (GLvoid *)(sizeof(GLfloat) * 4));
 	glBindVertexArray(0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 uint8_t paletteIndex(uint8_t byte0, uint8_t byte1, uint8_t pxIndex)
@@ -222,19 +198,20 @@ void GPU::updatePixels()
 			drawTile8x8(pixels, (tilex - startTileX)*8, (tiley - startTileY)*8);
 		}
 	}
-
+	
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kWidth, kHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
 }
 
 void GPU::frame()
 {
+	glBindTexture(GL_TEXTURE_2D, mFrameTexture);
 	updatePixels();
-	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(mProgram);
 	glBindVertexArray(mVao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glUseProgram(0);
 	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void GPU::tick(int cycles)

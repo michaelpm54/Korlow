@@ -1,6 +1,16 @@
-#include <epoxy/gl.h>
-#include "key_receiver.h"
 #include "window.h"
+
+#include <cstdio>
+#include <stdexcept>
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include "key_receiver.h"
+
+void KeyCallback(GLFWwindow *handle, int key, int scancode, int action, int mods)
+{
+    Window *window = static_cast<Window*>(glfwGetWindowUserPointer(handle));
+    window->keyCallback(handle, key, scancode, action, mods);
+}
 
 void resizeCallback(GLFWwindow *window, int width, int height)
 {
@@ -52,6 +62,15 @@ void Window::create()
 	glfwSetWindowUserPointer(mHandle, this);
 	glfwSetKeyCallback(mHandle, KeyCallback);
 	glfwSetFramebufferSizeCallback(mHandle, resizeCallback);
+	if (!mDoneGlewInit)
+	{
+		GLenum err = glewInit();
+		if (GLEW_OK != err)
+		{
+  			throw std::runtime_error("Error: " + std::string(reinterpret_cast<const char*>(glewGetErrorString(err))));
+		}
+		mDoneGlewInit = true;
+	}
 }
 
 void Window::keyCallback(GLFWwindow *handle, int key, int scancode, int action, int mods)

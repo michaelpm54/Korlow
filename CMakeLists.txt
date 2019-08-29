@@ -13,6 +13,8 @@ set(KORLOW_SOURCES
 	src/cpu_instructions.cpp
 	src/cpu_base.cpp
 	src/inst_data.cpp
+	src/font.cpp
+	src/util.cpp
 )
 
 set(KORLOW_HEADERS
@@ -28,6 +30,8 @@ set(KORLOW_HEADERS
 	src/inst_data.h
 	src/memory_map.h
 	src/key_receiver.h
+	src/font.h
+	src/util.h
 )
 
 add_library(Korlow
@@ -48,14 +52,28 @@ target_compile_features(app PRIVATE cxx_std_17)
 target_compile_features(Korlow PRIVATE cxx_std_17)
 
 find_package(GLFW3 REQUIRED)
-find_package(epoxy REQUIRED)
+find_package(glew REQUIRED)
+find_package(freetype REQUIRED)
+find_package(glm REQUIRED)
+
+target_include_directories(Korlow
+	PRIVATE
+		${FREETYPE_INCLUDE_DIRS}
+)
+
+target_link_libraries(Korlow
+	PRIVATE
+		GLFW3
+		OpenGL32
+		glew32
+		freetype
+		glm
+)
 
 target_link_libraries(
 	app
 	PRIVATE
 		Korlow
-		GLFw3
-		epoxy
 )
 
 set_target_properties(app

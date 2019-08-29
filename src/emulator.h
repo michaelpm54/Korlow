@@ -9,6 +9,7 @@ class Window;
 class MMU;
 class CPU;
 class GPU;
+class Font;
 
 class Emulator : public KeyReceiver
 {
@@ -16,13 +17,25 @@ public:
 	Emulator(std::string biosPath, std::string romPath, uint8_t verbosityFlags);
 	~Emulator();
 	int run();
-	int loop();
 
 	virtual void sendKey(int key, int scancode, int action, int mods) override;
 
+private:
+	int loop();
 	void dumpRam();
+	void renderMessages();
+	void updateMessages();
 
 private:
+	struct Message
+	{
+		std::string text;
+		float x;
+		float y;
+		std::chrono::system_clock::time_point begin;
+		std::chrono::duration<int, std::milli> timeout;
+	};
+	
 	Window *mWindow { nullptr };
 	std::string mBiosPath;
 	std::string mRomPath;
@@ -32,6 +45,8 @@ private:
 	GPU *mGpu { nullptr };
 	bool mContinue { true };
 	std::chrono::time_point<std::chrono::system_clock> mLastDumpTime;
+	Font *mFont { nullptr };
+	std::vector<Message> mMessages;
 };
 
 #endif // EMULATOR_H

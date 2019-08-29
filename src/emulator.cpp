@@ -5,14 +5,14 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <GLFW/glfw3.h>
 #include "cpu.h"
 #include "emulator.h"
+#include "font.h"
 #include "gpu.h"
 #include "mmu.h"
 #include "window.h"
-#include <GLFW/glfw3.h>
-
-bool readFileBytes(const std::string &filePath, std::unique_ptr<uint8_t[]> &bytes, int &size);
+#include "util.h"
 
 Emulator::Emulator(std::string biosPath, std::string romPath, uint8_t verbosityFlags)
 	:
@@ -53,7 +53,11 @@ int Emulator::run()
 	else
 	{
 		int biosSize;
-		if (!readFileBytes(mBiosPath, biosData, biosSize))
+		try
+		{
+			biosData = readFileBytes(mBiosPath, biosSize);
+		}
+		catch (const std::runtime_error &e)
 		{
 			std::cerr << "Failed to open BIOS file '" << mBiosPath << "'" << std::endl;
 			return 1;
@@ -67,14 +71,20 @@ int Emulator::run()
 	}
 
 	int romSize;
-	if (!readFileBytes(mRomPath, romData, romSize))
+	try
+	{
+		romData = readFileBytes(mRomPath, romSize);
+	}
+	catch (const std::runtime_error &e)
 	{
 		std::cerr << "Failed to open ROM file '" << mRomPath << "'" << std::endl;
+		return 1;
 	}
 
 	if (romSize <= 0x100 || romSize > 8388608)
 	{
 		std::cerr << "ROM file size is too big (> 8 MiB)" << std::endl;
+		return 1;
 	}
 
 	mMmu->init();
@@ -83,10 +93,15 @@ int Emulator::run()
 	std::copy_n(romData.get(), romSize, &mMmu->mem[0]);
 
 	mGpu->reset();
+	mGpu->initOpenGL();
 	mGpu->mmu = mMmu;
 
 	mCpu->mmu = mMmu;
 	mCpu->gpu = mGpu;
+
+	FT_Init();
+
+	mFont = new Font("../assets/fonts/IBMPlexMono-Semibold.otf");
 
 	return loop();
 }
@@ -95,10 +110,15 @@ int Emulator::loop()
 {
 	while (mContinue && !mWindow->closed() && !mCpu->didBreak())
 	{
+		updateMessages();
+
 		mCpu->frame();
 
 		mWindow->events();
 		mGpu->frame();
+
+		renderMessages();
+
 		mWindow->refresh();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));
@@ -112,25 +132,11 @@ int Emulator::loop()
 	}
 	std::cerr << "\n" << numWithCommas << " instructions executed" << std::endl;
 
+	delete mFont;
+
+	FT_Done();
+
 	return 0;
-}
-
-bool readFileBytes(const std::string &filePath, std::unique_ptr<uint8_t[]> &bytes, int &size)
-{
-	FILE *file = fopen(filePath.c_str(), "rb");
-	if (!file)
-	{
-		std::cerr << "Failed to open file '" << filePath << "':\n" << std::string(strerror(errno)) << std::endl;
-		return false;
-	}
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	bytes.reset(new uint8_t[size]);
-	fseek(file, 0, SEEK_SET);
-	fread(bytes.get(), 1, size, file);
-	fclose(file);
-
-	return true;
 }
 
 void Emulator::sendKey(int key, int scancode, int action, int mods)
@@ -164,4 +170,31 @@ void Emulator::dumpRam()
 	fwrite(mMmu->mem.get(), 0x10000, 1, f);
 	fclose(f);
 	std::cout << "Dumped RAM" << std::endl;
+
+	std::string text = "Dumped RAM to file: 'ramdump.bin'";
+	mMessages.push_back({text, 8, 52, now, std::chrono::milliseconds(2000)});
+}
+
+void Emulator::renderMessages()
+{
+	for (const auto &msg : mMessages)
+	{
+		mFont->renderText(msg.text, msg.x, msg.y);
+	}
+}
+
+void Emulator::updateMessages()
+{
+	auto now = std::chrono::system_clock::now();
+	mMessages.erase(
+		std::remove_if(
+			mMessages.begin(),
+			mMessages.end(),
+			[=](auto &m)
+			{
+				return std::chrono::duration_cast<std::chrono::milliseconds>(now - m.begin) > m.timeout;
+			}
+		),
+		mMessages.end()
+	);
 }

@@ -1,7 +1,8 @@
 #ifndef GPU_H
 #define GPU_H
 
-#include <epoxy/gl.h>
+#include <cstdint>
+#include <GL/gl.h>
 
 class MMU;
 
@@ -10,6 +11,7 @@ class GPU
 public:
 	GPU();
 	~GPU();
+	void initOpenGL();
 	void frame();
 	void updatePixels();
 	void reset();
