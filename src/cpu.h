@@ -33,6 +33,7 @@ public:
 	void printInstruction(const instruction_t &i, bool cb);
 
 	int numInstructionsExecuted() const;
+	void delayImeEnable();
 
 public:
 	GPU *gpu { nullptr };
@@ -45,10 +46,16 @@ public:
 	uint16_t de { 0 };
 	uint16_t hl { 0 };
 
+	bool ime { false };
+
+private:
+	void interrupts();
+
 private:
 	registers_t mRegisters;
 	bool mBreak { false };
 	int mInstructionCounter { 0 };
+	int mDelayedImeEnable { 0 };
 };
 
 #endif // CPU_H

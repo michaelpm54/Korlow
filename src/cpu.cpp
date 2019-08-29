@@ -1,14 +1,16 @@
 #include <cstdio>
 #include "cpu.h"
+#include "cpu_base.h"
 #include "cpu_instructions.h"
 #include "inst_data.h"
 #include "gpu.h"
+#include "memory_map.h"
 #include "mmu.h"
 
 // #define DEBUG
 
 static constexpr int kCpuFreq = 4194304;
-static constexpr int kMaxCyclesPerFrame = kCpuFreq / 960;
+static constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
 
 void CPU::frame()
 {
@@ -21,7 +23,20 @@ void CPU::frame()
 	while (cycles < kMaxCyclesPerFrame && !mBreak)
 	{
 		cycles += executeInstruction();
+		if (mDelayedImeEnable)
+		{
+			if (mDelayedImeEnable == 2)
+			{
+				mDelayedImeEnable = 0;
+				ime = true;
+			}
+			else
+			{
+				mDelayedImeEnable++;
+			}
+		}
 		gpu->tick(cycles);
+		interrupts();
 	}
 }
 
@@ -206,4 +221,47 @@ bool CPU::didBreak() const
 int CPU::numInstructionsExecuted() const
 {
 	return mInstructionCounter;
+}
+
+void CPU::interrupts()
+{
+	if (!ime)
+	{
+		return;
+	}
+
+	uint8_t If = mmu->mem[kIf] & mmu->mem[kIe];
+
+	if (If & 1)
+	{
+		RST(this, 0x40);
+		If &= ~(1UL << 1);
+	}
+	if (If & 2)
+	{
+		RST(this, 0x48);
+		If &= ~(1UL << 2);
+	}
+	if (If & 4)
+	{
+		RST(this, 0x50);
+		If &= ~(1UL << 4);
+	}
+	if (If & 8)
+	{
+		RST(this, 0x58);
+		If &= ~(1UL << 8);
+	}
+	if (If & 16)
+	{
+		RST(this, 0x60);
+		If &= ~(1UL << 16);
+	}
+
+	mmu->mem[kIf] = If;
+}
+
+void CPU::delayImeEnable()
+{
+	mDelayedImeEnable = 1;
 }

@@ -5,6 +5,7 @@
 void MMU::init()
 {
 	mem.reset(new uint8_t[0x10000]);
+	mem[kIf] = 0xE0;
 }
 
 uint8_t MMU::read8(uint16_t addr)
@@ -15,18 +16,6 @@ uint8_t MMU::read8(uint16_t addr)
 		{
 			return bios[addr];
 		}
-	}
-
-	if (addr == kLy)
-	{
-		static int n = 0;
-		if (n == 0x9A)
-		{
-			n = 0;
-			return 0x91;
-		}
-		n++;
-		return 0x90;
 	}
 
 	return mem[addr];
@@ -43,6 +32,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	{
 		serialData.push_back(val);
 		printf("\nSerial data:\n{\n%s\n}\n\n", serialData.c_str());
+		or8(kIf, 0x4);
 	}
 	else if (addr == 0xFF02)
 	{
@@ -113,11 +103,15 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 	else if (addr == kScy)
 	{
-		// printf("SCY ? Tile Scroll Y\n");
+		printf("SCY: 0x%02X | %d\n", val, val);
 	}
 	else if (addr == kScx)
 	{
 		// printf("SCX ? Tile Scroll X\n");
+	}
+	else if (addr == kLy)
+	{
+		mem[kLy] = 0;
 	}
 	else if (addr == kBgPalette)
 	{

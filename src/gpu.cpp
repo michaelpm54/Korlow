@@ -130,41 +130,17 @@ void decodeTile(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
 	}
 }
 
-int getPatternIndex(uint8_t *map, int xtile, int ytile, bool signedIdx)
+int getMapIndex(int x, int y)
 {
-	// 32 rows of 32 bytes
-	int patternIdx = map[ytile * 32 + xtile];
-	if (signedIdx)
-		patternIdx = int8_t(patternIdx);
-	return patternIdx;
+	return ((y / 8) * 32) + (x / 8);
 }
 
-void getTile(uint8_t *tileData, int patternIdx, uint8_t *tile)
-{
-	memcpy(tile, &tileData[patternIdx * 16], 16);
-}
-
-void GPU::drawTile8x8(uint8_t *pixels, int x, int y)
-{
-	int pxIdx = 0;
-	for (int px_y = 0; px_y < 8; px_y++)
-	{
-		for (int px_x = 0; px_x < 8; px_x++)
-		{
-			int absY = ((y+px_y) * kWidth);
-			int absX = (x + px_x);
-			int pxIdx = absY + absX;
-			mPixels[pxIdx] = pixels[px_y * 8 + px_x];
-		}
-	}
-}
-
-void GPU::updatePixels()
+void GPU::updatePixels(int line)
 {
 	uint8_t lcdc = mmu->mem[kLcdc];
 
-	// if (!(lcdc & 0x80))
-		// return;
+	if (!(lcdc & 0x80))
+		return;
 
 	uint16_t tileData = kTileRamSigned;
 	if (lcdc & 0x10)
@@ -178,34 +154,34 @@ void GPU::updatePixels()
 		bgMap = kBgMap1;
 	}
 
-	int startTileX = mmu->mem[kScx] / 32;
-	int startTileY = mmu->mem[kScy] / 32;
-	int endTileX = startTileX + (kWidth / 8);
-	int endTileY = startTileY + (kHeight / 8);
+	line += mmu->mem[kScy];
 
-	for (int tiley = startTileY; tiley < endTileY; tiley++)
+	for (int x = 0; x < 160; x += 8)
 	{
-		for (int tilex = startTileX; tilex < endTileX; tilex++)
+		int patternNum = mmu->mem[bgMap + getMapIndex(x + mmu->mem[kScx], line)];
+		patternNum = tileData == kTileRamUnsigned ? uint8_t(patternNum) : int8_t(patternNum);
+
+		uint8_t lineData[2];
+		int patternOffset = tileData + (patternNum * 16) + ((line % 8) * 2);
+
+		lineData[0] = mmu->mem[patternOffset];
+		lineData[1] = mmu->mem[patternOffset + 1];
+
+		for (int i = 0; i < 8; i++)
 		{
-			int patternIdx = getPatternIndex(&mmu->mem[bgMap], tilex, tiley, tileData == kTileRamSigned);
-
-			uint8_t tile[16];
-			getTile(&mmu->mem[tileData], patternIdx, tile);
-
-			uint8_t pixels[64];
-			decodeTile(mBgPalette, tile, pixels);
-
-			drawTile8x8(pixels, (tilex - startTileX)*8, (tiley - startTileY)*8);
+			uint8_t mask = 0x80 >> i;
+			uint8_t lower = !!(lineData[0] & mask);
+			uint8_t upper = !!(lineData[1] & mask);
+			uint8_t combined = (upper << 1) | lower;
+			mPixels[((mmu->mem[kLy] - 1) % 0x90) * 160 + x + i] = mBgPalette[combined];
 		}
 	}
-	
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kWidth, kHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
 }
 
 void GPU::frame()
 {
 	glBindTexture(GL_TEXTURE_2D, mFrameTexture);
-	updatePixels();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kWidth, kHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
 	glUseProgram(mProgram);
 	glBindVertexArray(mVao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -216,37 +192,56 @@ void GPU::frame()
 
 void GPU::tick(int cycles)
 {
-	mClock += cycles;
+	mModeClock += cycles;
 	uint8_t stat = mmu->mem[kStat];
-	if (mClock >= 77 && mClock <= 83)
+
+	if (mode == MODE_OAM)
 	{
-		mode = 2;
-		stat = (stat & 0b1111'1100) | 0x2;
+		if (mModeClock >= 83)
+		{
+			mode = MODE_OAM_VRAM;
+			mModeClock = 0;
+		}
 	}
-	else if (mClock >= 169 && mClock <= 175)
+	else if (mode == MODE_OAM_VRAM)
 	{
-		mode = 3;
-		stat = (stat & 0b1111'1100) | 0x3;
+		if (mModeClock >= 175)
+		{
+			mode = MODE_HBLANK;
+			mModeClock = 0;
+		}
 	}
-	else if (mClock >= 201 && mClock <= 207)
+	else if (mode == MODE_HBLANK)
 	{
-		mode = 0;
-		stat = (stat & 0b1111'1100);
+		if (mModeClock >= 207)
+		{
+			if (mmu->mem[kLy] >= 0x91)
+			{
+				mode = MODE_VBLANK;
+				updatePixels(mmu->mem[kLy]);
+				mmu->mem[kLy] = 0;
+				mModeClock = 0;
+				mmu->or8(kIf, 0x1);
+			}
+			else
+			{
+				mode = MODE_OAM;
+				mmu->mem[kLy]++;
+				updatePixels(mmu->mem[kLy]);
+				mModeClock = 0;
+			}
+		}
 	}
-	else if (mClock >= 456 && mClock < 4560)
+	else if (mode == MODE_VBLANK)
 	{
-		mode = 1;
-		stat = (stat & 0b1111'1100) | 0x1;
+		if (mModeClock >= 4560)
+		{
+			mode = MODE_OAM;
+			mModeClock = 0;
+		}
 	}
-	else if (mClock >= 4560)
-	{
-		mode = 2;
-		mClock = 0;
-	}
-	if (stat != mmu->mem[kStat])
-	{
-		mmu->mem[kStat] = stat;
-	}
+
+	mmu->mem[kStat] = (mmu->mem[kStat] & 0b1111'1100) | mode;
 }
 
 void GPU::setBgPalette(uint8_t val)

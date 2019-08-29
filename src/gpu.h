@@ -13,30 +13,33 @@ public:
 	~GPU();
 	void initOpenGL();
 	void frame();
-	void updatePixels();
+	void updatePixels(int line);
 	void reset();
 	void createGLObjects();
 	void destroyGLObjects();
-
 	void tick(int cycles);
-
 	void setBgPalette(uint8_t val);
-
-private:
-	void drawTile8x8(uint8_t *pixels, int x, int y);
 
 public:
 	MMU *mmu { nullptr };
-	int mode { 0 };
+	int mode { MODE_OAM };
 
 private:
+	enum Mode
+	{
+		MODE_HBLANK = 0,
+		MODE_VBLANK = 1,
+		MODE_OAM = 2,
+		MODE_OAM_VRAM = 3,
+	};
+
 	GLuint mProgram { 0 };
 	GLuint mFrameTexture { 0 };
 	GLuint mVao { 0 };
 	GLuint mVbo { 0 };
 	uint8_t *mPixels { nullptr };
 	uint8_t mBgPalette[4];
-	int mClock { 0 };
+	int mModeClock { 0 };
 };
 
 #endif // GPU_H

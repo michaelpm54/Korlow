@@ -13,6 +13,7 @@ constexpr inline uint16_t kWram            = 0xC000;
 constexpr inline uint16_t kEchoRam         = 0xE000;
 constexpr inline uint16_t kOam             = 0xFE00;
 constexpr inline uint16_t kIo              = 0xFF00;
+constexpr inline uint16_t kIf              = 0xFF0F;
 constexpr inline uint16_t kLcdc            = 0xFF40;
 constexpr inline uint16_t kStat            = 0xFF41;
 constexpr inline uint16_t kScy             = 0xFF42;
@@ -26,7 +27,7 @@ constexpr inline uint16_t kObj1Palette     = 0xFF49;
 constexpr inline uint16_t kWy              = 0xFF4A;
 constexpr inline uint16_t kWx              = 0xFF4B;
 constexpr inline uint16_t kZeroPage        = 0xFF80;
-constexpr inline uint16_t kIeFlag          = 0xFFFF;
+constexpr inline uint16_t kIe              = 0xFFFF;
 
 struct Header
 {

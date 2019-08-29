@@ -20,6 +20,7 @@ void RST(CPU *cpu, uint16_t addr)
 	cpu->sp -= 2;
 	cpu->mmu->write16(cpu->sp, cpu->pc);
 	cpu->pc = addr;
+	cpu->ime = false;
 }
 
 void SWAP_RH(CPU *cpu, uint16_t &r)
@@ -1453,7 +1454,7 @@ void RET_C(CPU *cpu, instruction_t &i)
 
 void RETI(CPU *cpu, instruction_t &i)
 {
-	// cpu->ime = false;
+	cpu->ime = false;
 	cpu->pc = cpu->mmu->read16(cpu->sp);
 	cpu->sp += 2;
 }
@@ -1597,7 +1598,7 @@ void LDH_A_C(CPU *cpu, instruction_t &i)
 
 void DI(CPU *cpu, instruction_t &i)
 {
-	// cpu->ime = false;
+	cpu->ime = false;
 }
 
 void PUSH_AF(CPU *cpu, instruction_t &i)
@@ -1662,7 +1663,7 @@ void LD_A_AIMM16(CPU *cpu, instruction_t &i)
 
 void EI(CPU *cpu, instruction_t &i)
 {
-	// cpu->ime = true;
+	cpu->delayImeEnable();
 }
 
 void CP_A_IMM8(CPU *cpu, instruction_t &i)

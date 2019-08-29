@@ -3,6 +3,9 @@
 
 #include <cstdint>
 
+class CPU;
+void RST(CPU *cpu, uint16_t addr);
+
 // Z00C
 // Sets LSB to carry
 void RL(uint8_t val, uint8_t *result, uint8_t *flags);
