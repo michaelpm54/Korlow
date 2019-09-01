@@ -799,7 +799,7 @@ void LD_L_B(CPU *cpu, instruction_t &i)
 
 void LD_L_C(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Hi(cpu->bc));
+	SetLo(cpu->hl, Lo(cpu->bc));
 }
 
 void LD_L_D(CPU *cpu, instruction_t &i)
@@ -809,7 +809,7 @@ void LD_L_D(CPU *cpu, instruction_t &i)
 
 void LD_L_E(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Hi(cpu->de));
+	SetLo(cpu->hl, Lo(cpu->de));
 }
 
 void LD_L_H(CPU *cpu, instruction_t &i)
@@ -1648,7 +1648,9 @@ void LD_HL_SPIMM8(CPU *cpu, instruction_t &i)
 
 	SetLo(cpu->af, flags);
 
-	cpu->sp = sp;
+	// cpu->sp = sp;
+
+	cpu->hl = sp;
 }
 
 void LD_SP_HL(CPU *cpu, instruction_t &i)
@@ -2161,7 +2163,7 @@ const instructionFunc_t kInstructions[0x100] =
 /* 2 */ JR_NZ_IMM8, LD_HL_IMM16, LDI_HL_A,    INC_HL,   INC_H,         DEC_H,    LD_H_IMM8,   DAA,      JR_Z_IMM8,    ADD_HL_HL, LDI_A_HL,    DEC_HL,  INC_L,        DEC_L,      LD_L_IMM8,  CPL,
 /* 3 */ JR_NC_IMM8, LD_SP_IMM16, LDD_HL_A,    INC_SP,   INC_AHL,       DEC_AHL,  LD_AHL_IMM8, SCF,      JR_C_IMM8,    ADD_HL_SP, LDD_A_HL,    DEC_SP,  INC_A,        DEC_A,      LD_A_IMM8,  CCF,
 /* 4 */ LD_B_B,     LD_B_C,      LD_B_D,      LD_B_E,   LD_B_H,        LD_B_L,   LD_B_AHL,    LD_B_A,   LD_C_B,       LD_C_C,    LD_C_D,      LD_C_E,  LD_C_H,       LD_C_L,     LD_C_AHL,   LD_C_A,
-/* 5 */ LD_D_B,     LD_D_C,      LD_D_D,      LD_D_E,   LD_D_H,        LD_D_L,   LD_D_AHL,    LD_D_A,   LD_E_B,       LD_E_C,    LD_E_D,      LD_E_E,  LD_E_H,       LD_H_L,     LD_E_AHL,   LD_E_A,
+/* 5 */ LD_D_B,     LD_D_C,      LD_D_D,      LD_D_E,   LD_D_H,        LD_D_L,   LD_D_AHL,    LD_D_A,   LD_E_B,       LD_E_C,    LD_E_D,      LD_E_E,  LD_E_H,       LD_E_L,     LD_E_AHL,   LD_E_A,
 /* 6 */ LD_H_B,     LD_H_C,      LD_H_D,      LD_H_E,   LD_H_H,        LD_H_L,   LD_H_AHL,    LD_H_A,   LD_L_B,       LD_L_C,    LD_L_D,      LD_L_E,  LD_L_H,       LD_L_L,     LD_L_AHL,   LD_L_A,
 /* 7 */ LD_AHL_B,   LD_AHL_C,    LD_AHL_D,    LD_AHL_E, LD_AHL_H,      LD_AHL_L, HALT,        LD_AHL_A, LD_A_B,       LD_A_C,    LD_A_D,      LD_A_E,  LD_A_H,       LD_A_L,     LD_A_AHL,   LD_A_A,
 /* 8 */ ADD_A_B,    ADD_A_C,     ADD_A_D,     ADD_A_E,  ADD_A_H,       ADD_A_L,  ADD_A_AHL,   ADD_A_A,  ADC_A_B,      ADC_A_C,   ADC_A_D,     ADC_A_E, ADC_A_H,      ADC_A_L,    ADC_A_AHL,  ADC_A_A,
