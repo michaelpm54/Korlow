@@ -29,6 +29,7 @@ struct MMU
 	void and16(uint16_t addr, uint16_t val);
 
 private:
+	void oam_write8(uint16_t addr, uint8_t val);
 	void io_write8(uint16_t addr, uint8_t val);
 };
 

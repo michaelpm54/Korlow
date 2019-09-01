@@ -135,17 +135,56 @@ int getMapIndex(int x, int y)
 	return ((y / 8) * 32) + (x / 8);
 }
 
-void GPU::updatePixels(int line)
+int getMapEntry(uint8_t *map, int x, int y)
+{
+	return map[getMapIndex(x, y)];
+}
+
+uint8_t decodePixel(std::array<uint8_t, 2> data, int pixelIdx)
+{
+	uint8_t mask = 0x80 >> pixelIdx;
+	uint8_t lower = !!(data[0] & mask);
+	uint8_t upper = !!(data[1] & mask);
+	uint8_t paletteIdx = (upper << 1) | lower;
+	return paletteIdx;
+}
+
+void GPU::setPixel(int x, int y, uint8_t colour)
+{
+	mPixels[y * kWidth + x] = colour;
+}
+
+std::array<std::array<uint8_t, 2>, 8> getTile(uint8_t *tiles, int patternNum, bool isSigned)
+{
+	if (isSigned)
+	{
+		patternNum = int8_t(patternNum);
+	}
+
+	std::array<std::array<uint8_t, 2>, 8> lines;
+	memcpy(lines.data(), tiles + (patternNum * 16), 16);
+	return lines;
+}
+
+void GPU::drawSprite(const sprite_t &sprite)
+{
+	
+}
+
+void GPU::drawScanline(int line)
 {
 	uint8_t lcdc = mmu->mem[kLcdc];
 
 	if (!(lcdc & 0x80))
 		return;
 
+	bool isSigned = true;
+
 	uint16_t tileData = kTileRamSigned;
 	if (lcdc & 0x10)
 	{
 		tileData = kTileRamUnsigned;
+		isSigned = false;
 	}
 
 	uint16_t bgMap = kBgMap0;
@@ -154,27 +193,39 @@ void GPU::updatePixels(int line)
 		bgMap = kBgMap1;
 	}
 
+	uint8_t *map = &mmu->mem[bgMap];
+	uint8_t *tiles = &mmu->mem[tileData];
+
 	line += mmu->mem[kScy];
 
+	int pxY = (mmu->mem[kLy] - 1) % 0x90;
+
+	// bg
 	for (int x = 0; x < 160; x += 8)
 	{
-		int patternNum = mmu->mem[bgMap + getMapIndex(x + mmu->mem[kScx], line)];
-		patternNum = tileData == kTileRamUnsigned ? uint8_t(patternNum) : int8_t(patternNum);
-
-		uint8_t lineData[2];
-		int patternOffset = tileData + (patternNum * 16) + ((line % 8) * 2);
-
-		lineData[0] = mmu->mem[patternOffset];
-		lineData[1] = mmu->mem[patternOffset + 1];
+		int mapX = x + mmu->mem[kScx];
+		int mapY = line;
+		auto tileData = getTile(tiles, getMapEntry(map, mapX, mapY), isSigned);
+		auto lineData = tileData[line % 8];
 
 		for (int i = 0; i < 8; i++)
 		{
-			uint8_t mask = 0x80 >> i;
-			uint8_t lower = !!(lineData[0] & mask);
-			uint8_t upper = !!(lineData[1] & mask);
-			uint8_t combined = (upper << 1) | lower;
-			mPixels[((mmu->mem[kLy] - 1) % 0x90) * 160 + x + i] = mBgPalette[combined];
+			uint8_t palIdx = decodePixel(lineData, i);
+			uint8_t colour = mBgPalette[palIdx];
+			int pxX = x + i;
+			setPixel(pxX, pxY, colour);
 		}
+	}
+
+	if (mSpritesChanged)
+	{
+		memcpy(mSprites.data(), &mmu->mem[kOam], sizeof(sprite_t) * 40);
+		std::sort(mSprites.begin(), mSprites.end(), [](const sprite_t &lh, const sprite_t &rh) {return lh.x < rh.x;});
+		for (const auto &sprite : mSprites)
+		{
+			drawSprite(sprite);
+		}
+		mSpritesChanged = false;
 	}
 }
 
@@ -218,7 +269,7 @@ void GPU::tick(int cycles)
 			if (mmu->mem[kLy] >= 0x91)
 			{
 				mode = MODE_VBLANK;
-				updatePixels(mmu->mem[kLy]);
+				drawScanline(mmu->mem[kLy]);
 				mmu->mem[kLy] = 0;
 				mModeClock = 0;
 				mmu->or8(kIf, 0x1);
@@ -227,7 +278,12 @@ void GPU::tick(int cycles)
 			{
 				mode = MODE_OAM;
 				mmu->mem[kLy]++;
-				updatePixels(mmu->mem[kLy]);
+				if (mmu->mem[kLy] == mmu->mem[kLyc])
+				{
+					mmu->mem[kStat] |= 0x4;
+					mmu->mem[kIf] |= 0x2;
+				}
+				drawScanline(mmu->mem[kLy]);
 				mModeClock = 0;
 			}
 		}

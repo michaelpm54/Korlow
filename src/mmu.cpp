@@ -31,7 +31,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	if (addr == 0xFF01)
 	{
 		serialData.push_back(val);
-		printf("\nSerial data:\n{\n%s\n}\n\n", serialData.c_str());
+		// printf("\nSerial data:\n{\n%s\n}\n\n", serialData.c_str());
 		or8(kIf, 0x4);
 	}
 	else if (addr == 0xFF02)
@@ -123,8 +123,17 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 }
 
+void MMU::oam_write8(uint16_t addr, uint8_t val)
+{
+	printf("OAM write { %04X = %02X }\n", addr, val);
+}
+
 void MMU::write8(uint16_t addr, uint8_t val)
 {
+	if (addr >= kOam && addr < kIo)
+	{
+		oam_write8(addr, val);
+	}
 	if (addr >= kIo && addr < kZeroPage)
 	{
 		io_write8(addr, val);
