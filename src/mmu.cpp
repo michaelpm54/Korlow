@@ -103,11 +103,11 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 	else if (addr == kScy)
 	{
-		printf("SCY: 0x%02X | %d\n", val, val);
+		// printf("SCY: 0x%02X | %d\n", val, val);
 	}
 	else if (addr == kScx)
 	{
-		// printf("SCX ? Tile Scroll X\n");
+		// printf("SCX: 0x%02X | %d\n", val, val);
 	}
 	else if (addr == kLy)
 	{
@@ -121,6 +121,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	{
 		// printf("io write %02x to %04X\n", val, addr);
 	}
+	mem[addr] = val;
 }
 
 void MMU::oam_write8(uint16_t addr, uint8_t val)
@@ -137,6 +138,7 @@ void MMU::write8(uint16_t addr, uint8_t val)
 	if (addr >= kIo && addr < kZeroPage)
 	{
 		io_write8(addr, val);
+		return;
 	}
 	if (val)
 	{
@@ -156,6 +158,31 @@ void MMU::write8(uint16_t addr, uint8_t val)
 		{
 			// printf("BG tile map write 2\n");
 		}
+	}
+	if (addr == kIe)
+	{
+		printf("Enabled interrupt ");
+		if (val & 0x1)
+		{
+			printf("VBLANK");
+		}
+		if (val & 0x2)
+		{
+			printf("LCD STAT");
+		}
+		if (val & 0x4)
+		{
+			printf("TIMER");
+		}
+		if (val & 0x8)
+		{
+			printf("SERIAL");
+		}
+		if (val & 0x10)
+		{
+			printf("JOYPAD");
+		}
+		printf("\n");
 	}
 	mem[addr] = val;
 }

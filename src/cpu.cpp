@@ -36,7 +36,7 @@ void CPU::frame()
 			}
 		}
 		gpu->tick(cycles);
-		interrupts();
+		cycles += interrupts();
 	}
 }
 
@@ -223,42 +223,61 @@ int CPU::numInstructionsExecuted() const
 	return mInstructionCounter;
 }
 
-void CPU::interrupts()
+int CPU::interrupts()
 {
 	if (!ime)
 	{
-		return;
+		return 0;
 	}
 
 	uint8_t If = mmu->mem[kIf] & mmu->mem[kIe];
 
-	if (If & 1)
+	if (!If)
 	{
+		return 0;
+	}
+
+	int cycles = 0;
+
+	if (If & 0b0000'0001)
+	{
+		// printf("INT VBLANK\n");
 		RST(this, 0x40);
-		If &= ~(1UL << 1);
+		If &= ~(1UL << 0b0000'0001);
+		cycles += 4;
 	}
-	if (If & 2)
+	if (If & 0b0000'0010)
 	{
+		// printf("INT STAT\n");
 		RST(this, 0x48);
-		If &= ~(1UL << 2);
+		If &= ~(1UL << 0b0000'0010);
+		cycles += 4;
 	}
-	if (If & 4)
+	if (If & 0b0000'0100)
 	{
+		// printf("INT TIMER\n");
 		RST(this, 0x50);
-		If &= ~(1UL << 4);
+		If &= ~(1UL << 0b0000'0100);
+		cycles += 4;
 	}
-	if (If & 8)
+	if (If & 0b0000'1000)
 	{
+		// printf("INT SERIAL\n");
 		RST(this, 0x58);
-		If &= ~(1UL << 8);
+		If &= ~(1UL << 0b0000'1000);
+		cycles += 4;
 	}
-	if (If & 16)
+	if (If & 0b0001'0000)
 	{
+		// printf("INT JOYPAD\n");
 		RST(this, 0x60);
-		If &= ~(1UL << 16);
+		If &= ~(1UL << 0b0001'0000);
+		cycles += 4;
 	}
 
 	mmu->mem[kIf] = If;
+
+	return cycles;
 }
 
 void CPU::delayImeEnable()

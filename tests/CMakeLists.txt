@@ -3,6 +3,7 @@ set(KORLOW_TEST_SOURCES
 	rotation.cpp
 	addition.cpp
 	subtraction.cpp
+	decrement.cpp
 	increment.cpp
 	load.cpp
 )

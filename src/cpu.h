@@ -49,7 +49,7 @@ public:
 	bool ime { false };
 
 private:
-	void interrupts();
+	int interrupts();
 
 private:
 	registers_t mRegisters;

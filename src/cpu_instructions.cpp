@@ -522,7 +522,7 @@ void DEC_AHL(CPU *cpu, instruction_t &i)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	SUB8(Hi(cpu->af), cpu->mmu->read8(cpu->hl), &result, &flags);
+	SUB8(cpu->mmu->read8(cpu->hl), 1, &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
 	SetLo(cpu->af, (flags & 0b1110'0000) | (cpu->af & 0x10));
 }
@@ -1454,7 +1454,7 @@ void RET_C(CPU *cpu, instruction_t &i)
 
 void RETI(CPU *cpu, instruction_t &i)
 {
-	cpu->ime = false;
+	cpu->ime = true;
 	cpu->pc = cpu->mmu->read16(cpu->sp);
 	cpu->sp += 2;
 }
