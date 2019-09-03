@@ -1,6 +1,9 @@
 #include "doctest.h"
 
+#include "cpu.h"
 #include "cpu_base.h"
+#include "mmu.h"
+#include "types.h"
 
 TEST_CASE("RL sets flags and result correctly")
 {
@@ -309,5 +312,71 @@ TEST_CASE("RRC sets flags and result correctly")
 				CHECK(result == 0x10);
 			}
 		}
+	}
+}
+
+TEST_CASE("Rotate instructions")
+{
+	uint8_t flags = 0;
+	uint8_t result = 0;
+	int cycles = 0; // unused but necessary argument
+	instruction_t i;
+	CPU cpu;
+	MMU mmu;
+	mmu.init();
+	cpu.mmu = &mmu;
+
+	SUBCASE("0X")
+	{
+		i.code = 0x7;
+		SetHi(cpu.af, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0);
+		SetHi(cpu.af, 0x80);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0x1);
+		CHECK(Lo(cpu.af) == FLAGS_CARRY);
+		SetLo(cpu.af, FLAGS_CARRY);
+		SetHi(cpu.af, 0x80 >> 1);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0x80);
+		CHECK(Lo(cpu.af) == 0);
+
+		i.code = 0xF;
+		SetHi(cpu.af, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0);
+		SetHi(cpu.af, 0x0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0x0);
+		CHECK(Lo(cpu.af) == 0x0);
+		SetLo(cpu.af, FLAGS_CARRY);
+		SetHi(cpu.af, 0x2);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0x1);
+		CHECK(Lo(cpu.af) == 0);
+	}
+
+	SUBCASE("1X")
+	{
+		i.code = 0x17;
+		SetLo(cpu.af, 0);
+		SetHi(cpu.af, 0x80);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0);
+		CHECK(Lo(cpu.af) == FLAGS_CARRY);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 1);
+		CHECK(Lo(cpu.af) == 0);
+
+		i.code = 0x1F;
+		SetLo(cpu.af, 0);
+		SetHi(cpu.af, 1);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0);
+		CHECK(Lo(cpu.af) == FLAGS_CARRY);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0x80);
+		CHECK(Lo(cpu.af) == 0);
 	}
 }

@@ -214,6 +214,10 @@ void LD_B_IMM8(CPU *cpu, instruction_t &i)
 	SetHi(cpu->bc, i.op8);
 }
 
+// x = cpu.a.bit[7]
+// carry = x
+// cpu.a << 1
+// cpu.a |= x
 void RLCA(CPU *cpu, instruction_t &i)
 {
 	uint8_t bit7 = !!(cpu->af & 0b1000'0000'0000'0000);
@@ -355,10 +359,10 @@ void LD_E_IMM8(CPU *cpu, instruction_t &i)
 
 void RRA(CPU *cpu, instruction_t &i)
 {
-	uint8_t flags = 0;
+	uint8_t flags = Lo(cpu->af);
 	uint8_t result = 0;
 	RR(Hi(cpu->af), &result, &flags);
-	SetLo(cpu->af, flags & 0b0111'0000);
+	SetLo(cpu->af, flags & FLAGS_CARRY);
 	SetHi(cpu->af, result);
 }
 
