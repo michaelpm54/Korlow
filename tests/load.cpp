@@ -472,13 +472,23 @@ TEST_CASE("Load instructions")
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.af) == 0x3D);
 
-		i = { 0xF8, 0x3E, 0x0, false };
-		cpu.sp = 0xCD00;
+		i = { 0xF8, 0x0, 0x0, false };
+		SetLo(cpu.af, 0);
+		cpu.sp = 0xC000;
 		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 0xCD3E);
-		i = { 0xF8, 0xFF, 0x0, false };
+		CHECK(cpu.sp == 0xC000);
+		CHECK(cpu.hl == 0xC000);
+		CHECK(Lo(cpu.af) == 0);
+		i.op8 = 0xFF;
 		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 0xCD00 - 1);
+		CHECK(cpu.hl == 0xBFFF);
+		i.op8 = 1;
+		cpu.executeRegular(i, cycles);
+		CHECK(cpu.hl == 0xC001);
+		cpu.sp = 0xFF;
+		cpu.executeRegular(i, cycles);
+		CHECK(cpu.hl == 0x0100);
+		CHECK(Lo(cpu.af) == (FLAGS_CARRY | FLAGS_HALFCARRY));
 
 		i.code = 0xF9;
 		cpu.hl = 0xCD02;

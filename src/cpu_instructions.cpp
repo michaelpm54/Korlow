@@ -1627,28 +1627,26 @@ void LD_HL_SPIMM8(CPU *cpu, instruction_t &i)
 	{
 		if (((cpu->sp & 0xFF) + s8) > 0xFF)
 		{
-			flags |= 0x10;
+			flags |= FLAGS_CARRY;
 		}
 		if (((cpu->sp & 0xF) + (s8 & 0xF)) > 0xF)
 		{
-			flags |= 0x20;
+			flags |= FLAGS_HALFCARRY;
 		}
 	}
 	else
 	{
-		if ((sp & 0xFF) <= (cpu->sp & 0xFF))
+		if ((sp & 0xFF) < (cpu->sp & 0xFF))
 		{
-			flags |= 0x10;
+			flags |= FLAGS_CARRY;
 		}
-		if ((sp & 0xF) <= (cpu->sp & 0xF))
+		if ((sp & 0xF) < (cpu->sp & 0xF))
 		{
-			flags |= 0x20;
+			flags |= FLAGS_HALFCARRY;
 		}
 	}
 
 	SetLo(cpu->af, flags);
-
-	// cpu->sp = sp;
 
 	cpu->hl = sp;
 }
