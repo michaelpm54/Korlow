@@ -142,10 +142,6 @@ void CPU::executeRegular(instruction_t &i, int &cycles)
 
 void CPU::executeCB(instruction_t &i, int &cycles)
 {
-	pc += 1;
-
-	i = fetch();
-
 #ifdef DEBUG
 	mRegisters.pc = pc;
 	printRegisters(i.code, false, false);
@@ -183,6 +179,8 @@ int CPU::executeInstruction()
 
 	if (i.code == 0xCB)
 	{
+		pc++;
+		i = fetch();
 		executeCB(i, cycles);
 	}
 	else
