@@ -51,11 +51,21 @@ TEST_CASE("increment")
 		SetHi(cpu.bc, 0x2);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.bc) == 0x3);
+		CHECK(Lo(cpu.af) == 0);
+		SetHi(cpu.bc, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x0C;
 		SetLo(cpu.bc, 0x3);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.bc) == 0x4);
+		CHECK(Lo(cpu.af) == 0);
+		SetLo(cpu.bc, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 
 	SUBCASE("1X")
@@ -72,11 +82,21 @@ TEST_CASE("increment")
 		SetHi(cpu.de, 0x3);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.de) == 0x4);
+		CHECK(Lo(cpu.af) == 0);
+		SetHi(cpu.de, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x1C;
 		SetLo(cpu.de, 0x4);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.de) == 0x5);
+		CHECK(Lo(cpu.af) == 0);
+		SetLo(cpu.de, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 
 	SUBCASE("2X")
@@ -93,11 +113,21 @@ TEST_CASE("increment")
 		SetHi(cpu.hl, 0x6);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.hl) == 0x7);
+		CHECK(Lo(cpu.af) == 0);
+		SetHi(cpu.hl, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x2C;
 		SetLo(cpu.hl, 0x8);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.hl) == 0x9);
+		CHECK(Lo(cpu.af) == 0);
+		SetLo(cpu.hl, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 
 	SUBCASE("3X")
@@ -114,11 +144,21 @@ TEST_CASE("increment")
 		cpu.hl = 0xC000;
 		mmu.mem[cpu.hl] = 0xC;
 		cpu.executeRegular(i, cycles);
-		CHECK(mmu.mem[0xC000] == 0xD);
+		CHECK(mmu.mem[cpu.hl] == 0xD);
+		CHECK(Lo(cpu.af) == 0);
+		mmu.mem[cpu.hl] = 0xFF;
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x3C;
 		SetHi(cpu.af, 0xE);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.af) == 0xF);
+		CHECK(Lo(cpu.af) == 0);
+		SetHi(cpu.af, 0xFF);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 }
