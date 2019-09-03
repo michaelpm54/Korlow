@@ -40,10 +40,16 @@ TEST_CASE("decrement")
 
 	SUBCASE("0X")
 	{
+		SetLo(cpu.af, 0);
 		i.code = 0x5;
 		SetHi(cpu.bc, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.bc) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetHi(cpu.bc, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0xB;
 		cpu.bc = 0x0001;
@@ -57,6 +63,11 @@ TEST_CASE("decrement")
 		SetLo(cpu.bc, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.bc) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetLo(cpu.bc, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 
 	SUBCASE("1X")
@@ -65,6 +76,11 @@ TEST_CASE("decrement")
 		SetHi(cpu.de, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.de) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetHi(cpu.de, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x1B;
 		cpu.de = 0x0001;
@@ -78,6 +94,11 @@ TEST_CASE("decrement")
 		SetLo(cpu.de, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.de) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetLo(cpu.de, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 
 	SUBCASE("2X")
@@ -86,6 +107,11 @@ TEST_CASE("decrement")
 		SetHi(cpu.hl, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.hl) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetHi(cpu.hl, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x2B;
 		cpu.hl = 0x0001;
@@ -99,6 +125,11 @@ TEST_CASE("decrement")
 		SetLo(cpu.hl, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.hl) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetLo(cpu.hl, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 
 	SUBCASE("3X")
@@ -108,6 +139,11 @@ TEST_CASE("decrement")
 		mmu.mem[cpu.hl] = 0x1;
 		cpu.executeRegular(i, cycles);
 		CHECK(mmu.mem[cpu.hl] == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		mmu.mem[cpu.hl] = 0;
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 
 		i.code = 0x3B;
 		cpu.sp = 0xC002;
@@ -121,5 +157,10 @@ TEST_CASE("decrement")
 		SetHi(cpu.af, 0x1);
 		cpu.executeRegular(i, cycles);
 		CHECK(Hi(cpu.af) == 0x0);
+		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_SUBTRACT));
+		SetHi(cpu.af, 0);
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == (FLAGS_SUBTRACT | FLAGS_HALFCARRY));
+		SetLo(cpu.af, 0);
 	}
 }
