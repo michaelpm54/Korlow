@@ -108,5 +108,18 @@ TEST_CASE("decrement")
 		mmu.mem[cpu.hl] = 0x1;
 		cpu.executeRegular(i, cycles);
 		CHECK(mmu.mem[cpu.hl] == 0x0);
+
+		i.code = 0x3B;
+		cpu.sp = 0xC002;
+		cpu.executeRegular(i, cycles);
+		CHECK(cpu.sp == 0xC001);
+		cpu.sp = 0x0100;
+		cpu.executeRegular(i, cycles);
+		CHECK(cpu.sp == 0x00FF);
+
+		i.code = 0x3D;
+		SetHi(cpu.af, 0x1);
+		cpu.executeRegular(i, cycles);
+		CHECK(Hi(cpu.af) == 0x0);
 	}
 }
