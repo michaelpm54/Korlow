@@ -380,533 +380,1119 @@ TEST_CASE("Rotate instructions")
 
 	SUBCASE("CB")
 	{
-		SUBCASE("RLC B")
+		SUBCASE("RLC")
 		{
-			i.code = 0x0;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.bc, 0);
-
-			SUBCASE("0 << 1")
+			SUBCASE("RLC B")
 			{
+				i.code = 0x0;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.bc, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.bc) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					SetHi(cpu.bc, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.bc) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SetHi(cpu.bc, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.bc) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetHi(cpu.bc, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.bc) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC C")
 			{
-				SetHi(cpu.bc, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.bc) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				SetHi(cpu.bc, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.bc) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC C")
-		{
-			i.code = 0x1;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetLo(cpu.bc, 0);
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x1;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetLo(cpu.bc, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.bc) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					SetLo(cpu.bc, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.bc) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SetLo(cpu.bc, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.bc) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetLo(cpu.bc, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.bc) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC D")
 			{
-				SetLo(cpu.bc, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.bc) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				SetLo(cpu.bc, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.bc) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC D")
-		{
-			i.code = 0x2;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.de, 0);
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x2;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.de, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.de) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					SetHi(cpu.de, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.de) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SetHi(cpu.de, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.de) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetHi(cpu.de, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.de) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC E")
 			{
-				SetHi(cpu.de, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.de) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				SetHi(cpu.de, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.de) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC E")
-		{
-			i.code = 0x3;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetLo(cpu.de, 0);
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x3;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetLo(cpu.de, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.de) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					SetLo(cpu.de, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.de) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SetLo(cpu.de, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.de) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetLo(cpu.de, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.de) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC H")
 			{
-				SetLo(cpu.de, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.de) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				SetLo(cpu.de, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.de) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC H")
-		{
-			i.code = 0x4;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.hl, 0);
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x4;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.hl, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.hl) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					SetHi(cpu.hl, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.hl) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SetHi(cpu.hl, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.hl) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetHi(cpu.hl, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.hl) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC L")
 			{
-				SetHi(cpu.hl, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.hl) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				SetHi(cpu.hl, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.hl) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC L")
-		{
-			i.code = 0x5;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetLo(cpu.hl, 0);
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x5;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetLo(cpu.hl, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.hl) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					SetLo(cpu.hl, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.hl) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SetLo(cpu.hl, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.hl) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetLo(cpu.hl, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.hl) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC (HL)")
 			{
-				SetLo(cpu.hl, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.hl) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				SetLo(cpu.hl, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.hl) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC (HL)")
-		{
-			i.code = 0x6;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear value
-			cpu.hl = 0xC000;
-			mmu.mem[cpu.hl] = 0;
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x6;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear value
+				cpu.hl = 0xC000;
 				mmu.mem[cpu.hl] = 0;
-				cpu.executeCB(i, cycles);
-				CHECK(mmu.mem[cpu.hl] == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 << 1")
+				{
+					mmu.mem[cpu.hl] = 0;
+					cpu.executeCB(i, cycles);
+					CHECK(mmu.mem[cpu.hl] == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("1 << 1")
+				{
+					mmu.mem[cpu.hl] = 1;
+					cpu.executeCB(i, cycles);
+					CHECK(mmu.mem[cpu.hl] == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					mmu.mem[cpu.hl] = 0x80;
+					cpu.executeCB(i, cycles);
+					CHECK(mmu.mem[cpu.hl] == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("1 << 1")
+			SUBCASE("RLC A")
 			{
-				mmu.mem[cpu.hl] = 1;
-				cpu.executeCB(i, cycles);
-				CHECK(mmu.mem[cpu.hl] == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("0x80 << 1")
-			{
-				mmu.mem[cpu.hl] = 0x80;
-				cpu.executeCB(i, cycles);
-				CHECK(mmu.mem[cpu.hl] == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RLC A")
-		{
-			i.code = 0x7;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.af, 0);
-
-			SUBCASE("0 << 1")
-			{
+				i.code = 0x7;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.af, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.af) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
-			}
 
-			SUBCASE("1 << 1")
-			{
-				SetHi(cpu.af, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.af) == 2);
-				CHECK(Lo(cpu.af) == 0);
-			}
+				SUBCASE("0 << 1")
+				{
+					SetHi(cpu.af, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.af) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
 
-			SUBCASE("0x80 << 1")
-			{
-				SetHi(cpu.af, 0x80);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.af) == 1);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				SUBCASE("1 << 1")
+				{
+					SetHi(cpu.af, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.af) == 2);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SetHi(cpu.af, 0x80);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.af) == 1);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 		}
 
-		SUBCASE("RRC B")
+		SUBCASE("RRC")
 		{
-			i.code = 0x8;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.bc, 0);
-
-			SUBCASE("0 >> 1")
+			SUBCASE("RRC B")
 			{
+				i.code = 0x8;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.bc, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.bc) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					SetHi(cpu.bc, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.bc) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetHi(cpu.bc, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.bc) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetHi(cpu.bc, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.bc) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC C")
 			{
-				SetHi(cpu.bc, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.bc) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("1 >> 1")
-			{
-				SetHi(cpu.bc, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.bc) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RRC C")
-		{
-			i.code = 0x9;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetLo(cpu.bc, 0);
-
-			SUBCASE("0 >> 1")
-			{
+				i.code = 0x9;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetLo(cpu.bc, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.bc) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					SetLo(cpu.bc, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.bc) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetLo(cpu.bc, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.bc) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetLo(cpu.bc, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.bc) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC D")
 			{
-				SetLo(cpu.bc, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.bc) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("1 >> 1")
-			{
-				SetLo(cpu.bc, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.bc) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RRC D")
-		{
-			i.code = 0xA;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.de, 0);
-
-			SUBCASE("0 >> 1")
-			{
+				i.code = 0xA;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.de, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.de) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					SetHi(cpu.de, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.de) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetHi(cpu.de, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.de) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetHi(cpu.de, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.de) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC E")
 			{
-				SetHi(cpu.de, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.de) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("1 >> 1")
-			{
-				SetHi(cpu.de, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.de) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RRC E")
-		{
-			i.code = 0xB;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetLo(cpu.de, 0);
-
-			SUBCASE("0 >> 1")
-			{
+				i.code = 0xB;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetLo(cpu.de, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.de) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					SetLo(cpu.de, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.de) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetLo(cpu.de, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.de) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetLo(cpu.de, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.de) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC H")
 			{
-				SetLo(cpu.de, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.de) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("1 >> 1")
-			{
-				SetLo(cpu.de, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.de) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RRC H")
-		{
-			i.code = 0xC;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.hl, 0);
-
-			SUBCASE("0 >> 1")
-			{
+				i.code = 0xC;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.hl, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.hl) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					SetHi(cpu.hl, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.hl) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetHi(cpu.hl, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.hl) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetHi(cpu.hl, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.hl) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC L")
 			{
-				SetHi(cpu.hl, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.hl) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("1 >> 1")
-			{
-				SetHi(cpu.hl, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.hl) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RRC L")
-		{
-			i.code = 0xD;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetLo(cpu.hl, 0);
-
-			SUBCASE("0 >> 1")
-			{
+				i.code = 0xD;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetLo(cpu.hl, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.hl) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					SetLo(cpu.hl, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.hl) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetLo(cpu.hl, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.hl) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetLo(cpu.hl, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Lo(cpu.hl) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC (HL)")
 			{
-				SetLo(cpu.hl, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.hl) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
-
-			SUBCASE("1 >> 1")
-			{
-				SetLo(cpu.hl, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Lo(cpu.hl) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
-			}
-		}
-
-		SUBCASE("RRC (HL)")
-		{
-			i.code = 0xE;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			cpu.hl = 0xC000;
-			mmu.mem[cpu.hl] = 0;
-
-			SUBCASE("0 >> 1")
-			{
+				i.code = 0xE;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				cpu.hl = 0xC000;
 				mmu.mem[cpu.hl] = 0;
-				cpu.executeCB(i, cycles);
-				CHECK(mmu.mem[cpu.hl] == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
+
+				SUBCASE("0 >> 1")
+				{
+					mmu.mem[cpu.hl] = 0;
+					cpu.executeCB(i, cycles);
+					CHECK(mmu.mem[cpu.hl] == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					mmu.mem[cpu.hl] = 2;
+					cpu.executeCB(i, cycles);
+					CHECK(mmu.mem[cpu.hl] == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					mmu.mem[cpu.hl] = 1;
+					cpu.executeCB(i, cycles);
+					CHECK(mmu.mem[cpu.hl] == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 
-			SUBCASE("2 >> 1")
+			SUBCASE("RRC A")
 			{
-				mmu.mem[cpu.hl] = 2;
-				cpu.executeCB(i, cycles);
-				CHECK(mmu.mem[cpu.hl] == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
+				i.code = 0xF;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetHi(cpu.af, 0);
 
-			SUBCASE("1 >> 1")
-			{
-				mmu.mem[cpu.hl] = 1;
-				cpu.executeCB(i, cycles);
-				CHECK(mmu.mem[cpu.hl] == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				SUBCASE("0 >> 1")
+				{
+					SetHi(cpu.af, 0);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.af) == 0);
+					CHECK(Lo(cpu.af) == FLAGS_ZERO);
+				}
+
+				SUBCASE("2 >> 1")
+				{
+					SetHi(cpu.af, 2);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.af) == 1);
+					CHECK(Lo(cpu.af) == 0);
+				}
+
+				SUBCASE("1 >> 1")
+				{
+					SetHi(cpu.af, 1);
+					cpu.executeCB(i, cycles);
+					CHECK(Hi(cpu.af) == 0x80);
+					CHECK(Lo(cpu.af) == FLAGS_CARRY);
+				}
 			}
 		}
 
-		SUBCASE("RRC A")
+		SUBCASE("RL")
 		{
-			i.code = 0xF;
-			// clear flags
-			SetLo(cpu.af, 0);
-			// clear register
-			SetHi(cpu.af, 0);
-
-			SUBCASE("0 >> 1")
+			SUBCASE("RL B")
 			{
+				i.code = 0x10;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetHi(cpu.bc, 0);
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.bc, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.bc) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.bc, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.bc) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.bc, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.bc) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.bc, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.bc) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.bc, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.bc) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.bc, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.bc) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL C")
+			{
+				i.code = 0x11;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetLo(cpu.bc, 0);
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.bc, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.bc) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.bc, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.bc) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.bc, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.bc) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.bc, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.bc) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.bc, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.bc) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.bc, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.bc) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL D")
+			{
+				i.code = 0x12;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetHi(cpu.de, 0);
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.de, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.de) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.de, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.de) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.de, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.de) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.de, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.de) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.de, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.de) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.de, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.de) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL E")
+			{
+				i.code = 0x13;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetLo(cpu.de, 0);
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.de, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.de) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.de, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.de) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.de, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.de) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.de, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.de) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.de, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.de) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.de, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.de) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL H")
+			{
+				i.code = 0x14;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetHi(cpu.hl, 0);
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.hl, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.hl) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.hl, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.hl) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.hl, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.hl) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.hl, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.hl) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.hl, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.hl) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.hl, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.hl) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL L")
+			{
+				i.code = 0x15;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				SetLo(cpu.hl, 0);
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.hl, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.hl) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.hl, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.hl) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.hl, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.hl) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.hl, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.hl) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetLo(cpu.hl, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.hl) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetLo(cpu.hl, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Lo(cpu.hl) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL (HL)")
+			{
+				i.code = 0x16;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
+				cpu.hl = 0xC000;
+				mmu.mem[cpu.hl] = 0;
+
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						mmu.mem[cpu.hl] = 0;
+						cpu.executeCB(i, cycles);
+						CHECK(mmu.mem[cpu.hl] == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						mmu.mem[cpu.hl] = 0;
+						cpu.executeCB(i, cycles);
+						CHECK(mmu.mem[cpu.hl] == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						mmu.mem[cpu.hl] = 1;
+						cpu.executeCB(i, cycles);
+						CHECK(mmu.mem[cpu.hl] == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						mmu.mem[cpu.hl] = 1;
+						cpu.executeCB(i, cycles);
+						CHECK(mmu.mem[cpu.hl] == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						mmu.mem[cpu.hl] = 0x80;
+						cpu.executeCB(i, cycles);
+						CHECK(mmu.mem[cpu.hl] == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						mmu.mem[cpu.hl] = 0x80;
+						cpu.executeCB(i, cycles);
+						CHECK(mmu.mem[cpu.hl] == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
+			}
+
+			SUBCASE("RL A")
+			{
+				i.code = 0x17;
+				// clear flags
+				SetLo(cpu.af, 0);
+				// clear register
 				SetHi(cpu.af, 0);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.af) == 0);
-				CHECK(Lo(cpu.af) == FLAGS_ZERO);
-			}
 
-			SUBCASE("2 >> 1")
-			{
-				SetHi(cpu.af, 2);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.af) == 1);
-				CHECK(Lo(cpu.af) == 0);
-			}
+				SUBCASE("0 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.af, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.af) == 1);
+						CHECK(Lo(cpu.af) == 0);
+					}
 
-			SUBCASE("1 >> 1")
-			{
-				SetHi(cpu.af, 1);
-				cpu.executeCB(i, cycles);
-				CHECK(Hi(cpu.af) == 0x80);
-				CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.af, 0);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.af) == 0);
+						CHECK(Lo(cpu.af) == FLAGS_ZERO);
+					}
+				}
+
+				SUBCASE("1 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.af, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.af) == 3);
+						CHECK(Lo(cpu.af) == 0);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.af, 1);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.af) == 2);
+						CHECK(Lo(cpu.af) == 0);
+					}
+				}
+
+				SUBCASE("0x80 << 1")
+				{
+					SUBCASE("With carry")
+					{
+						SetLo(cpu.af, FLAGS_CARRY);
+						SetHi(cpu.af, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.af) == 1);
+						CHECK(Lo(cpu.af) == FLAGS_CARRY);
+					}
+
+					SUBCASE("Without carry")
+					{
+						SetLo(cpu.af, 0);
+						SetHi(cpu.af, 0x80);
+						cpu.executeCB(i, cycles);
+						CHECK(Hi(cpu.af) == 0);
+						CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+					}
+				}
 			}
 		}
 	}
