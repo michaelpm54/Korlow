@@ -370,10 +370,13 @@ void RRA(CPU *cpu, instruction_t &i)
 
 void JR_NZ_IMM8(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x80))
+	if (!(cpu->af & FLAGS_ZERO))
 	{
 		cpu->pc += int8_t(i.op8);
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -436,7 +439,10 @@ void JR_Z_IMM8(CPU *cpu, instruction_t &i)
 	if (cpu->af & 0x80)
 	{
 		cpu->pc += int8_t(i.op8);
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -490,10 +496,13 @@ void CPL(CPU *cpu, instruction_t &i)
 
 void JR_NC_IMM8(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x10))
+	if (!(cpu->af & FLAGS_CARRY))
 	{
 		cpu->pc += int8_t(i.op8);
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -543,10 +552,13 @@ void SCF(CPU *cpu, instruction_t &i)
 
 void JR_C_IMM8(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x10)
+	if (cpu->af & FLAGS_CARRY)
 	{
 		cpu->pc += int8_t(i.op8);
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1286,11 +1298,14 @@ void CP_A_A(CPU *cpu, instruction_t &i)
 
 void RET_NZ(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x80))
+	if (!(cpu->af & FLAGS_ZERO))
 	{
 		cpu->pc = cpu->mmu->read16(cpu->sp);
 		cpu->sp += 2;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1302,10 +1317,13 @@ void POP_BC(CPU *cpu, instruction_t &i)
 
 void JP_NZ_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x80))
+	if (!(cpu->af & FLAGS_ZERO))
 	{
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1316,12 +1334,15 @@ void JP_IMM16(CPU *cpu, instruction_t &i)
 
 void CALL_NZ_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x80))
+	if (!(cpu->af & FLAGS_ZERO))
 	{
 		cpu->sp -= 2;
 		cpu->mmu->write16(cpu->sp, cpu->pc);
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1347,11 +1368,14 @@ void RST_00(CPU *cpu, instruction_t &i)
 
 void RET_Z(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x80)
+	if (cpu->af & FLAGS_ZERO)
 	{
 		cpu->pc = cpu->mmu->read16(cpu->sp);
 		cpu->sp += 2;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1363,10 +1387,13 @@ void RET(CPU *cpu, instruction_t &i)
 
 void JP_Z_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x80)
+	if (cpu->af & FLAGS_ZERO)
 	{
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1376,12 +1403,15 @@ void CB(CPU *cpu, instruction_t &i)
 
 void CALL_Z_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x80)
+	if (cpu->af & FLAGS_ZERO)
 	{
 		cpu->sp -= 2;
 		cpu->mmu->write16(cpu->sp, cpu->pc);
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1406,11 +1436,14 @@ void RST_08(CPU *cpu, instruction_t &i)
 
 void RET_NC(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x10))
+	if (!(cpu->af & FLAGS_CARRY))
 	{
 		cpu->pc = cpu->mmu->read16(cpu->sp);
 		cpu->sp += 2;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1422,21 +1455,27 @@ void POP_DE(CPU *cpu, instruction_t &i)
 
 void JP_NC_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x10))
+	if (!(cpu->af & FLAGS_CARRY))
 	{
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
 void CALL_NC_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (!(cpu->af & 0x10))
+	if (!(cpu->af & FLAGS_CARRY))
 	{
 		cpu->sp -= 2;
 		cpu->mmu->write16(cpu->sp, cpu->pc);
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1448,11 +1487,14 @@ void PUSH_DE(CPU *cpu, instruction_t &i)
 
 void RET_C(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x10)
+	if (cpu->af & FLAGS_CARRY)
 	{
 		cpu->pc = cpu->mmu->read16(cpu->sp);
 		cpu->sp += 2;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1465,10 +1507,13 @@ void RETI(CPU *cpu, instruction_t &i)
 
 void JP_C_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x10)
+	if (cpu->af & FLAGS_CARRY)
 	{
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 
@@ -1484,12 +1529,15 @@ void RST_10(CPU *cpu, instruction_t &i)
 
 void CALL_C_IMM16(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x10)
+	if (cpu->af & FLAGS_CARRY)
 	{
 		cpu->sp -= 2;
 		cpu->mmu->write16(cpu->sp, cpu->pc);
 		cpu->pc = i.op16;
-		i.didAction = true;
+	}
+	else
+	{
+		i.didAction = false;
 	}
 }
 

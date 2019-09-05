@@ -6,6 +6,7 @@ set(KORLOW_TEST_SOURCES
 	decrement.cpp
 	increment.cpp
 	load.cpp
+	flow.cpp
 )
 
 set(KORLOW_TEST_HEADERS
