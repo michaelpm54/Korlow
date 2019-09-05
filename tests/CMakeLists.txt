@@ -8,6 +8,7 @@ set(KORLOW_TEST_SOURCES
 	load.cpp
 	flow.cpp
 	stack.cpp
+	logic.cpp
 )
 
 set(KORLOW_TEST_HEADERS

@@ -489,7 +489,9 @@ void LD_L_IMM8(CPU *cpu, instruction_t &i)
 void CPL(CPU *cpu, instruction_t &i)
 {
 	SetHi(cpu->af, ~Hi(cpu->af));
-	SetFlags(cpu->af, 0b0110'0000, 0b0110'0000);
+	uint8_t old_flags = Lo(cpu->af);
+	uint8_t new_flags = (old_flags & (FLAGS_ZERO | FLAGS_CARRY)) | (FLAGS_SUBTRACT | FLAGS_HALFCARRY);
+	SetLo(cpu->af, new_flags);
 }
 
 // 0x30
@@ -599,7 +601,9 @@ void LD_A_IMM8(CPU *cpu, instruction_t &i)
 
 void CCF(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->af, 	Lo(cpu->af) & 0b1000'0000);	
+	uint8_t old_flags = Lo(cpu->af);
+	uint8_t new_flags = (old_flags & FLAGS_ZERO) | ((~(old_flags & FLAGS_CARRY)) & FLAGS_CARRY);
+	SetLo(cpu->af, new_flags);
 }
 
 // 0x40
