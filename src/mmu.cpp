@@ -31,7 +31,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	if (addr == 0xFF01)
 	{
 		serialData.push_back(val);
-		// printf("\nSerial data:\n{\n%s\n}\n\n", serialData.c_str());
+		printf("\nSerial data:\n{\n%s\n}\n\n", serialData.c_str());
 		or8(kIf, 0x4);
 	}
 	else if (addr == 0xFF02)
@@ -111,7 +111,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 	else if (addr == kLy)
 	{
-		mem[kLy] = 0;
+		val = 0;
 	}
 	else if (addr == kBgPalette)
 	{

@@ -1,7 +1,7 @@
 #include "doctest.h"
 #include "cpu.h"
-#include "mmu.h"
 #include "cpu_base.h"
+#include "mmu.h"
 #include "types.h"
 
 TEST_CASE("Logical instructions")
@@ -52,5 +52,18 @@ TEST_CASE("Logical instructions")
 		SetLo(cpu.af, 0);
 		cpu.executeRegular(i, cycles);
 		CHECK(Lo(cpu.af) == FLAGS_CARRY);
+	}
+
+	SUBCASE("NOP")
+	{
+		// Make sure it's doing nothing :^)
+		uint8_t flags = Lo(cpu.af);
+		uint16_t pc = cpu.pc;
+		uint16_t sp = cpu.sp;
+		i.code = 0x0;
+		cpu.executeRegular(i, cycles);
+		CHECK(Lo(cpu.af) == flags);
+		CHECK(cpu.pc == (pc + 1));
+		CHECK(cpu.sp == sp);
 	}
 }

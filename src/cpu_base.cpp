@@ -55,17 +55,18 @@ void ADD8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags)
 {
 	*flags = 0;
 	*result = a + b;
-	if ((a ^ b ^ *result) & 0x10)
+
+	if ((a ^ b ^ *result) & FLAGS_CARRY)
 	{
-		*flags |= 0x20;
+		*flags |= FLAGS_HALFCARRY;
 	}
 	if (uint16_t(a) + uint16_t(b) > 0xFF)
 	{
-		*flags |= 0x10;
+		*flags |= FLAGS_CARRY;
 	}
 	if (*result == 0)
 	{
-		*flags |= 0x80;
+		*flags |= FLAGS_ZERO;
 	}
 }
 
@@ -73,17 +74,17 @@ void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags)
 {
 	*flags = 0;
 	*result = a + b;
-	if (((a & 0xFF) ^ (b & 0xFF) ^ ((*result) & 0xFF)) & 0x10)
+	if ((a & 0xF) + (b & 0xF) > 0xF)
 	{
-		*flags |= 0x20;
+		*flags |= FLAGS_HALFCARRY;
 	}
 	if ((a & 0xFF) + (b & 0xFF) > 0xFF)
 	{
-		*flags |= 0x10;
+		*flags |= FLAGS_CARRY;
 	}
 	if (*result == 0)
 	{
-		*flags |= 0x80;
+		*flags |= FLAGS_ZERO;
 	}
 }
 
