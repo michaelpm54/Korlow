@@ -10,7 +10,12 @@
 // #define DEBUG
 
 static constexpr int kCpuFreq = 4194304;
-static constexpr int kMaxCyclesPerFrame = kCpuFreq / 15;
+static constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
+
+void CPU::halt()
+{
+	mHalt = true;
+}
 
 void CPU::frame()
 {
@@ -22,7 +27,11 @@ void CPU::frame()
 	int cycles = 0;
 	while (cycles < kMaxCyclesPerFrame && !mBreak)
 	{
-		cycles += executeInstruction();
+		if (!mHalt)
+		{
+			cycles += executeInstruction();
+		}
+
 		if (mDelayedImeEnable)
 		{
 			if (mDelayedImeEnable == 2)
@@ -240,6 +249,7 @@ int CPU::interrupts()
 	if (If & 0b0000'0001)
 	{
 		// printf("INT VBLANK\n");
+		mHalt = false;
 		RST(this, 0x40);
 		If &= ~(1UL << 0b0000'0001);
 		cycles += 4;
@@ -247,6 +257,7 @@ int CPU::interrupts()
 	if (If & 0b0000'0010)
 	{
 		// printf("INT STAT\n");
+		mHalt = false;
 		RST(this, 0x48);
 		If &= ~(1UL << 0b0000'0010);
 		cycles += 4;
@@ -254,6 +265,7 @@ int CPU::interrupts()
 	if (If & 0b0000'0100)
 	{
 		// printf("INT TIMER\n");
+		mHalt = false;
 		RST(this, 0x50);
 		If &= ~(1UL << 0b0000'0100);
 		cycles += 4;
@@ -261,6 +273,7 @@ int CPU::interrupts()
 	if (If & 0b0000'1000)
 	{
 		// printf("INT SERIAL\n");
+		mHalt = false;
 		RST(this, 0x58);
 		If &= ~(1UL << 0b0000'1000);
 		cycles += 4;
@@ -268,6 +281,7 @@ int CPU::interrupts()
 	if (If & 0b0001'0000)
 	{
 		// printf("INT JOYPAD\n");
+		mHalt = false;
 		RST(this, 0x60);
 		If &= ~(1UL << 0b0001'0000);
 		cycles += 4;

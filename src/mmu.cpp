@@ -144,19 +144,19 @@ void MMU::write8(uint16_t addr, uint8_t val)
 	{
 		if (addr >= kTileRamUnsigned && addr < kTileRamSigned)
 		{
-			// printf("BG Data 1 write\n");
+			// printf("BG Data 1 write { %04X, %02X }\n", addr, val);
 		}
 		else if (addr >= kTileRamSigned && addr < kBgMap0)
 		{
-			// printf("BG Data 2 write\n");
+			// printf("BG Data 2 write { %04X, %02X }\n", addr, val);
 		}
 		else if (addr >= kBgMap0 && addr < kBgMap1)
 		{
-			// printf("BG tile map write 1\n");
+			// printf("BG tile map write 1 { %04X, %02X }\n", addr, val);
 		}
 		else if (addr >= kBgMap1 && addr < kCartRam)
 		{
-			// printf("BG tile map write 2\n");
+			// printf("BG tile map write 2 { %04X, %02X }\n", addr, val);
 		}
 	}
 	if (addr == kIe)
@@ -181,6 +181,10 @@ void MMU::write8(uint16_t addr, uint8_t val)
 		if (val & 0x10)
 		{
 			printf("JOYPAD");
+		}
+		else
+		{
+			printf("None");
 		}
 		printf("\n");
 	}

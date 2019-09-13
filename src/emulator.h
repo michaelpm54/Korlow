@@ -47,6 +47,7 @@ private:
 	std::chrono::time_point<std::chrono::system_clock> mLastDumpTime;
 	Font *mFont { nullptr };
 	std::vector<Message> mMessages;
+	bool mPaused { false };
 };
 
 #endif // EMULATOR_H

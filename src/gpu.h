@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <array>
 #include <GL/gl.h>
+#include <glm/glm.hpp>
 
 struct sprite_t
 {
@@ -28,6 +29,11 @@ public:
 	void destroyGLObjects();
 	void tick(int cycles);
 	void setBgPalette(uint8_t val);
+
+	void setSize(int w, int h);
+
+	// Map
+	void updateMap();
 
 private:
 	void setPixel(int x, int y, uint8_t colour);
@@ -55,6 +61,20 @@ private:
 	int mModeClock { 0 };
 	bool mSpritesChanged { false };
 	std::array<sprite_t, 40> mSprites;
+
+	int mWidth { 0 };
+	int mHeight { 0 };
+	int mNumPixels { 0 };
+
+	glm::mat4 mProjMatrix { 1.0f };
+	glm::mat4 mMainModel { 1.0f };
+	glm::mat4 mMapModel { 1.0f };
+
+	// Map
+	GLuint mMapTex;
+	GLuint mMapBuf;
+	GLuint mMapVao;
+	uint8_t *mMapData { nullptr };
 };
 
 #endif // GPU_H

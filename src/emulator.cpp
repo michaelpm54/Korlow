@@ -14,6 +14,10 @@
 #include "window.h"
 #include "util.h"
 
+constexpr int kScreenScale = 3;
+constexpr int kScreenSizeX = 160 * kScreenScale + (32 * 2 * kScreenScale);
+constexpr int kScreenSizeY = 144 * kScreenScale;
+
 Emulator::Emulator(std::string biosPath, std::string romPath, uint8_t verbosityFlags)
 	:
 	mBiosPath(std::move(biosPath)),
@@ -35,10 +39,9 @@ Emulator::~Emulator()
 
 int Emulator::run()
 {
-	const int screenScale = 3;
 	mWindow = new Window();
 	mWindow->setTitle("Korlow2");
-	mWindow->setSize(160 * screenScale, 144 * screenScale);
+	mWindow->setSize(kScreenSizeX, kScreenSizeY);
 	mWindow->create();
 	mWindow->addReceiver(this);
 
@@ -92,6 +95,7 @@ int Emulator::run()
 	mMmu->bios = biosData.get();
 	std::copy_n(romData.get(), romSize, &mMmu->mem[0]);
 
+	mGpu->setSize(kScreenSizeX, kScreenSizeY);
 	mGpu->reset();
 	mGpu->initOpenGL();
 	mGpu->mmu = mMmu;
@@ -110,12 +114,16 @@ int Emulator::loop()
 {
 	while (mContinue && !mWindow->closed() && !mCpu->didBreak())
 	{
+
 		updateMessages();
 
-		mCpu->frame();
-
 		mWindow->events();
-		mGpu->frame();
+
+		if (!mPaused)
+		{
+			mCpu->frame();
+			mGpu->frame();
+		}
 
 		renderMessages();
 
@@ -146,6 +154,15 @@ void Emulator::sendKey(int key, int scancode, int action, int mods)
 		if (key == GLFW_KEY_D)
 		{
 			dumpRam();
+		}
+		else if (key == GLFW_KEY_M)
+		{
+			mGpu->updateMap();
+		}
+		else if (key == GLFW_KEY_SPACE)
+		{
+			mPaused = !mPaused;
+			mMessages.push_back({mPaused ? "Paused" : "Unpaused", 8, 52, std::chrono::system_clock::now(), std::chrono::milliseconds(2000)});
 		}
 	}
 }

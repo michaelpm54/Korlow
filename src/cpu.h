@@ -35,6 +35,8 @@ public:
 	int numInstructionsExecuted() const;
 	void delayImeEnable();
 
+	void halt();
+
 public:
 	GPU *gpu { nullptr };
 	MMU *mmu { nullptr };
@@ -56,6 +58,7 @@ private:
 	bool mBreak { false };
 	int mInstructionCounter { 0 };
 	int mDelayedImeEnable { 0 };
+	bool mHalt { false };
 };
 
 #endif // CPU_H

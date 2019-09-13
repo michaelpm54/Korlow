@@ -29,8 +29,8 @@ void SWAP_RH(CPU *cpu, uint16_t &r)
 	uint8_t hi = (n & 0xF0) >> 4;
 	uint8_t lo = (n & 0x0F);
 	uint8_t result = (lo << 4) | hi;
-	SetHi(r, result);;
-	SetLo(cpu->af, (!result) ? 0x80 : 0x0);;
+	SetHi(r, result);
+	SetLo(cpu->af, (!result) ? 0x80 : 0x0);
 }
 
 void SWAP_RL(CPU *cpu, uint16_t &r)
@@ -39,8 +39,8 @@ void SWAP_RL(CPU *cpu, uint16_t &r)
 	uint8_t hi = (n & 0xF0) >> 4;
 	uint8_t lo = (n & 0x0F);
 	uint8_t result = (lo << 4) | hi;
-	SetLo(r, result);;
-	SetLo(cpu->af, (!result) ? 0x80 : 0x0);;
+	SetLo(r, result);
+	SetLo(cpu->af, (!result) ? 0x80 : 0x0);
 }
 
 void SRL_RH(CPU *cpu, uint16_t &r)
@@ -57,8 +57,8 @@ void SRL_RH(CPU *cpu, uint16_t &r)
 	{
 		flags |= 0x10;
 	}
-	SetHi(r, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(r, result);
+	SetLo(cpu->af, flags);
 }
 
 void SRL_RL(CPU *cpu, uint16_t &r)
@@ -75,21 +75,21 @@ void SRL_RL(CPU *cpu, uint16_t &r)
 	{
 		flags |= 0x10;
 	}
-	SetLo(r, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(r, result);
+	SetLo(cpu->af, flags);
 }
 
 void XOR_A_R(CPU *cpu, uint8_t r)
 {
-	SetHi(cpu->af, Hi(cpu->af ^ r));;
-	SetLo(cpu->af, Hi(cpu->af) == 0 ? 0x80 : 0);;
+	SetHi(cpu->af, Hi(cpu->af) ^ r);
+	SetLo(cpu->af, Hi(cpu->af) == 0 ? 0x80 : 0);
 }
 
 void AND_A_R(CPU *cpu, uint8_t r)
 {
 	// Z010
-	SetHi(cpu->af, Hi(cpu->af) & r);;
-	SetLo(cpu->af, Hi(cpu->af) ? 0xA0 : 0x20);;
+	SetHi(cpu->af, Hi(cpu->af) & r);
+	SetLo(cpu->af, Hi(cpu->af) ? 0xA0 : 0x20);
 }
 
 void OR_A_R(CPU *cpu, uint8_t b)
@@ -98,13 +98,13 @@ void OR_A_R(CPU *cpu, uint8_t b)
 	uint8_t result = Hi(cpu->af) | b;
 	if (result == 0)
 	{
-		SetLo(cpu->af, 0x80);;
+		SetLo(cpu->af, 0x80);
 	}
 	else
 	{
-		SetLo(cpu->af, 0x00);;
+		SetLo(cpu->af, 0x00);
 	}
-	SetHi(cpu->af, result);;
+	SetHi(cpu->af, result);
 }
 
 uint8_t SLA_REG8(CPU *cpu, uint8_t r)
@@ -122,7 +122,7 @@ uint8_t SLA_REG8(CPU *cpu, uint8_t r)
 	{
 		f |= (newCarry << 4);
 	}
-	SetLo(cpu->af, f);;
+	SetLo(cpu->af, f);
 	return r;
 }
 
@@ -141,7 +141,7 @@ uint8_t SRA_REG8(CPU *cpu, uint8_t r)
 	{
 		f |= (newCarry << 4);
 	}
-	SetLo(cpu->af, f);;
+	SetLo(cpu->af, f);
 	return r;
 }
 
@@ -170,8 +170,8 @@ void ADC_A_R(CPU *cpu, uint8_t r)
 		flags |= FLAGS_ZERO;
 	}
 
-	SetLo(cpu->af, flags);;
-	SetHi(cpu->af, result);;
+	SetLo(cpu->af, flags);
+	SetHi(cpu->af, result);
 }
 
 void SBC_A_R(CPU *cpu, uint8_t r)
@@ -199,15 +199,15 @@ void SBC_A_R(CPU *cpu, uint8_t r)
 		flags |= FLAGS_ZERO;
 	}
 
-	SetLo(cpu->af, flags);;
-	SetHi(cpu->af, result);;
+	SetLo(cpu->af, flags);
+	SetHi(cpu->af, result);
 }
 
 // Merges flags according to mask
 void SetFlags(uint16_t &af, uint8_t flags, uint8_t mask)
 {
 	uint8_t f = Lo(af);
-	SetLo(af, f ^ ((f ^ flags) & mask));;
+	SetLo(af, f ^ ((f ^ flags) & mask));
 }
 
 // 0x00
@@ -243,7 +243,7 @@ void DEC_B(CPU *cpu, instruction_t &i)
 
 void LD_B_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, i.op8);;
+	SetHi(cpu->bc, i.op8);
 }
 
 // x = cpu.a.bit[7]
@@ -253,8 +253,8 @@ void LD_B_IMM8(CPU *cpu, instruction_t &i)
 void RLCA(CPU *cpu, instruction_t &i)
 {
 	uint8_t bit7 = !!(cpu->af & 0b1000'0000'0000'0000);
-	SetLo(cpu->af, bit7 << 4);;
-	SetHi(cpu->af, (Hi(cpu->af) << 1) | bit7);;
+	SetLo(cpu->af, bit7 << 4);
+	SetHi(cpu->af, (Hi(cpu->af) << 1) | bit7);
 }
 
 void LD_AIMM16_SP(CPU *cpu, instruction_t &i)
@@ -274,7 +274,7 @@ void ADD_HL_BC(CPU *cpu, instruction_t &i)
 
 void LD_A_ABC(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->bc));;
+	SetHi(cpu->af, cpu->mmu->read8(cpu->bc));
 }
 
 void DEC_BC(CPU *cpu, instruction_t &i)
@@ -300,8 +300,8 @@ void LD_C_IMM8(CPU *cpu, instruction_t &i)
 void RRCA(CPU *cpu, instruction_t &i)
 {
 	uint8_t bit0 = !!(cpu->af & 0b0000'0001'0000'0000);
-	SetLo(cpu->af, bit0 << 4);;
-	SetHi(cpu->af, ((Hi(cpu->af) >> 1) & 0b0111'1111) | (bit0 << 7));;
+	SetLo(cpu->af, bit0 << 4);
+	SetHi(cpu->af, ((Hi(cpu->af) >> 1) & 0b0111'1111) | (bit0 << 7));
 }
 
 // 0x10
@@ -337,7 +337,7 @@ void DEC_D(CPU *cpu, instruction_t &i)
 
 void LD_D_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, i.op8);;
+	SetHi(cpu->de, i.op8);
 }
 
 void RLA(CPU *cpu, instruction_t &i)
@@ -345,8 +345,8 @@ void RLA(CPU *cpu, instruction_t &i)
 	uint8_t flags = Lo(cpu->af);
 	uint8_t result = 0;
 	RL(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags & 0b0111'0000);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags & 0b0111'0000);
 }
 
 void JR_IMM8(CPU *cpu, instruction_t &i)
@@ -361,12 +361,12 @@ void ADD_HL_DE(CPU *cpu, instruction_t &i)
 	uint16_t result = 0;
 	ADD16(cpu->hl, cpu->de, &result, &flags);
 	cpu->hl = result;
-	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));;
+	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));
 }
 
 void LD_A_ADE(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->de));;
+	SetHi(cpu->af, cpu->mmu->read8(cpu->de));
 }
 
 void DEC_DE(CPU *cpu, instruction_t &i)
@@ -386,7 +386,7 @@ void DEC_E(CPU *cpu, instruction_t &i)
 
 void LD_E_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, i.op8);;
+	SetLo(cpu->de, i.op8);
 }
 
 void RRA(CPU *cpu, instruction_t &i)
@@ -394,8 +394,8 @@ void RRA(CPU *cpu, instruction_t &i)
 	uint8_t flags = Lo(cpu->af);
 	uint8_t result = 0;
 	RR(Hi(cpu->af), &result, &flags);
-	SetLo(cpu->af, flags & FLAGS_CARRY);;
-	SetHi(cpu->af, result);;
+	SetLo(cpu->af, flags & FLAGS_CARRY);
+	SetHi(cpu->af, result);
 }
 
 // 0x20
@@ -434,7 +434,7 @@ void DEC_H(CPU *cpu, instruction_t &i)
 
 void LD_H_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, i.op8);;
+	SetHi(cpu->hl, i.op8);
 }
 
 void DAA(CPU *cpu, instruction_t &i)
@@ -462,8 +462,8 @@ void DAA(CPU *cpu, instruction_t &i)
 		f |= 0x10;
 	if ( ! (tmp & 0xFF) )
 		f |= 0x80;
-	SetHi(cpu->af, tmp & 0xFF);;
-	SetLo(cpu->af, f);;
+	SetHi(cpu->af, tmp & 0xFF);
+	SetLo(cpu->af, f);
 }
 
 void JR_Z_IMM8(CPU *cpu, instruction_t &i)
@@ -490,12 +490,12 @@ void ADD_HL_HL(CPU *cpu, instruction_t &i)
 	uint16_t result = 0;
 	ADD16(cpu->hl, cpu->hl, &result, &flags);
 	cpu->hl = result;
-	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));;
+	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));
 }
 
 void LDI_A_HL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl++));;
+	SetHi(cpu->af, cpu->mmu->read8(cpu->hl++));
 }
 
 void DEC_HL(CPU *cpu, instruction_t &i)
@@ -515,15 +515,15 @@ void DEC_L(CPU *cpu, instruction_t &i)
 
 void LD_L_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, i.op8);;
+	SetLo(cpu->hl, i.op8);
 }
 
 void CPL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, ~Hi(cpu->af));;
+	SetHi(cpu->af, ~Hi(cpu->af));
 	uint8_t old_flags = Lo(cpu->af);
 	uint8_t new_flags = (old_flags & (FLAGS_ZERO | FLAGS_CARRY)) | (FLAGS_SUBTRACT | FLAGS_HALFCARRY);
-	SetLo(cpu->af, new_flags);;
+	SetLo(cpu->af, new_flags);
 }
 
 // 0x30
@@ -562,7 +562,7 @@ void INC_AHL(CPU *cpu, instruction_t &i)
 	uint8_t result = 0;
 	INC8(cpu->mmu->read8(cpu->hl), &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->af, flags);
 }
 
 void DEC_AHL(CPU *cpu, instruction_t &i)
@@ -571,7 +571,7 @@ void DEC_AHL(CPU *cpu, instruction_t &i)
 	uint8_t result = 0;
 	SUB8(cpu->mmu->read8(cpu->hl), 1, &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, (flags & 0b1110'0000) | (cpu->af & 0x10));;
+	SetLo(cpu->af, (flags & 0b1110'0000) | (cpu->af & 0x10));
 }
 
 void LD_AHL_IMM8(CPU *cpu, instruction_t &i)
@@ -581,7 +581,7 @@ void LD_AHL_IMM8(CPU *cpu, instruction_t &i)
 
 void SCF(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->af, (Lo(cpu->af) & 0b1000'0000) | 0x10);;
+	SetLo(cpu->af, (Lo(cpu->af) & 0b1000'0000) | 0x10);
 }
 
 void JR_C_IMM8(CPU *cpu, instruction_t &i)
@@ -603,12 +603,12 @@ void ADD_HL_SP(CPU *cpu, instruction_t &i)
 	uint16_t result = 0;
 	ADD16(cpu->hl, cpu->sp, &result, &flags);
 	cpu->hl = result;
-	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));;
+	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));
 }
 
 void LDD_A_HL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl--));;
+	SetHi(cpu->af, cpu->mmu->read8(cpu->hl--));
 }
 
 void DEC_SP(CPU *cpu, instruction_t &i)
@@ -628,260 +628,260 @@ void DEC_A(CPU *cpu, instruction_t &i)
 
 void LD_A_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, i.op8);;
+	SetHi(cpu->af, i.op8);
 }
 
 void CCF(CPU *cpu, instruction_t &i)
 {
 	uint8_t old_flags = Lo(cpu->af);
 	uint8_t new_flags = (old_flags & FLAGS_ZERO) | ((~(old_flags & FLAGS_CARRY)) & FLAGS_CARRY);
-	SetLo(cpu->af, new_flags);;
+	SetLo(cpu->af, new_flags);
 }
 
 // 0x40
 
 void LD_B_B(CPU *cpu, instruction_t &i)
 {
-	// SetHi(cpu->bc, Hi(cpu->bc));;
+	// SetHi(cpu->bc, Hi(cpu->bc));
 }
 
 void LD_B_C(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Lo(cpu->bc));;
+	SetHi(cpu->bc, Lo(cpu->bc));
 }
 
 void LD_B_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Hi(cpu->de));;
+	SetHi(cpu->bc, Hi(cpu->de));
 }
 
 void LD_B_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Lo(cpu->de));;
+	SetHi(cpu->bc, Lo(cpu->de));
 }
 
 void LD_B_H(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Hi(cpu->hl));;
+	SetHi(cpu->bc, Hi(cpu->hl));
 }
 
 void LD_B_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Lo(cpu->hl));;
+	SetHi(cpu->bc, Lo(cpu->hl));
 }
 
 void LD_B_AHL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, cpu->mmu->read8(cpu->hl));;
+	SetHi(cpu->bc, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_B_A(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Hi(cpu->af));;
+	SetHi(cpu->bc, Hi(cpu->af));
 }
 
 void LD_C_B(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Hi(cpu->bc));;
+	SetLo(cpu->bc, Hi(cpu->bc));
 }
 
 void LD_C_C(CPU *cpu, instruction_t &i)
 {
-	// SetLo(cpu->bc, Lo(cpu->bc));;
+	// SetLo(cpu->bc, Lo(cpu->bc));
 }
 
 void LD_C_D(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Hi(cpu->de));;
+	SetLo(cpu->bc, Hi(cpu->de));
 }
 
 void LD_C_E(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Lo(cpu->de));;
+	SetLo(cpu->bc, Lo(cpu->de));
 }
 
 void LD_C_H(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Hi(cpu->hl));;
+	SetLo(cpu->bc, Hi(cpu->hl));
 }
 
 void LD_C_L(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Lo(cpu->hl));;
+	SetLo(cpu->bc, Lo(cpu->hl));
 }
 
 void LD_C_AHL(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, cpu->mmu->read8(cpu->hl));;
+	SetLo(cpu->bc, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_C_A(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Hi(cpu->af));;
+	SetLo(cpu->bc, Hi(cpu->af));
 }
 
 // 0x50
 
 void LD_D_B(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Hi(cpu->bc));;
+	SetHi(cpu->de, Hi(cpu->bc));
 }
 
 void LD_D_C(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->bc));;
+	SetHi(cpu->de, Lo(cpu->bc));
 }
 
 void LD_D_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Hi(cpu->de));;
+	SetHi(cpu->de, Hi(cpu->de));
 }
 
 void LD_D_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de));;
+	SetHi(cpu->de, Lo(cpu->de));
 }
 
 void LD_D_H(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Hi(cpu->hl));;
+	SetHi(cpu->de, Hi(cpu->hl));
 }
 
 void LD_D_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->hl));;
+	SetHi(cpu->de, Lo(cpu->hl));
 }
 
 void LD_D_AHL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, cpu->mmu->read8(cpu->hl));;
+	SetHi(cpu->de, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_D_A(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Hi(cpu->af));;
+	SetHi(cpu->de, Hi(cpu->af));
 }
 
 void LD_E_B(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, Hi(cpu->bc));;
+	SetLo(cpu->de, Hi(cpu->bc));
 }
 
 void LD_E_C(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, Lo(cpu->bc));;
+	SetLo(cpu->de, Lo(cpu->bc));
 }
 
 void LD_E_D(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, Hi(cpu->de));;
+	SetLo(cpu->de, Hi(cpu->de));
 }
 
 void LD_E_E(CPU *cpu, instruction_t &i)
 {
-	// SetLo(cpu->de, Lo(cpu->de));;
+	// SetLo(cpu->de, Lo(cpu->de));
 }
 
 void LD_E_H(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, Hi(cpu->hl));;
+	SetLo(cpu->de, Hi(cpu->hl));
 }
 
 void LD_E_L(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, Lo(cpu->hl));;
+	SetLo(cpu->de, Lo(cpu->hl));
 }
 
 void LD_E_AHL(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, cpu->mmu->read8(cpu->hl));;
+	SetLo(cpu->de, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_E_A(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, Hi(cpu->af));;
+	SetLo(cpu->de, Hi(cpu->af));
 }
 
 // 0x60
 
 void LD_H_B(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->bc));;
+	SetHi(cpu->hl, Hi(cpu->bc));
 }
 
 void LD_H_C(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Lo(cpu->bc));;
+	SetHi(cpu->hl, Lo(cpu->bc));
 }
 
 void LD_H_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->de));;
+	SetHi(cpu->hl, Hi(cpu->de));
 }
 
 void LD_H_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Lo(cpu->de));;
+	SetHi(cpu->hl, Lo(cpu->de));
 }
 
 void LD_H_H(CPU *cpu, instruction_t &i)
 {
-	// SetHi(cpu->hl, Hi(cpu->hl));;
+	// SetHi(cpu->hl, Hi(cpu->hl));
 }
 
 void LD_H_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Lo(cpu->hl));;
+	SetHi(cpu->hl, Lo(cpu->hl));
 }
 
 void LD_H_AHL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, cpu->mmu->read8(cpu->hl));;
+	SetHi(cpu->hl, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_H_A(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->af));;
+	SetHi(cpu->hl, Hi(cpu->af));
 }
 
 void LD_L_B(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Hi(cpu->bc));;
+	SetLo(cpu->hl, Hi(cpu->bc));
 }
 
 void LD_L_C(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Lo(cpu->bc));;
+	SetLo(cpu->hl, Lo(cpu->bc));
 }
 
 void LD_L_D(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Hi(cpu->de));;
+	SetLo(cpu->hl, Hi(cpu->de));
 }
 
 void LD_L_E(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Lo(cpu->de));;
+	SetLo(cpu->hl, Lo(cpu->de));
 }
 
 void LD_L_H(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Hi(cpu->hl));;
+	SetLo(cpu->hl, Hi(cpu->hl));
 }
 
 void LD_L_L(CPU *cpu, instruction_t &i)
 {
-	// SetLo(cpu->hl, Hi(cpu->hl));;
+	// SetLo(cpu->hl, Hi(cpu->hl));
 }
 
 void LD_L_AHL(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, cpu->mmu->read8(cpu->hl));;
+	SetLo(cpu->hl, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_L_A(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, Hi(cpu->af));;
+	SetLo(cpu->hl, Hi(cpu->af));
 }
 
 // 0x70
@@ -918,7 +918,7 @@ void LD_AHL_L(CPU *cpu, instruction_t &i)
 
 void HALT(CPU *cpu, instruction_t &i)
 {
-	cpu->doBreak();
+	cpu->halt();
 }
 
 void LD_AHL_A(CPU *cpu, instruction_t &i)
@@ -928,42 +928,42 @@ void LD_AHL_A(CPU *cpu, instruction_t &i)
 
 void LD_A_B(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, Hi(cpu->bc));;
+	SetHi(cpu->af, Hi(cpu->bc));
 }
 
 void LD_A_C(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, Lo(cpu->bc));;
+	SetHi(cpu->af, Lo(cpu->bc));
 }
 
 void LD_A_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, Hi(cpu->de));;
+	SetHi(cpu->af, Hi(cpu->de));
 }
 
 void LD_A_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, Lo(cpu->de));;
+	SetHi(cpu->af, Lo(cpu->de));
 }
 
 void LD_A_H(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, Hi(cpu->hl));;
+	SetHi(cpu->af, Hi(cpu->hl));
 }
 
 void LD_A_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, Lo(cpu->hl));;
+	SetHi(cpu->af, Lo(cpu->hl));
 }
 
 void LD_A_AHL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl));;
+	SetHi(cpu->af, cpu->mmu->read8(cpu->hl));
 }
 
 void LD_A_A(CPU *cpu, instruction_t &i)
 {
-	// SetHi(cpu->af, Hi(cpu->af));;
+	// SetHi(cpu->af, Hi(cpu->af));
 }
 
 // 0x80
@@ -973,8 +973,8 @@ void ADD_A_B(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_C(CPU *cpu, instruction_t &i)
@@ -982,8 +982,8 @@ void ADD_A_C(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Lo(cpu->bc), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_D(CPU *cpu, instruction_t &i)
@@ -991,8 +991,8 @@ void ADD_A_D(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Hi(cpu->de), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_E(CPU *cpu, instruction_t &i)
@@ -1000,8 +1000,8 @@ void ADD_A_E(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Lo(cpu->de), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_H(CPU *cpu, instruction_t &i)
@@ -1009,8 +1009,8 @@ void ADD_A_H(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_L(CPU *cpu, instruction_t &i)
@@ -1018,8 +1018,8 @@ void ADD_A_L(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Lo(cpu->hl), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_AHL(CPU *cpu, instruction_t &i)
@@ -1027,8 +1027,8 @@ void ADD_A_AHL(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), cpu->mmu->read8(cpu->hl), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADD_A_A(CPU *cpu, instruction_t &i)
@@ -1036,8 +1036,8 @@ void ADD_A_A(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void ADC_A_B(CPU *cpu, instruction_t &i)
@@ -1117,8 +1117,8 @@ void SUB_A_AHL(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	SUB8(Hi(cpu->af), cpu->mmu->read8(cpu->hl), &result, &flags);
-	SetLo(cpu->af, flags);;
-	SetHi(cpu->af, result);;
+	SetLo(cpu->af, flags);
+	SetHi(cpu->af, result);
 }
 
 void SUB_A_A(CPU *cpu, instruction_t &i)
@@ -1393,8 +1393,8 @@ void ADD_A_IMM8(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	ADD8(Hi(cpu->af), i.op8, &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void RST_00(CPU *cpu, instruction_t &i)
@@ -1643,7 +1643,7 @@ void ADD_SP_IMM8(CPU *cpu, instruction_t &i)
 	}
 
 	cpu->sp = sum16;
-	SetLo(cpu->af, flags & 0b0011'0000);;
+	SetLo(cpu->af, flags & 0b0011'0000);
 }
 
 void JP_HL(CPU *cpu, instruction_t &i)
@@ -1670,7 +1670,7 @@ void RST_28(CPU *cpu, instruction_t &i)
 
 void LDH_A_IMM8(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(0xFF00 + i.op8));;
+	SetHi(cpu->af, cpu->mmu->read8(0xFF00 + i.op8));
 }
 
 void POP_AF(CPU *cpu, instruction_t &i)
@@ -1681,7 +1681,7 @@ void POP_AF(CPU *cpu, instruction_t &i)
 
 void LDH_A_C(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(0xFF00 + Lo(cpu->bc)));;
+	SetHi(cpu->af, cpu->mmu->read8(0xFF00 + Lo(cpu->bc)));
 }
 
 void DI(CPU *cpu, instruction_t &i)
@@ -1734,7 +1734,7 @@ void LD_HL_SPIMM8(CPU *cpu, instruction_t &i)
 		}
 	}
 
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->af, flags);
 
 	cpu->hl = sp;
 }
@@ -1746,7 +1746,7 @@ void LD_SP_HL(CPU *cpu, instruction_t &i)
 
 void LD_A_AIMM16(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(i.op16));;
+	SetHi(cpu->af, cpu->mmu->read8(i.op16));
 }
 
 void EI(CPU *cpu, instruction_t &i)
@@ -1773,8 +1773,8 @@ void RLC_B(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RLC_C(CPU *cpu, instruction_t &i)
@@ -1782,8 +1782,8 @@ void RLC_C(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RLC_D(CPU *cpu, instruction_t &i)
@@ -1791,8 +1791,8 @@ void RLC_D(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RLC_E(CPU *cpu, instruction_t &i)
@@ -1800,8 +1800,8 @@ void RLC_E(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RLC_H(CPU *cpu, instruction_t &i)
@@ -1809,8 +1809,8 @@ void RLC_H(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RLC_L(CPU *cpu, instruction_t &i)
@@ -1818,8 +1818,8 @@ void RLC_L(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RLC_AHL(CPU *cpu, instruction_t &i)
@@ -1828,7 +1828,7 @@ void RLC_AHL(CPU *cpu, instruction_t &i)
 	uint8_t result = 0;
 	RLC(cpu->mmu->read8(cpu->hl), &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->af, flags);
 }
 
 void RLC_A(CPU *cpu, instruction_t &i)
@@ -1836,8 +1836,8 @@ void RLC_A(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RLC(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_B(CPU *cpu, instruction_t &i)
@@ -1845,8 +1845,8 @@ void RRC_B(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_C(CPU *cpu, instruction_t &i)
@@ -1854,8 +1854,8 @@ void RRC_C(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_D(CPU *cpu, instruction_t &i)
@@ -1863,8 +1863,8 @@ void RRC_D(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_E(CPU *cpu, instruction_t &i)
@@ -1872,8 +1872,8 @@ void RRC_E(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_H(CPU *cpu, instruction_t &i)
@@ -1881,8 +1881,8 @@ void RRC_H(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_L(CPU *cpu, instruction_t &i)
@@ -1890,8 +1890,8 @@ void RRC_L(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RRC_AHL(CPU *cpu, instruction_t &i)
@@ -1900,7 +1900,7 @@ void RRC_AHL(CPU *cpu, instruction_t &i)
 	uint8_t result = 0;
 	RRC(cpu->mmu->read8(cpu->hl), &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->af, flags);
 }
 
 void RRC_A(CPU *cpu, instruction_t &i)
@@ -1908,8 +1908,8 @@ void RRC_A(CPU *cpu, instruction_t &i)
 	uint8_t flags = 0;
 	uint8_t result = 0;
 	RRC(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 // 0xCB 0x10
@@ -1919,8 +1919,8 @@ void RL_B(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RL_C(CPU *cpu, instruction_t &i)
@@ -1928,8 +1928,8 @@ void RL_C(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RL_D(CPU *cpu, instruction_t &i)
@@ -1937,8 +1937,8 @@ void RL_D(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RL_E(CPU *cpu, instruction_t &i)
@@ -1946,8 +1946,8 @@ void RL_E(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RL_H(CPU *cpu, instruction_t &i)
@@ -1955,8 +1955,8 @@ void RL_H(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RL_L(CPU *cpu, instruction_t &i)
@@ -1964,8 +1964,8 @@ void RL_L(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RL_AHL(CPU *cpu, instruction_t &i)
@@ -1974,7 +1974,7 @@ void RL_AHL(CPU *cpu, instruction_t &i)
 	uint8_t result = 0;
 	RL(cpu->mmu->read8(cpu->hl), &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->af, flags);
 }
 
 void RL_A(CPU *cpu, instruction_t &i)
@@ -1982,8 +1982,8 @@ void RL_A(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RL(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_B(CPU *cpu, instruction_t &i)
@@ -1991,8 +1991,8 @@ void RR_B(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_C(CPU *cpu, instruction_t &i)
@@ -2000,8 +2000,8 @@ void RR_C(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->bc, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_D(CPU *cpu, instruction_t &i)
@@ -2009,8 +2009,8 @@ void RR_D(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_E(CPU *cpu, instruction_t &i)
@@ -2018,8 +2018,8 @@ void RR_E(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->de, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_H(CPU *cpu, instruction_t &i)
@@ -2027,8 +2027,8 @@ void RR_H(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_L(CPU *cpu, instruction_t &i)
@@ -2036,8 +2036,8 @@ void RR_L(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);;
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->hl, result);
+	SetLo(cpu->af, flags);
 }
 
 void RR_AHL(CPU *cpu, instruction_t &i)
@@ -2046,7 +2046,7 @@ void RR_AHL(CPU *cpu, instruction_t &i)
 	uint8_t result = 0;
 	RR(cpu->mmu->read8(cpu->hl), &result, &flags);
 	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);;
+	SetLo(cpu->af, flags);
 }
 
 void RR_A(CPU *cpu, instruction_t &i)
@@ -2054,40 +2054,40 @@ void RR_A(CPU *cpu, instruction_t &i)
 	uint8_t flags = cpu->af & 0x10;
 	uint8_t result = 0;
 	RR(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);;
-	SetLo(cpu->af, flags);;
+	SetHi(cpu->af, result);
+	SetLo(cpu->af, flags);
 }
 
 // 0xCB 0x20
 
 void SLA_B(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, SLA_REG8(cpu, Hi(cpu->bc)));;
+	SetHi(cpu->bc, SLA_REG8(cpu, Hi(cpu->bc)));
 }
 
 void SLA_C(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, SLA_REG8(cpu, Lo(cpu->bc)));;
+	SetLo(cpu->bc, SLA_REG8(cpu, Lo(cpu->bc)));
 }
 
 void SLA_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, SLA_REG8(cpu, Hi(cpu->de)));;
+	SetHi(cpu->de, SLA_REG8(cpu, Hi(cpu->de)));
 }
 
 void SLA_E(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, SLA_REG8(cpu, Lo(cpu->de)));;
+	SetLo(cpu->de, SLA_REG8(cpu, Lo(cpu->de)));
 }
 
 void SLA_H(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, SLA_REG8(cpu, Hi(cpu->hl)));;
+	SetHi(cpu->hl, SLA_REG8(cpu, Hi(cpu->hl)));
 }
 
 void SLA_L(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, SLA_REG8(cpu, Lo(cpu->hl)));;
+	SetLo(cpu->hl, SLA_REG8(cpu, Lo(cpu->hl)));
 }
 
 void SLA_AHL(CPU *cpu, instruction_t &i)
@@ -2097,37 +2097,37 @@ void SLA_AHL(CPU *cpu, instruction_t &i)
 
 void SLA_A(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, SLA_REG8(cpu, Hi(cpu->af)));;
+	SetHi(cpu->af, SLA_REG8(cpu, Hi(cpu->af)));
 }
 
 void SRA_B(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, SRA_REG8(cpu, Hi(cpu->bc)));;
+	SetHi(cpu->bc, SRA_REG8(cpu, Hi(cpu->bc)));
 }
 
 void SRA_C(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, SRA_REG8(cpu, Lo(cpu->bc)));;
+	SetLo(cpu->bc, SRA_REG8(cpu, Lo(cpu->bc)));
 }
 
 void SRA_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, SRA_REG8(cpu, Hi(cpu->de)));;
+	SetHi(cpu->de, SRA_REG8(cpu, Hi(cpu->de)));
 }
 
 void SRA_E(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->de, SRA_REG8(cpu, Lo(cpu->de)));;
+	SetLo(cpu->de, SRA_REG8(cpu, Lo(cpu->de)));
 }
 
 void SRA_H(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, SRA_REG8(cpu, Hi(cpu->hl)));;
+	SetHi(cpu->hl, SRA_REG8(cpu, Hi(cpu->hl)));
 }
 
 void SRA_L(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->hl, SRA_REG8(cpu, Lo(cpu->hl)));;
+	SetLo(cpu->hl, SRA_REG8(cpu, Lo(cpu->hl)));
 }
 
 void SRA_AHL(CPU *cpu, instruction_t &i)
@@ -2137,7 +2137,7 @@ void SRA_AHL(CPU *cpu, instruction_t &i)
 
 void SRA_A(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, SRA_REG8(cpu, Hi(cpu->af)));;
+	SetHi(cpu->af, SRA_REG8(cpu, Hi(cpu->af)));
 }
 
 // 0xCB 0x30
@@ -2235,7 +2235,7 @@ void TestBit(CPU *cpu, uint8_t bit)
 	{
 		flags |= FLAGS_ZERO;
 	}
-	SetLo(cpu->af, (Lo(cpu->af) & FLAGS_CARRY) | flags);;
+	SetLo(cpu->af, (Lo(cpu->af) & FLAGS_CARRY) | flags);
 }
 
 void BIT_0_B(CPU *cpu, instruction_t &i)
@@ -2870,7 +2870,7 @@ void RES_7_L(CPU *cpu, instruction_t &i)
 
 void RES_7_AHL(CPU *cpu, instruction_t &i)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b1000'0000));
+	cpu->mmu->and8(cpu->hl, static_cast<uint8_t>(~0x80));
 }
 
 void RES_7_A(CPU *cpu, instruction_t &i)
