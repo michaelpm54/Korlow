@@ -4,6 +4,7 @@
 #include <chrono>
 #include <string>
 #include "key_receiver.h"
+#include "memory_map.h"
 
 class Window;
 class MMU;
@@ -25,6 +26,7 @@ private:
 	void dumpRam();
 	void renderMessages();
 	void updateMessages();
+	void printRomInfo(romHeader_t &header);
 
 private:
 	struct Message

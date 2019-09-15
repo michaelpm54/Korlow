@@ -90,6 +90,10 @@ int Emulator::run()
 		return 1;
 	}
 
+	romHeader_t romHeader;
+	std::memcpy(&romHeader, &romData.get()[0x100], sizeof(romHeader_t));
+	printRomInfo(romHeader);
+
 	mMmu->init();
 	mMmu->gpu = mGpu;
 	mMmu->bios = biosData.get();
@@ -214,4 +218,11 @@ void Emulator::updateMessages()
 		),
 		mMessages.end()
 	);
+}
+
+void Emulator::printRomInfo(romHeader_t &header)
+{
+	printf("Title: %s\n", header.title);
+	printf("ROM Size: %d\n", (2 << 14) << header.romSize);
+	printf("Cart type: %s\n", kCartTypes.at(header.cartType));
 }
