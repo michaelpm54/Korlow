@@ -35,6 +35,8 @@ public:
 	// Map
 	void updateMap();
 
+	void setSpritePalette(int paletteIdx, uint8_t val);
+
 private:
 	void setPixel(int x, int y, uint8_t colour);
 	void drawSprite(const sprite_t &sprite);
@@ -75,6 +77,8 @@ private:
 	GLuint mMapBuf;
 	GLuint mMapVao;
 	uint8_t *mMapData { nullptr };
+
+	uint8_t mSpritePalettes[2][4];
 };
 
 #endif // GPU_H

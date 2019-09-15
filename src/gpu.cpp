@@ -23,7 +23,8 @@ const int kNumComponents = 1;
 
 GPU::GPU()
 {
-	memcpy(mBgPalette, kShades, 4);
+	std::memset(mBgPalette, 0, 4);
+	std::memset(mSpritePalettes, 0, 8);
 }
 
 GPU::~GPU()
@@ -249,10 +250,10 @@ void GPU::drawScanline(int line)
 		isSigned = false;
 	}
 
-	uint16_t bgMap = kBgMap0;
+	uint16_t bgMap = kMap0;
 	if (lcdc & 0x8)
 	{
-		bgMap = kBgMap1;
+		bgMap = kMap1;
 	}
 
 	int scx = mmu->mem[kScx];
@@ -261,7 +262,7 @@ void GPU::drawScanline(int line)
 	int y_map = y_abs / 8;
 	int y_px_in_tile = y_abs % 8;
 
-	// bg
+	// background
 	for (int x = 0; x < 160; x++)
 	{
 		int x_abs = x + scx;
@@ -283,6 +284,39 @@ void GPU::drawScanline(int line)
 		uint8_t colour = mBgPalette[decodePixel(row, x_px_in_tile)];
 
 		setPixel(x, line - 1, colour);
+	}
+
+	if (lcdc & 0x20)
+	{
+		uint16_t wdMap = kMap0;
+		if (lcdc & 0x40)
+		{
+			wdMap = kMap1;
+		}
+
+		// window
+		for (int x = 0; x < 160; x++)
+		{
+			int x_abs = x + scx;
+			int x_map = x_abs / 8;
+			int x_px_in_tile = x_abs % 8;
+
+			// Wrap around if it tries to draw past the end of a map
+			int idx_offset_in_map = ((y_map * 32) + x_map) % 0x400;
+
+			int idx_offset = wdMap + idx_offset_in_map;
+			int idx = isSigned ? int8_t(mmu->mem[idx_offset]) : uint8_t(mmu->mem[idx_offset]);
+
+			int tile_offset_in_data = idx * 16;
+			int tile_offset = tileData + tile_offset_in_data;
+
+			int row_offset = tile_offset + (y_px_in_tile * 2);
+
+			uint16_t row = mmu->read16(row_offset);
+			uint8_t colour = mBgPalette[decodePixel(row, x_px_in_tile)];
+
+			setPixel(x, line - 1, colour);
+		}
 	}
 
 	if (mSpritesChanged)
@@ -341,7 +375,7 @@ void GPU::updateMap()
 	{
 		for (int i = 0; i < 0x400; i++)
 		{
-			mMapData[i] = mmu->mem[kBgMap0 + i];
+			mMapData[i] = mmu->mem[kMap0 + i];
 		}
 
 		int left = getMapIndex(mmu->mem[kScx], mmu->mem[kScy]);
@@ -364,7 +398,7 @@ void GPU::updateMap()
 	{
 		for (int i = 0; i < 0x400; i++)
 		{
-			mMapData[0x400 + i] = mmu->mem[kBgMap1 + i];
+			mMapData[0x400 + i] = mmu->mem[kMap1 + i];
 		}
 
 		int left = getMapIndex(mmu->mem[kScx], mmu->mem[kScy]);
@@ -448,4 +482,11 @@ void GPU::setBgPalette(uint8_t val)
 	mBgPalette[1] = kShades[(val & 0xC) >> 2];
 	mBgPalette[2] = kShades[(val & 0x30) >> 4];
 	mBgPalette[3] = kShades[(val & 0xC0) >> 6];
+}
+
+void GPU::setSpritePalette(int paletteIdx, uint8_t val)
+{
+	mSpritePalettes[paletteIdx][1] = kShades[(val & 0xC) >> 2];
+	mSpritePalettes[paletteIdx][2] = kShades[(val & 0x30) >> 4];
+	mSpritePalettes[paletteIdx][3] = kShades[(val & 0xC0) >> 6];
 }

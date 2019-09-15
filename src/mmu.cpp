@@ -147,15 +147,15 @@ void MMU::write8(uint16_t addr, uint8_t val)
 		{
 			// printf("BG Data 1 write { %04X, %02X }\n", addr, val);
 		}
-		else if (addr >= kTileRamSigned && addr < kBgMap0)
+		else if (addr >= kTileRamSigned && addr < kMap0)
 		{
 			// printf("BG Data 2 write { %04X, %02X }\n", addr, val);
 		}
-		else if (addr >= kBgMap0 && addr < kBgMap1)
+		else if (addr >= kMap0 && addr < kMap1)
 		{
 			// printf("BG tile map write 1 { %04X, %02X }\n", addr, val);
 		}
-		else if (addr >= kBgMap1 && addr < kCartRam)
+		else if (addr >= kMap1 && addr < kCartRam)
 		{
 			// printf("BG tile map write 2 { %04X, %02X }\n", addr, val);
 		}
@@ -188,6 +188,14 @@ void MMU::write8(uint16_t addr, uint8_t val)
 			printf("JOYPAD ");
 		}
 		printf("\n");
+	}
+	else if (addr == kObj0Palette)
+	{
+		gpu->setSpritePalette(0, val);
+	}
+	else if (addr == kObj1Palette)
+	{
+		gpu->setSpritePalette(1, val);
 	}
 	mem[addr] = val;
 }
