@@ -53,6 +53,8 @@ void RRC(uint8_t val, uint8_t *result, uint8_t *flags)
 
 void ADD8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags)
 {
+	// Z0HC
+
 	*flags = 0;
 	*result = a + b;
 
@@ -91,19 +93,19 @@ void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags)
 void SUB8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags)
 {
 	// Z1HC
-	*flags = 0x40;
+	*flags = FLAGS_SUBTRACT;
 	*result = a - b;
 	if (!*result)
 	{
-		*flags |= 0x80;
+		*flags |= FLAGS_ZERO;
 	}
 	if (b > a)
 	{
-		*flags |= 0x10;
+		*flags |= FLAGS_CARRY;
 	}
 	if ((int(a) & 0xF) - (int(b) & 0xF) < 0)
 	{
-		*flags |= 0x20;
+		*flags |= FLAGS_HALFCARRY;
 	}
 }
 

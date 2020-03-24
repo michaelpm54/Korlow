@@ -10,7 +10,6 @@ struct instruction_t
 	uint16_t op16;
 	bool didAction;
 };
-
 class CPU;
 using instructionFunc_t = void (*)(CPU *cpu, instruction_t &instruction);
 

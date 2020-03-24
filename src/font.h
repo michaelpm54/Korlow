@@ -1,10 +1,11 @@
 #ifndef FONT_H
 #define FONT_H
 
+#include "opengl.h"
+
 #include <vector>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include <GL/gl.h>
 
 void FT_Init();
 void FT_Done();

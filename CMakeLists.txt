@@ -1,10 +1,28 @@
 cmake_minimum_required(VERSION 3.14)
+
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "")
+endif()
+
 project(Korlow LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 set(OUT_DIR "bin")
+set(CMAKE_AUTOMOC ON)
+
+set(KORLOW_GUI_SOURCES
+	src/gui/main_window.cpp
+	src/gui/opengl_widget.cpp
+)
+
+set(KORLOW_GUI_HEADERS
+	src/gui/main_window.h
+	src/gui/opengl_widget.h
+)
 
 set(KORLOW_SOURCES
+	src/main.cpp
 	src/emulator.cpp
 	src/window.cpp
 	src/mmu.cpp
@@ -15,6 +33,8 @@ set(KORLOW_SOURCES
 	src/inst_data.cpp
 	src/font.cpp
 	src/util.cpp
+	src/fs.cpp
+	${KORLOW_GUI_SOURCES}
 )
 
 set(KORLOW_HEADERS
@@ -32,48 +52,42 @@ set(KORLOW_HEADERS
 	src/key_receiver.h
 	src/font.h
 	src/util.h
+	src/opengl.h
+	src/fs.h
+	${KORLOW_GUI_HEADERS}
 )
 
-add_library(Korlow
+add_executable(app
 	${KORLOW_SOURCES}
 	${KORLOW_HEADERS}
 )
 
-add_executable(app
-	src/main.cpp
-)
+target_include_directories(app PUBLIC src)
 
-target_include_directories(Korlow
+target_include_directories(app
 	INTERFACE
 		${CMAKE_SOURCE_DIR}/src
 )
 
-target_compile_features(app PRIVATE cxx_std_17)
-target_compile_features(Korlow PRIVATE cxx_std_17)
+set_property(TARGET app PROPERTY CXX_STANDARD 20)
+set_property(TARGET app PROPERTY CXX_STANDARD_REQUIRED ON)
 
-find_package(GLFW3 REQUIRED)
-find_package(glew REQUIRED)
-find_package(freetype REQUIRED)
-find_package(glm REQUIRED)
+if (MSVC_VERSION GREATER_EQUAL "1900")
+    target_compile_features(app PRIVATE cxx_std_20)
+endif()
 
-target_include_directories(Korlow
-	PRIVATE
-		${FREETYPE_INCLUDE_DIRS}
-)
-
-target_link_libraries(Korlow
-	PRIVATE
-		GLFW3
-		OpenGL32
-		glew32
-		freetype
-		glm
-)
+find_package(GLEW REQUIRED)
+find_package(freetype CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Gui CONFIG REQUIRED)
 
 target_link_libraries(
 	app
 	PRIVATE
-		Korlow
+		GLEW::GLEW
+		freetype
+		glm
+		Qt5::Core Qt5::Widgets Qt5::Gui
 )
 
 set_target_properties(app
@@ -82,6 +96,11 @@ set_target_properties(app
 			${OUT_DIR}
 )
 
-add_subdirectory(tests)
-enable_testing()
-add_test(NAME KorlowTest COMMAND test_app)
+add_custom_command(TARGET app PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory 
+              ${CMAKE_CURRENT_LIST_DIR}/assets $<TARGET_FILE_DIR:app>/assets
+)
+
+#add_subdirectory(tests)
+#enable_testing()
+#add_test(NAME KorlowTest COMMAND test_app)

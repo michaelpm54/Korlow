@@ -1,23 +1,33 @@
+#include <algorithm>
+
 #include "gpu.h"
 #include "mmu.h"
 #include "memory_map.h"
 
-void MMU::init()
+MMU::MMU()
 {
-	mem.reset(new uint8_t[0x10000]);
+	try {
+		mem.resize(0x10000);
+	}
+	catch (...) {
+		throw std::runtime_error("Failed to allocate MMU memory");
+	}
+
 	mem[kIf] = 0xE0;
+}
+
+void MMU::init(GPU* gpu)
+{
+	mGpu = gpu;
+}
+
+void MMU::setRom(const std::vector<std::uint8_t> &bytes)
+{
+	std::copy_n(bytes.data(), std::min(0x10000, static_cast<int>(bytes.size())), &mem[0]);
 }
 
 uint8_t MMU::read8(uint16_t addr)
 {
-	if (addr < kHeader)
-	{
-		if (inBios)
-		{
-			return bios[addr];
-		}
-	}
-
 	return mem[addr];
 }
 
@@ -116,7 +126,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 	else if (addr == kBgPalette)
 	{
-		gpu->setBgPalette(val);
+		mGpu->setBgPalette(val);
 	}
 	else
 	{
@@ -191,11 +201,11 @@ void MMU::write8(uint16_t addr, uint8_t val)
 	}
 	else if (addr == kObj0Palette)
 	{
-		gpu->setSpritePalette(0, val);
+		mGpu->setSpritePalette(0, val);
 	}
 	else if (addr == kObj1Palette)
 	{
-		gpu->setSpritePalette(1, val);
+		mGpu->setSpritePalette(1, val);
 	}
 	mem[addr] = val;
 }

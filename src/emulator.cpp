@@ -5,22 +5,112 @@
 #include <iostream>
 #include <memory>
 #include <thread>
-#include <GLFW/glfw3.h>
+
 #include "cpu.h"
 #include "emulator.h"
 #include "font.h"
+#include "fs.h"
 #include "gpu.h"
 #include "mmu.h"
 #include "window.h"
-#include "util.h"
 
-constexpr int kScreenScale = 3;
-constexpr int kScreenSizeX = 160 * kScreenScale + (32 * 2 * kScreenScale);
-constexpr int kScreenSizeY = 144 * kScreenScale;
+#include "gui/main_window.h"
+#include "gui/opengl_widget.h"
 
-Emulator::Emulator(std::string biosPath, std::string romPath, uint8_t verbosityFlags)
+Emulator::Emulator(int argc, char *argv[])
+	: QApplication(argc, argv)
+	, mMainWindow(new MainWindow())
+	, mOpenGLWidget(new OpenGLWidget())
+{
+	mMainWindow->setCentralWidget(mOpenGLWidget.get());
+
+	connect(this, &QCoreApplication::aboutToQuit, this, [this](){ mContinue = false; });
+	connect(mMainWindow.get(), &MainWindow::openFile, this, &Emulator::openFile);
+
+	initHardware();
+	setBios("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+}
+
+void Emulator::openFile(const std::string& path)
+{
+	if (path.empty()) { return; }
+
+	try {
+		setRom(FS::readBytes(path));
+	}
+	catch (const std::runtime_error& e) {
+		std::cerr << e.what() << std::endl;
+	}
+}
+
+void Emulator::initHardware()
+{
+	mMmu = std::make_unique<MMU>();
+	mCpu = std::make_unique<CPU>();
+
+	GpuRegisters gpuRegisters =
+	{
+		.if_ = mMmu->mem[kIf],
+		.lcdc = mMmu->mem[kLcdc],
+		.stat = mMmu->mem[kStat],
+		.scy = mMmu->mem[kScy],
+		.scx = mMmu->mem[kScx],
+		.ly = mMmu->mem[kLy],
+		.lyc = mMmu->mem[kLyc],
+		.dmaStartAddr = mMmu->mem[kDmaStartAddr],
+		.bgPalette = mMmu->mem[kBgPalette],
+		.obj0Palette = mMmu->mem[kObj0Palette],
+		.obj1Palette = mMmu->mem[kObj1Palette],
+		.windowY = mMmu->mem[kWy],
+		.windowX = mMmu->mem[kWx]
+	};
+
+	GpuMem gpuMem =
+	{
+		.oam = &mMmu->mem[kOam],
+		.map0 = &mMmu->mem[kMap0],
+		.map1 = &mMmu->mem[kMap1],
+		.tilesSigned = &mMmu->mem[kTileRamSigned],
+		.tilesUnsigned = &mMmu->mem[kTileRamUnsigned],
+	};
+
+	mGpu = std::make_unique<GPU>(gpuRegisters, gpuMem, mOpenGLWidget.get());
+
+	mMmu->init(mGpu.get());
+	mCpu->mmu = mMmu.get();
+	mCpu->gpu = mGpu.get();
+}
+
+void Emulator::setBios(const std::string& path)
+{
+	
+}
+
+void Emulator::setRom(const std::vector<uint8_t> &bytes)
+{
+	romHeader_t romHeader;
+	std::memcpy(&romHeader, &bytes[0x100], sizeof(romHeader_t));
+	printRomInfo(romHeader);
+
+	mMmu->setRom(bytes);
+
+	mGpu->reset();
+
+	mCpu->initWithoutBios();
+
+	//FT_Init();
+
+	//mFont = new Font("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf");
+
+	loop();
+
+	QCoreApplication::quit();
+}
+
+/*
+Emulator::Emulator(std::string romPath, uint8_t verbosityFlags)
 	:
-	mBiosPath(std::move(biosPath)),
+	QApplication(1, nullptr),
 	mRomPath(std::move(romPath)),
 	mVerbosityFlags(verbosityFlags),
 	mMmu(new MMU()),
@@ -28,63 +118,32 @@ Emulator::Emulator(std::string biosPath, std::string romPath, uint8_t verbosityF
 	mGpu(new GPU()),
 	mLastDumpTime(std::chrono::system_clock::now() - std::chrono::seconds(2))
 {}
+*/
 
-Emulator::~Emulator()
+void Emulator::run()
 {
-	delete mGpu;
-	delete mMmu;
-	delete mCpu;
-	delete mWindow;
-}
-
-int Emulator::run()
-{
+	exec();
+/*
 	mWindow = new Window();
 	mWindow->setTitle("Korlow2");
 	mWindow->setSize(kScreenSizeX, kScreenSizeY);
 	mWindow->create();
 	mWindow->addReceiver(this);
 
-	std::unique_ptr<uint8_t[]> biosData;
 	std::unique_ptr<uint8_t[]> romData;
-
-	if (mBiosPath.empty())
-	{
-		std::cerr << "Please provide a BIOS file." << std::endl;
-		return 1;
-	}
-	else
-	{
-		int biosSize;
-		try
-		{
-			biosData = readFileBytes(mBiosPath, biosSize);
-		}
-		catch (const std::runtime_error &e)
-		{
-			std::cerr << "Failed to open BIOS file '" << mBiosPath << "'" << std::endl;
-			return 1;
-		}
-
-		if (biosSize != 0x100)
-		{
-			std::cerr << "BIOS file size is wrong (! 0x100 bytes)" << std::endl;
-			return 1;
-		}
-	}
 
 	int romSize;
 	try
 	{
 		romData = readFileBytes(mRomPath, romSize);
 	}
-	catch (const std::runtime_error &e)
+	catch (const std::runtime_error &)
 	{
 		std::cerr << "Failed to open ROM file '" << mRomPath << "'" << std::endl;
 		return 1;
 	}
 
-	if (romSize <= 0x100 || romSize > 8388608)
+	if (romSize > 8388608)
 	{
 		std::cerr << "ROM file size is too big (> 8 MiB)" << std::endl;
 		return 1;
@@ -96,8 +155,7 @@ int Emulator::run()
 
 	mMmu->init();
 	mMmu->gpu = mGpu;
-	mMmu->bios = biosData.get();
-	std::copy_n(romData.get(), romSize, &mMmu->mem[0]);
+	mMmu->set_rom(romData.get(), romSize);
 
 	mGpu->setSize(kScreenSizeX, kScreenSizeY);
 	mGpu->reset();
@@ -107,33 +165,58 @@ int Emulator::run()
 	mCpu->mmu = mMmu;
 	mCpu->gpu = mGpu;
 
+	// Special case in case I want to run the boot ROM :)
+	if (romSize == 0x100)
+	{
+		constexpr uint8_t logo[] =
+		{
+			0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
+			0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+			0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
+			0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+			0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
+			0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
+		};
+		std::memcpy(&mMmu->mem[0x104], logo, sizeof(logo));
+		// a = 0x19 at this point
+		// a += mem[0x14D] needs to be equal to 0
+		// 0x19 + 0xE7 = 0x100 or 0x00 as a byte
+		mMmu->write8(0x14D, 0xE7);
+		// jr -2
+		mMmu->write8(0x100, 0x18);
+		mMmu->write16(0x101, 0x00FE);
+	}
+	else
+	{
+		mCpu->initWithoutBios();
+	}
+
 	FT_Init();
 
 	mFont = new Font("../assets/fonts/IBMPlexMono-Semibold.otf");
 
 	return loop();
+*/
 }
 
 int Emulator::loop()
 {
-	while (mContinue && !mWindow->closed() && !mCpu->didBreak())
+	while (mContinue && /*!mWindow->closed() &&*/ !mCpu->didBreak() && mMainWindow->isVisible())
 	{
-
-		updateMessages();
-
-		mWindow->events();
+		//updateMessages();
 
 		if (!mPaused)
 		{
 			mCpu->frame();
-			mGpu->frame();
+			mGpu->updateMap();
+			mOpenGLWidget->update(mGpu->getPixels());
 		}
 
-		renderMessages();
-
-		mWindow->refresh();
+		//renderMessages();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));
+
+		processEvents();
 	}
 
 	std::string numWithCommas = std::to_string(mCpu->numInstructionsExecuted());
@@ -144,15 +227,16 @@ int Emulator::loop()
 	}
 	std::cerr << "\n" << numWithCommas << " instructions executed" << std::endl;
 
-	delete mFont;
+	//delete mFont;
 
-	FT_Done();
+	//FT_Done();
 
 	return 0;
 }
 
 void Emulator::sendKey(int key, int scancode, int action, int mods)
 {
+	/*
 	if (action == GLFW_PRESS)
 	{
 		if (key == GLFW_KEY_D)
@@ -169,6 +253,7 @@ void Emulator::sendKey(int key, int scancode, int action, int mods)
 			mMessages.push_back({mPaused ? "Paused" : "Unpaused", 8, 52, std::chrono::system_clock::now(), std::chrono::milliseconds(2000)});
 		}
 	}
+	*/
 }
 
 void Emulator::dumpRam()
@@ -188,7 +273,7 @@ void Emulator::dumpRam()
 		std::cerr << "Failed to open ramdump.bin" << std::endl;
 		return;
 	}
-	fwrite(mMmu->mem.get(), 0x10000, 1, f);
+	fwrite(mMmu->mem.data(), 0x10000, 1, f);
 	fclose(f);
 	std::cout << "Dumped RAM" << std::endl;
 

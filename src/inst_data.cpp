@@ -113,7 +113,7 @@ const char * const kInstFmts[0x100] =
 /* 0 */ "NOP",              "LD BC, %04X", "LD (BC), A",  "INC BC",     "INC B",         "DEC B",      "LD B, %02X",    "RLCA",       "LD (%04X), SP",       "ADD HL, BC", "LD A, (BC)",   "DEC BC",   "INC C",        "DEC C",     "LD C, %02X",  "RRCA",
 /* 1 */ "STOP",             "LD DE, %04X", "LD (DE), A",  "INC DE",     "INC D",         "DEC D",      "LD D, %02X",    "RLA",        "JR %02" PRIX8,        "ADD HL, DE", "LD A, (DE)",   "DEC DE",   "INC E",        "DEC E",     "LD E, %02X",  "RRA",
 /* 2 */ "JR NZ, %02" PRIX8, "LD HL, %04X", "LD (HL+), A", "INC HL",     "INC H",         "DEC H",      "LD H, %02X",    "DAA",        "JR Z, %02" PRIX8,     "ADD HL, HL", "LD A, (HL+)",  "DEC HL",   "INC L",        "DEC L",     "LD L, %02X",  "CPL",
-/* 3 */ "JR NC, %02" PRIX8, "LD SP, %04X", "LD (HL-), A", "INC SP",     "INC (HL)",      "DEC (HL)",   "LD (HL), %02X", "SCF",        "JR C, %02" PRIX8,     "",           "LD A, (HL-)",  "DEC SP",   "INC A",        "DEC A",     "LD A, %02X",  "CCF",
+/* 3 */ "JR NC, %02" PRIX8, "LD SP, %04X", "LD (HL-), A", "INC SP",     "INC (HL)",      "DEC (HL)",   "LD (HL), %02X", "SCF",        "JR C, %02" PRIX8,     "ADD HL, SP", "LD A, (HL-)",  "DEC SP",   "INC A",        "DEC A",     "LD A, %02X",  "CCF",
 /* 4 */ "LD B, B",          "LD B, C",     "LD B, D",     "LD B, E",    "LD B, H",       "LD B, L",    "LD B, (HL)",    "LD B, A",    "LD C, B",             "LD C, C",    "LD C, D",      "LD C, E",  "LD C, H",      "LD C, L",   "LD C, (HL)",  "LD C, A",
 /* 5 */ "LD D, B",          "LD D, C",     "LD D, D",     "LD D, E",    "LD D, H",       "LD D, L",    "LD D, (HL)",    "LD D, A",    "LD E, B",             "LD E, C",    "LD E, D",      "LD E, E",  "LD E, H",      "LD E, L",   "LD E, (HL)",  "LD E, A",
 /* 6 */ "LD H, B",          "LD H, C",     "LD H, D",     "LD H, E",    "LD H, H",       "LD H, L",    "LD H, (HL)",    "LD H, A",    "LD L, B",             "LD L, C",    "LD L, D",      "LD L, E",  "LD L, H",      "LD L, L",   "LD L, (HL)",  "LD L, A",
@@ -123,7 +123,7 @@ const char * const kInstFmts[0x100] =
 /* A */ "AND A, B",         "AND A, C",    "AND A, D",    "AND A, E",   "AND A, H",      "AND A, L",   "AND A, (HL)",   "AND A, A",   "XOR A, B",            "XOR A, C",   "XOR A, D",     "XOR A, E", "XOR A, H",     "XOR A, L",  "XOR A, (HL)", "XOR A, A",
 /* B */ "OR A, B",          "OR A, C",     "OR A, D",     "OR A, E",    "OR A, H",       "OR A, L",    "OR A, (HL)",    "OR A, A",    "CP A, B",             "CP A, C",    "CP A, D",      "CP A, E",  "CP A, H",      "CP A, L",   "CP A, (HL)",  "CP A, A",
 /* C */ "RET NZ",           "POP BC",      "JP NZ, %04X", "JP %04X",    "CALL NZ, %04X", "PUSH BC",    "ADD A, %02X",   "RST 00",     "RET Z",               "RET",        "JP Z, %04X",   "CB",       "CALL Z, %04X", "CALL %04X", "ADC A, %02X", "RST 10",
-/* D */ "RET_NC",           "POP DE",      "JP NC, %04X", "INVALID",    "CALL NC, %04X", "PUSH DE",    "SUB A, %02X",   "RST 10",     "RET C",               "RETI",       "JP C, %04X",   "INVALID",  "",             "INVALID",   "SBC A, %02X", "RST 18",
+/* D */ "RET_NC",           "POP DE",      "JP NC, %04X", "INVALID",    "CALL NC, %04X", "PUSH DE",    "SUB A, %02X",   "RST 10",     "RET C",               "RETI",       "JP C, %04X",   "INVALID",  "CALL C, %04X", "INVALID",   "SBC A, %02X", "RST 18",
 /* E */ "LD (FF%02X), A",   "POP HL",      "LD (C), A",   "INVALID",    "INVALID",       "PUSH HL",    "AND A, %02X",   "RST 20",     "ADD SP, %02" PRIX8,   "JP (HL)",   "LD (%04X), A",  "INVALID",  "INVALID",      "INVALID",   "XOR A, %02X", "RST 28",
 /* F */ "LD A, (FF%02X)",   "POP AF",      "LD A, (C)",   "DI",         "INVALID",       "PUSH AF",    "OR A, %02X",    "RST 30",     "LD HL, SP+%02" PRIX8, "LD SP, HL",  "LD A, (%04X)", "EI",       "INVALID",      "INVALID",   "CP A, %02X",  "RST 38",
 };      
@@ -144,7 +144,7 @@ const int kInstFmtSizes[0x100] =
 /* A */ 0, 0,  0,  0,  0,  0, 0, 0, 0,  0, 0,  0, 0,  0,  0, 0,
 /* B */ 0, 0,  0,  0,  0,  0, 0, 0, 0,  0, 0,  0, 0,  0,  0, 0,
 /* C */ 0, 0,  16, 16, 16, 8, 8, 0, 0,  0, 16, 0, 16, 16, 8, 0,
-/* D */ 0, 0,  16, 0,  16, 0, 8, 0, 0,  0, 16, 0, 0,  0,  8, 0,
+/* D */ 0, 0,  16, 0,  16, 0, 8, 0, 0,  0, 16, 0, 16, 0,  8, 0,
 /* E */ 8, 0,  0,  0,  0,  0, 8, 0, 8,  0, 16, 0, 0,  0,  8, 0,
 /* F */ 8, 0,  0,  0,  0,  0, 8, 0, 8,  0, 16, 0, 0,  0,  8, 0,
 };
@@ -159,15 +159,15 @@ const char * const kCbInstFmts[0x100] =
 /* 4 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
 /* 5 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
 /* 6 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
-/* 7 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "BIT 7H", "", "", "",
+/* 7 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "BIT 7H", "", "BIT 7, (HL)", "",
 /* 8 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
 /* 9 */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
 /* A */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
-/* B */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
+/* B */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "RES 7, (HL)", "",
 /* C */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
 /* D */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
 /* E */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
-/* F */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "",
+/* F */ "",       "",       "",       "",       "",       "",       "",          "",       "",      "",     "",     "",     "",       "", "", "SET 7, A",
 };
 
 const int kCbInstFmtSizes[0x100] =

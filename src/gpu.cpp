@@ -2,14 +2,12 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
-#include <GL/glew.h>
+
 #include "gpu.h"
-#include "mmu.h"
 #include "memory_map.h"
 #include "util.h"
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "gui/opengl_widget.h"
 
 constexpr uint8_t kShades[4] =
 {
@@ -19,9 +17,8 @@ constexpr uint8_t kShades[4] =
 	0xFF
 };
 
-const int kNumComponents = 1;
-
-GPU::GPU()
+GPU::GPU(GpuRegisters registers, GpuMem mem, OpenGLWidget *openGLWidget)
+	: reg(registers), mem(mem), mOpenGL(openGLWidget)
 {
 	std::memset(mBgPalette, 0, 4);
 	std::memset(mSpritePalettes, 0, 8);
@@ -29,8 +26,10 @@ GPU::GPU()
 
 GPU::~GPU()
 {
-	destroyGLObjects();
-	delete mPixels;
+	if (mPixels)
+		delete mPixels;
+	if (mMapData)
+		free(mMapData);
 }
 
 void GPU::reset()
@@ -39,127 +38,17 @@ void GPU::reset()
 	{
 		delete[] mPixels;
 	}
-	mNumPixels = 160 * 144 * kNumComponents;
-	mPixels = new uint8_t[mNumPixels];
-	std::fill_n(mPixels, mNumPixels, 0x00);
-	createGLObjects();
-}
 
-void GPU::destroyGLObjects()
-{
-	if (mProgram)
-	{
-		glDeleteProgram(mProgram);
-	}
-	if (mFrameTexture)
-	{
-		glDeleteTextures(1, &mFrameTexture);
-	}
-	if (mVao)
-	{
-		glDeleteVertexArrays(1, &mVao);
-	}
-	if (mVbo)
-	{
-		glDeleteBuffers(1, &mVbo);
-	}
-	if (mMapTex)
-	{
-		glDeleteTextures(1, &mMapTex);
-	}
+	mPixels = new uint8_t[160 * 144];
+	std::fill_n(mPixels, 160 * 144, 0x00);
+
 	if (mMapData)
 	{
 		free(mMapData);
-		mMapData = nullptr;
 	}
-}
-
-void GPU::initOpenGL()
-{
-	glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-	mProjMatrix = glm::ortho(0.0f, 160.0f + 64.0f, 0.0f, 144.0f);
-	mMainModel = glm::scale(mMainModel, glm::vec3(160.0f, 144.0f, 1.0f));
-	mMapModel = glm::scale(mMapModel, glm::vec3(32.0f, 64.0f, 1.0f));
-	// mMapModel = glm::translate(mMapModel, glm::vec3(160.0f, 0.0f, 0.0f));
-}
-
-void GPU::setSize(int w, int h)
-{
-	mWidth = w;
-	mHeight = h;
-	createGLObjects();
-}
-
-void GPU::createGLObjects()
-{
-	destroyGLObjects();
-
-	mProgram = glCreateProgram();
-	glGenTextures(1, &mFrameTexture);
-	glGenVertexArrays(1, &mVao);
-	glGenBuffers(1, &mVbo);
-
-	glBindTexture(GL_TEXTURE_2D, mFrameTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 160, 144, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	loadShaders(mProgram, "../assets/shaders/ssquad.vs", "../assets/shaders/ssquad.fs");
-
-	GLfloat vertices[] =
-	{
-		/* xyzw */ 0.0f, 0.0f, 0.0f, 1.0f, /* uv */ 0.0f, 1.0f,
-		/* xyzw */ 1.0f, 0.0f, 0.0f, 1.0f, /* uv */ 1.0f, 1.0f,
-		/* xyzw */ 1.0f, 1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 0.0f,
-		/* xyzw */ 0.0f, 0.0f, 0.0f, 1.0f, /* uv */ 0.0f, 1.0f,
-		/* xyzw */ 1.0f, 1.0f, 0.0f, 1.0f, /* uv */ 1.0f, 0.0f,
-		/* xyzw */ 0.0f, 1.0f, 0.0f, 1.0f, /* uv */ 0.0f, 0.0f,
-	};
-
-	glBindVertexArray(mVao);
-	glBindBuffer(GL_ARRAY_BUFFER, mVbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * 6, vertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (GLvoid *)(sizeof(GLfloat) * 0));
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (GLvoid *)(sizeof(GLfloat) * 4));
-	glBindVertexArray(0);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	/*
-		Map: a 32x32 array of tile indices, which are 1 byte long.
-		a tile index refers to a location in the tile data starting at either
-		0x8000 or 0x9000 depending on whether LCDC.4 is set.
-		0 = 0x8000 and the tile index is unsigned
-		1 = 0x9000 and the tile index is signed
-		Each tile data set is 0x1000 bytes long.
-
-		For the map view I will create a texture showing an RGB colour from 0-255 based on the index,
-		for each index.
-
-		There are two maps of size 0x400. One is at 0x9800 and the other is at 0x9C00.
-		Which one is used is set based on LCDC.3.
-	*/
-	glGenTextures(1, &mMapTex);
 
 	mMapData = static_cast<uint8_t *>(malloc(0x800));
 	memset(mMapData, 0x46, 0x800);
-
-	glBindTexture(GL_TEXTURE_2D, mMapTex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 32, 64, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mMapData);
-	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 uint8_t paletteIndex(uint8_t byte0, uint8_t byte1, uint8_t pxIndex)
@@ -204,7 +93,7 @@ uint8_t decodePixel(uint16_t row, int pixelIdx)
 
 void GPU::setPixel(int x, int y, uint8_t colour)
 {
-	mPixels[(y * 160 + x) % (mNumPixels)] = colour;
+	mPixels[(y * 160 + x) % (160 * 144)] = colour;
 }
 
 std::array<std::array<uint8_t, 2>, 8> getTile(uint8_t *tiles, int patternNum, bool isSigned)
@@ -236,83 +125,69 @@ int getMapEntry(uint8_t *map, int x, int y)
 
 void GPU::drawScanline(int line)
 {
-	uint8_t lcdc = mmu->mem[kLcdc];
-
-	if (!(lcdc & 0x80))
+	if (!(reg.lcdc & 0x80))
 		return;
 
 	bool isSigned = true;
 
-	uint16_t tileData = kTileRamSigned;
-	if (lcdc & 0x10)
+	uint8_t *tiles = mem.tilesSigned;
+	if (reg.lcdc & 0x10)
 	{
-		tileData = kTileRamUnsigned;
+		tiles = mem.tilesUnsigned;
 		isSigned = false;
 	}
 
-	uint16_t bgMap = kMap0;
-	if (lcdc & 0x8)
-	{
-		bgMap = kMap1;
-	}
+	uint8_t *bgMap = reg.lcdc & 0x8 ? mem.map1 : mem.map0;
 
-	int scx = mmu->mem[kScx];
-
-	int y_abs = line + mmu->mem[kScy];
+	int y_abs = line + reg.scy;
 	int y_map = y_abs / 8;
 	int y_px_in_tile = y_abs % 8;
 
 	// background
 	for (int x = 0; x < 160; x++)
 	{
-		int x_abs = x + scx;
+		int x_abs = x + reg.scx;
 		int x_map = x_abs / 8;
 		int x_px_in_tile = x_abs % 8;
 
 		// Wrap around if it tries to draw past the end of a map
 		int idx_offset_in_map = ((y_map * 32) + x_map) % 0x400;
 
-		int idx_offset = bgMap + idx_offset_in_map;
-		int idx = isSigned ? int8_t(mmu->mem[idx_offset]) : uint8_t(mmu->mem[idx_offset]);
+		uint8_t map_val = bgMap[idx_offset_in_map];
+		int idx = isSigned ? int8_t(map_val) : map_val;
 
-		int tile_offset_in_data = idx * 16;
-		int tile_offset = tileData + tile_offset_in_data;
-
+		int tile_offset = idx * 16;
 		int row_offset = tile_offset + (y_px_in_tile * 2);
 
-		uint16_t row = mmu->read16(row_offset);
+		uint16_t row = tiles[row_offset] << 8;
+		row |= tiles[row_offset + 1];
 		uint8_t colour = mBgPalette[decodePixel(row, x_px_in_tile)];
 
 		setPixel(x, line - 1, colour);
 	}
 
-	if (lcdc & 0x20)
+	if (reg.lcdc & 0x20)
 	{
-		uint16_t wdMap = kMap0;
-		if (lcdc & 0x40)
-		{
-			wdMap = kMap1;
-		}
+		uint8_t *windowMap = reg.lcdc & 0x40 ? mem.map1 : mem.map0;
 
 		// window
 		for (int x = 0; x < 160; x++)
 		{
-			int x_abs = x + scx;
+			int x_abs = x + reg.scx;
 			int x_map = x_abs / 8;
 			int x_px_in_tile = x_abs % 8;
 
 			// Wrap around if it tries to draw past the end of a map
-			int idx_offset_in_map = ((y_map * 32) + x_map) % 0x400;
+			int idx_offset = ((y_map * 32) + x_map) % 0x400;
+			uint8_t map_val = windowMap[idx_offset];
+			int idx = isSigned ? int8_t(map_val) : map_val;
 
-			int idx_offset = wdMap + idx_offset_in_map;
-			int idx = isSigned ? int8_t(mmu->mem[idx_offset]) : uint8_t(mmu->mem[idx_offset]);
-
-			int tile_offset_in_data = idx * 16;
-			int tile_offset = tileData + tile_offset_in_data;
-
+			int tile_offset = idx * 16;
 			int row_offset = tile_offset + (y_px_in_tile * 2);
 
-			uint16_t row = mmu->read16(row_offset);
+			uint16_t row = tiles[row_offset];
+			row |= tiles[row_offset + 1];
+
 			uint8_t colour = mBgPalette[decodePixel(row, x_px_in_tile)];
 
 			setPixel(x, line - 1, colour);
@@ -321,7 +196,7 @@ void GPU::drawScanline(int line)
 
 	if (mSpritesChanged)
 	{
-		memcpy(mSprites.data(), &mmu->mem[kOam], sizeof(sprite_t) * 40);
+		memcpy(mSprites.data(), mem.oam, sizeof(sprite_t) * 40);
 		std::sort(mSprites.begin(), mSprites.end(), [](const sprite_t &lh, const sprite_t &rh) {return lh.x < rh.x;});
 		for (const auto &sprite : mSprites)
 		{
@@ -331,54 +206,21 @@ void GPU::drawScanline(int line)
 	}
 }
 
-void GPU::frame()
+const uint8_t* GPU::getPixels()
 {
-	glUseProgram(mProgram);
-	glUniformMatrix4fv(glGetUniformLocation(mProgram, "projection"), 1, GL_FALSE, glm::value_ptr(mProjMatrix));
-
-	// Draw main frame
-
-	// Update texture
-	glBindTexture(GL_TEXTURE_2D, mFrameTexture);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 160, 144, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mPixels);
-
-	// Update main model
-	glm::mat4 mainModel(1.0f);
-	mainModel = glm::scale(mainModel, glm::vec3(160.0f, 144.0f, 1.0f));
-	glUniformMatrix4fv(glGetUniformLocation(mProgram, "model"), 1, GL_FALSE, glm::value_ptr(mainModel));
-
-	// Draw
-	glBindVertexArray(mVao);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	// Draw map view
-
-	// Update map model
-	glm::mat4 mapModel(1.0f);
-	mapModel = glm::translate(mapModel, glm::vec3(160.0f, 0.0f, 0.0f));
-	mapModel = glm::scale(mapModel, glm::vec3(64.0f, 144.0f, 1.0f));
-	glUniformMatrix4fv(glGetUniformLocation(mProgram, "model"), 1, GL_FALSE, glm::value_ptr(mapModel));
-
-	// Draw
-	glBindTexture(GL_TEXTURE_2D, mMapTex);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glUseProgram(0);
-	glBindVertexArray(0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	return mPixels;
 }
 
 void GPU::updateMap()
 {
-	mMapModel = glm::translate(mMapModel, glm::vec3(1.0f, 0.0f, 0.0f));
-	if (!(mmu->mem[kLcdc] & (1U << 3)))
+	if (!(reg.lcdc & (1U << 3)))
 	{
 		for (int i = 0; i < 0x400; i++)
 		{
-			mMapData[i] = mmu->mem[kMap0 + i];
+			mMapData[i] = mem.map0[i];
 		}
 
-		int left = getMapIndex(mmu->mem[kScx], mmu->mem[kScy]);
+		int left = getMapIndex(reg.scx, reg.scy);
 		int right = left + 20;
 		int bottomLeft = (left + (18 * 32)) % 0x400;
 		int bottomRight = (right + (18 * 32)) % 0x400;
@@ -398,10 +240,10 @@ void GPU::updateMap()
 	{
 		for (int i = 0; i < 0x400; i++)
 		{
-			mMapData[0x400 + i] = mmu->mem[kMap1 + i];
+			mMapData[0x400 + i] = mem.map1[i];
 		}
 
-		int left = getMapIndex(mmu->mem[kScx], mmu->mem[kScy]);
+		int left = getMapIndex(reg.scx, reg.scy);
 		int right = left + 20;
 		int bottomLeft = left + (18 * 32);
 
@@ -413,14 +255,14 @@ void GPU::updateMap()
 			mMapData[right + (i * 32)] = 0xFF;
 		}
 	}
-	glBindTexture(GL_TEXTURE_2D, mMapTex);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 32, 64, GL_RED_INTEGER, GL_UNSIGNED_BYTE, mMapData);
+	
+	mOpenGL->updateMap(mMapData);
 }
 
 void GPU::tick(int cycles)
 {
 	mModeClock += cycles;
-	uint8_t stat = mmu->mem[kStat];
+	uint8_t stat = reg.stat;
 
 	if (mode == MODE_OAM)
 	{
@@ -442,24 +284,24 @@ void GPU::tick(int cycles)
 	{
 		if (mModeClock >= 207)
 		{
-			if (mmu->mem[kLy] >= 0x91)
+			if (reg.ly > 0x99)
 			{
 				mode = MODE_VBLANK;
-				drawScanline(mmu->mem[kLy]);
-				mmu->mem[kLy] = 0;
+				drawScanline(reg.ly);
+				reg.ly = 0;
 				mModeClock = 0;
-				mmu->or8(kIf, 0x1);
+				reg.if_ |= 0x1;
 			}
 			else
 			{
 				mode = MODE_OAM;
-				mmu->mem[kLy]++;
-				if (mmu->mem[kLy] == mmu->mem[kLyc])
+				reg.ly++;
+				if (reg.ly == reg.lyc)
 				{
-					mmu->mem[kStat] |= 0x4;
-					mmu->mem[kIf] |= 0x2;
+					reg.stat |= 0x4;
+					reg.if_ |= 0x2;
 				}
-				drawScanline(mmu->mem[kLy]);
+				drawScanline(reg.ly);
 				mModeClock = 0;
 			}
 		}
@@ -473,7 +315,7 @@ void GPU::tick(int cycles)
 		}
 	}
 
-	mmu->mem[kStat] = (mmu->mem[kStat] & 0b1111'1100) | mode;
+	reg.stat = (reg.stat & 0b1111'1100) | mode;
 }
 
 void GPU::setBgPalette(uint8_t val)

@@ -10,7 +10,6 @@ extern const int kInstCyclesAlt[0x100];
 extern const char * const kInstFmts[0x100];
 extern const int   kInstFmtSizes[0x100];
 
-
 extern const int kCbInstSizes[0x100];
 extern const int kCbInstCycles[0x100];
 

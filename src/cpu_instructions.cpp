@@ -81,30 +81,23 @@ void SRL_RL(CPU *cpu, uint16_t &r)
 
 void XOR_A_R(CPU *cpu, uint8_t r)
 {
+	// Z000
 	SetHi(cpu->af, Hi(cpu->af) ^ r);
-	SetLo(cpu->af, Hi(cpu->af) == 0 ? 0x80 : 0);
+	SetLo(cpu->af, !Hi(cpu->af) ? FLAGS_ZERO : 0);
 }
 
 void AND_A_R(CPU *cpu, uint8_t r)
 {
 	// Z010
 	SetHi(cpu->af, Hi(cpu->af) & r);
-	SetLo(cpu->af, Hi(cpu->af) ? 0xA0 : 0x20);
+	SetLo(cpu->af, !Hi(cpu->af) ? (FLAGS_ZERO | FLAGS_HALFCARRY) : FLAGS_HALFCARRY);
 }
 
-void OR_A_R(CPU *cpu, uint8_t b)
+void OR_A_R(CPU *cpu, uint8_t r)
 {
 	// Z000
-	uint8_t result = Hi(cpu->af) | b;
-	if (result == 0)
-	{
-		SetLo(cpu->af, 0x80);
-	}
-	else
-	{
-		SetLo(cpu->af, 0x00);
-	}
-	SetHi(cpu->af, result);
+	SetHi(cpu->af, Hi(cpu->af) | r);
+	SetLo(cpu->af, !Hi(cpu->af) ? FLAGS_ZERO : 0);
 }
 
 uint8_t SLA_REG8(CPU *cpu, uint8_t r)
@@ -129,19 +122,12 @@ uint8_t SLA_REG8(CPU *cpu, uint8_t r)
 uint8_t SRA_REG8(CPU *cpu, uint8_t r)
 {
 	// Z00C
-	uint8_t carry = (cpu->af & 0x10) >> 4;
+	uint8_t msb = r & 0x80;
 	uint8_t newCarry = r & 0x1;
 	r >>= 1;
-	uint8_t f = 0;
-	if (!r)
-	{
-		f |= 0x80;
-	}
-	if (r & 0x80)
-	{
-		f |= (newCarry << 4);
-	}
-	SetLo(cpu->af, f);
+	r = (r & 0b0111'1111) | msb;
+	uint8_t flags = !r ? FLAGS_ZERO : 0;
+	SetLo(cpu->af, flags | newCarry);
 	return r;
 }
 
@@ -171,7 +157,7 @@ void ADC_A_R(CPU *cpu, uint8_t r)
 	}
 
 	SetLo(cpu->af, flags);
-	SetHi(cpu->af, result);
+	SetHi(cpu->af, result & 0xFF);
 }
 
 void SBC_A_R(CPU *cpu, uint8_t r)
@@ -200,7 +186,7 @@ void SBC_A_R(CPU *cpu, uint8_t r)
 	}
 
 	SetLo(cpu->af, flags);
-	SetHi(cpu->af, result);
+	SetHi(cpu->af, result & 0xFF);
 }
 
 // Merges flags according to mask
@@ -439,36 +425,48 @@ void LD_H_IMM8(CPU *cpu, instruction_t &i)
 
 void DAA(CPU *cpu, instruction_t &i)
 {
-	int tmp = Hi(cpu->af);
+	uint8_t flags = Lo(cpu->af);
+	uint8_t a = Hi(cpu->af);
 
-	uint8_t f = Lo(cpu->af);
-
-	if ( ! ( f & 0x40 ) ) {
-		if ( ( f & 0x20 ) || ( tmp & 0x0F ) > 9 )
-			tmp += 6;
-		if ( ( f & 0x10 ) || tmp > 0x9F )
-			tmp += 0x60;
-	} else {
-		if ( f & 0x20 ) {
-			tmp -= 6;
-			if ( ! ( f & 0x10 ) )
-				tmp &= 0xFF;
+	printf("\nDAA\n");
+	if (!(flags & FLAGS_SUBTRACT)) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
+		if ((flags & FLAGS_CARRY) || a > 0x99) {
+			printf("%02X + 60 = ", a);
+			a += 0x60;
+			flags |= FLAGS_CARRY;
+			printf("%02X\n", a);
 		}
-		if ( f & 0x10 )
-			tmp -= 0x60;
+		if ((flags & FLAGS_HALFCARRY) || (a & 0xF) > 0x9) {
+			printf("%02X + 6 = ", a);
+			a += 0x6;
+			printf("%02X\n", a);
+		}
 	}
-	f &= 0b0101'0000;
-	if ( tmp & 0x100 )
-		f |= 0x10;
-	if ( ! (tmp & 0xFF) )
-		f |= 0x80;
-	SetHi(cpu->af, tmp & 0xFF);
-	SetLo(cpu->af, f);
+	else {  // after a subtraction, only adjust if (half-)carry occurred
+		if (flags & FLAGS_CARRY) {
+			printf("%02X - 60 = ", a);
+			a -= 0x60;
+			printf("%02X\n", a);
+		}
+		if (flags & FLAGS_HALFCARRY) {
+			printf("%02X - 6 = ", a);
+			a -= 0x6;
+			printf("%02X\n", a);
+		}
+	}
+
+	if (a)
+		flags &= ~(1 << 7);
+	else
+		flags |= FLAGS_ZERO;
+
+	SetHi(cpu->af, a);
+	SetLo(cpu->af, flags & 0b1101'0000);
 }
 
 void JR_Z_IMM8(CPU *cpu, instruction_t &i)
 {
-	if (cpu->af & 0x80)
+	if (cpu->af & FLAGS_ZERO)
 	{
 		cpu->pc += int8_t(i.op8);
 	}
@@ -495,7 +493,8 @@ void ADD_HL_HL(CPU *cpu, instruction_t &i)
 
 void LDI_A_HL(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl++));
+	SetHi(cpu->af, cpu->mmu->read8(cpu->hl));
+	cpu->hl++;
 }
 
 void DEC_HL(CPU *cpu, instruction_t &i)
@@ -603,7 +602,7 @@ void ADD_HL_SP(CPU *cpu, instruction_t &i)
 	uint16_t result = 0;
 	ADD16(cpu->hl, cpu->sp, &result, &flags);
 	cpu->hl = result;
-	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));
+	SetLo(cpu->af, (flags & (FLAGS_HALFCARRY | FLAGS_CARRY)) | (Lo(cpu->af) & FLAGS_ZERO));
 }
 
 void LDD_A_HL(CPU *cpu, instruction_t &i)
@@ -1123,7 +1122,7 @@ void SUB_A_AHL(CPU *cpu, instruction_t &i)
 
 void SUB_A_A(CPU *cpu, instruction_t &i)
 {
-	SUB(cpu, cpu->af);
+	SUB(cpu, Hi(cpu->af));
 }
 
 void SBC_A_B(CPU *cpu, instruction_t &i)
@@ -1675,7 +1674,7 @@ void LDH_A_IMM8(CPU *cpu, instruction_t &i)
 
 void POP_AF(CPU *cpu, instruction_t &i)
 {
-	cpu->af = cpu->mmu->read16(cpu->sp) & 0b1111'1111'1111'0000;
+	cpu->af = cpu->mmu->read16(cpu->sp) & 0xFFF0;
 	cpu->sp += 2;
 }
 
@@ -2290,22 +2289,22 @@ void BIT_1_C(CPU *cpu, instruction_t &i)
 
 void BIT_1_D(CPU *cpu, instruction_t &i)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0000'0010);
+	TestBit(cpu, Hi(cpu->de) & 0b0000'0010);
 }
 
 void BIT_1_E(CPU *cpu, instruction_t &i)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0000'0010);
+	TestBit(cpu, Lo(cpu->de) & 0b0000'0010);
 }
 
 void BIT_1_H(CPU *cpu, instruction_t &i)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0000'0010);
+	TestBit(cpu, Hi(cpu->hl) & 0b0000'0010);
 }
 
 void BIT_1_L(CPU *cpu, instruction_t &i)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0000'0010);
+	TestBit(cpu, Lo(cpu->hl) & 0b0000'0010);
 }
 
 void BIT_1_AHL(CPU *cpu, instruction_t &i)
@@ -2610,22 +2609,22 @@ void RES_1_C(CPU *cpu, instruction_t &i)
 
 void RES_1_D(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0000'0010));
+	SetHi(cpu->de, Hi(cpu->de) & ~(0b0000'0010));
 }
 
 void RES_1_E(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0000'0010));
+	SetLo(cpu->de, Lo(cpu->de) & ~(0b0000'0010));
 }
 
 void RES_1_H(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0000'0010));
+	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0000'0010));
 }
 
 void RES_1_L(CPU *cpu, instruction_t &i)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0000'0010));
+	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0000'0010));
 }
 
 void RES_1_AHL(CPU *cpu, instruction_t &i)
@@ -2895,7 +2894,7 @@ void SET_0_D(CPU *cpu, instruction_t &i)
 
 void SET_0_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0000'0001));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0000'0001));
 }
 
 void SET_0_H(CPU *cpu, instruction_t &i)
@@ -2905,7 +2904,7 @@ void SET_0_H(CPU *cpu, instruction_t &i)
 
 void SET_0_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'0001));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'0001));
 }
 
 void SET_0_AHL(CPU *cpu, instruction_t &i)
@@ -2935,7 +2934,7 @@ void SET_1_D(CPU *cpu, instruction_t &i)
 
 void SET_1_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0000'0010));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0000'0010));
 }
 
 void SET_1_H(CPU *cpu, instruction_t &i)
@@ -2945,7 +2944,7 @@ void SET_1_H(CPU *cpu, instruction_t &i)
 
 void SET_1_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'0010));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'0010));
 }
 
 void SET_1_AHL(CPU *cpu, instruction_t &i)
@@ -2975,7 +2974,7 @@ void SET_2_D(CPU *cpu, instruction_t &i)
 
 void SET_2_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0000'0100));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0000'0100));
 }
 
 void SET_2_H(CPU *cpu, instruction_t &i)
@@ -2985,7 +2984,7 @@ void SET_2_H(CPU *cpu, instruction_t &i)
 
 void SET_2_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'0100));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'0100));
 }
 
 void SET_2_AHL(CPU *cpu, instruction_t &i)
@@ -3015,7 +3014,7 @@ void SET_3_D(CPU *cpu, instruction_t &i)
 
 void SET_3_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0000'1000));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0000'1000));
 }
 
 void SET_3_H(CPU *cpu, instruction_t &i)
@@ -3025,7 +3024,7 @@ void SET_3_H(CPU *cpu, instruction_t &i)
 
 void SET_3_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'1000));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'1000));
 }
 
 void SET_3_AHL(CPU *cpu, instruction_t &i)
@@ -3055,7 +3054,7 @@ void SET_4_D(CPU *cpu, instruction_t &i)
 
 void SET_4_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0001'0000));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0001'0000));
 }
 
 void SET_4_H(CPU *cpu, instruction_t &i)
@@ -3065,7 +3064,7 @@ void SET_4_H(CPU *cpu, instruction_t &i)
 
 void SET_4_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0001'0000));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0001'0000));
 }
 
 void SET_4_AHL(CPU *cpu, instruction_t &i)
@@ -3095,7 +3094,7 @@ void SET_5_D(CPU *cpu, instruction_t &i)
 
 void SET_5_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0010'0000));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0010'0000));
 }
 
 void SET_5_H(CPU *cpu, instruction_t &i)
@@ -3105,7 +3104,7 @@ void SET_5_H(CPU *cpu, instruction_t &i)
 
 void SET_5_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0010'0000));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0010'0000));
 }
 
 void SET_5_AHL(CPU *cpu, instruction_t &i)
@@ -3135,7 +3134,7 @@ void SET_6_D(CPU *cpu, instruction_t &i)
 
 void SET_6_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b0100'0000));
+	SetLo(cpu->de, Lo(cpu->de) | (0b0100'0000));
 }
 
 void SET_6_H(CPU *cpu, instruction_t &i)
@@ -3145,7 +3144,7 @@ void SET_6_H(CPU *cpu, instruction_t &i)
 
 void SET_6_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0100'0000));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b0100'0000));
 }
 
 void SET_6_AHL(CPU *cpu, instruction_t &i)
@@ -3175,7 +3174,7 @@ void SET_7_D(CPU *cpu, instruction_t &i)
 
 void SET_7_E(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->de, Lo(cpu->de) | (0b1000'0000));
+	SetLo(cpu->de, Lo(cpu->de) | (0b1000'0000));
 }
 
 void SET_7_H(CPU *cpu, instruction_t &i)
@@ -3185,7 +3184,7 @@ void SET_7_H(CPU *cpu, instruction_t &i)
 
 void SET_7_L(CPU *cpu, instruction_t &i)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b1000'0000));
+	SetLo(cpu->hl, Lo(cpu->hl) | (0b1000'0000));
 }
 
 void SET_7_AHL(CPU *cpu, instruction_t &i)

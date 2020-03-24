@@ -20,6 +20,8 @@ add_executable(test_app
 	${KORLOW_TEST_HEADERS}
 )
 
+target_include_directories(test_app PUBLIC src)
+
 target_link_libraries(test_app
 	PRIVATE
 		Korlow

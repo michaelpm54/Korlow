@@ -5,7 +5,7 @@
 #include "types.h"
 
 class GPU;
-class MMU;
+struct MMU;
 
 struct registers_t
 {
@@ -36,6 +36,8 @@ public:
 	void delayImeEnable();
 
 	void halt();
+
+	void initWithoutBios();
 
 public:
 	GPU *gpu { nullptr };

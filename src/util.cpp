@@ -1,44 +1,12 @@
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <GL/glew.h>
 
-std::string readFileText(const std::string &filePath, int &size)
-{
-	FILE *file = fopen(filePath.c_str(), "rb");
-	if (!file)
-	{
-		throw std::runtime_error("Failed to open file '" + filePath + "':\n" + std::string(strerror(errno)));
-	}
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	std::string buffer;
-	buffer.resize(size);
-	fseek(file, 0, SEEK_SET);
-	fread(buffer.data(), 1, size, file);
-	fclose(file);
-
-	return buffer;
-}
-
-std::unique_ptr<uint8_t[]> readFileBytes(const std::string &filePath, int &size)
-{
-	FILE *file = fopen(filePath.c_str(), "rb");
-	if (!file)
-	{
-		throw std::runtime_error("Failed to open file '" + filePath + "':\n" + std::string(strerror(errno)));
-	}
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	std::unique_ptr<uint8_t[]> bytes(new uint8_t[size]);
-	fseek(file, 0, SEEK_SET);
-	fread(bytes.get(), 1, size, file);
-	fclose(file);
-
-	return bytes;
-}
+#include "fs.h"
+#include "util.h"
 
 void compileShader(GLuint shader)
 {
@@ -80,11 +48,10 @@ void loadShaders(GLuint program, const std::string &vsPath, const std::string &f
 {
 	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-	int size;
 	std::string shaderSrcs[2] =
 	{
-		readFileText(vsPath, size),
-		readFileText(fsPath, size),
+		FS::readText(vsPath),
+		FS::readText(fsPath),
 	};
 	const char *vsSrc = shaderSrcs[0].c_str();
 	const char *fsSrc = shaderSrcs[1].c_str();
