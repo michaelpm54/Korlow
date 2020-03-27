@@ -162,15 +162,15 @@ void ADC_A_R(CPU *cpu, uint8_t r)
 
 void SBC_A_R(CPU *cpu, uint8_t r)
 {
-	uint8_t carry = (cpu->af & FLAGS_CARRY) >> 4;
-	uint8_t flags = 0;
+	uint8_t carry = !!(cpu->af & FLAGS_CARRY);
+	uint8_t flags = FLAGS_SUBTRACT;
 
 	int16_t a, r_, c;
 	a = Hi(cpu->af);
 	r_ = r;
 	c = carry;
 
-	uint16_t result = a - r_ - c;
+	int16_t result = a - (r_ + c);
 
 	if (result < 0)
 	{
@@ -425,43 +425,29 @@ void LD_H_IMM8(CPU *cpu, instruction_t &i)
 
 void DAA(CPU *cpu, instruction_t &i)
 {
-	uint8_t flags = Lo(cpu->af);
 	uint8_t a = Hi(cpu->af);
+	uint8_t f = Lo(cpu->af);
 
-	printf("\nDAA\n");
-	if (!(flags & FLAGS_SUBTRACT)) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
-		if ((flags & FLAGS_CARRY) || a > 0x99) {
-			printf("%02X + 60 = ", a);
+	if (!(f & FLAGS_SUBTRACT)) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
+		if ((f & FLAGS_CARRY) || a > 0x99) {
 			a += 0x60;
-			flags |= FLAGS_CARRY;
-			printf("%02X\n", a);
+			f |= FLAGS_CARRY;
 		}
-		if ((flags & FLAGS_HALFCARRY) || (a & 0xF) > 0x9) {
-			printf("%02X + 6 = ", a);
+		if ((f & FLAGS_HALFCARRY) || (a & 0xF) > 0x9)
 			a += 0x6;
-			printf("%02X\n", a);
-		}
 	}
 	else {  // after a subtraction, only adjust if (half-)carry occurred
-		if (flags & FLAGS_CARRY) {
-			printf("%02X - 60 = ", a);
+		if (f & FLAGS_CARRY)
 			a -= 0x60;
-			printf("%02X\n", a);
-		}
-		if (flags & FLAGS_HALFCARRY) {
-			printf("%02X - 6 = ", a);
+		if (f & FLAGS_HALFCARRY)
 			a -= 0x6;
-			printf("%02X\n", a);
-		}
 	}
 
-	if (a)
-		flags &= ~(1 << 7);
-	else
-		flags |= FLAGS_ZERO;
+	f &= 0b1101'0000;
+	f = a ? f & 0b0111'0000 : f | 0b1000'0000;
 
 	SetHi(cpu->af, a);
-	SetLo(cpu->af, flags & 0b1101'0000);
+	SetLo(cpu->af, f);
 }
 
 void JR_Z_IMM8(CPU *cpu, instruction_t &i)
@@ -1750,7 +1736,7 @@ void LD_A_AIMM16(CPU *cpu, instruction_t &i)
 
 void EI(CPU *cpu, instruction_t &i)
 {
-	cpu->delayImeEnable();
+	cpu->enableInterrupts();
 }
 
 void CP_A_IMM8(CPU *cpu, instruction_t &i)

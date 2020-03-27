@@ -38,7 +38,13 @@ uint16_t MMU::read16(uint16_t addr)
 
 void MMU::io_write8(uint16_t addr, uint8_t val)
 {
-	if (addr == 0xFF01)
+	if (addr == kIo) // P1/JOYP
+	{
+		printf("JOYP write %02X = %02X\n", val, val | 0xCF);
+		mem[addr] = val | 0xCF;
+		return;
+	}
+	else if (addr == 0xFF01)
 	{
 		serialData.push_back(val);
 		printf("Serial data: %02X\n", val);
@@ -124,19 +130,26 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	{
 		val = 0;
 	}
+	else if (addr == kDmaStartAddr)
+	{
+		uint16_t addr = uint16_t(val) << 8;
+		for (int i = 0; i < 0xA0; i++)
+			write8(kOam + i, read8(addr + i));
+	}
 	else if (addr == kBgPalette)
 	{
 		mGpu->setBgPalette(val);
 	}
 	else
 	{
-		// printf("io write %02x to %04X\n", val, addr);
+		printf("io write %02x to %04X\n", val, addr);
 	}
 	mem[addr] = val;
 }
 
 void MMU::oam_write8(uint16_t addr, uint8_t val)
 {
+	mem[addr] = val;
 	// printf("OAM write { %04X = %02X }\n", addr, val);
 }
 
@@ -145,6 +158,7 @@ void MMU::write8(uint16_t addr, uint8_t val)
 	if (addr >= kOam && addr < kIo)
 	{
 		oam_write8(addr, val);
+		return;
 	}
 	if (addr >= kIo && addr < kZeroPage)
 	{
@@ -177,23 +191,52 @@ void MMU::write8(uint16_t addr, uint8_t val)
 			printf("Disabled all interrupts\n");
 		}
 		printf("Enabled interrupt ");
-		if (val & 0x1)
+		if (val & 0b0000'0001)
 		{
 			printf("VBLANK ");
 		}
-		if (val & 0x2)
+		if (val & 0b0000'0010)
 		{
 			printf("LCD STAT ");
 		}
-		if (val & 0x4)
+		if (val & 0b0000'0100)
 		{
 			printf("TIMER ");
 		}
-		if (val & 0x8)
+		if (val & 0b0000'1000)
 		{
 			printf("SERIAL ");
 		}
-		if (val & 0x10)
+		if (val & 0b0001'0000)
+		{
+			printf("JOYPAD ");
+		}
+		printf("\n");
+	}
+	else if (addr == kIf)
+	{
+		if (!val)
+		{
+			printf("Fired no interrupts\n");
+		}
+		printf("Fired interrupt ");
+		if (val & 0b0000'0001)
+		{
+			printf("VBLANK ");
+		}
+		if (val & 0b0000'0010)
+		{
+			printf("LCD STAT ");
+		}
+		if (val & 0b0000'0100)
+		{
+			printf("TIMER ");
+		}
+		if (val & 0b0000'1000)
+		{
+			printf("SERIAL ");
+		}
+		if (val & 0b0001'0000)
 		{
 			printf("JOYPAD ");
 		}
@@ -212,8 +255,8 @@ void MMU::write8(uint16_t addr, uint8_t val)
 
 void MMU::write16(uint16_t addr, uint16_t val)
 {
-	mem[addr] = val & 0xFF;
-	mem[addr+1] = (val & 0xFF00) >> 8;
+	write8(addr, val);
+	write8(addr+1, (val & 0xFF00) >> 8);
 }
 
 void MMU::or8(uint16_t addr, uint8_t val)

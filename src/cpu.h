@@ -33,7 +33,7 @@ public:
 	void printInstruction(const instruction_t &i, bool cb);
 
 	int numInstructionsExecuted() const;
-	void delayImeEnable();
+	void enableInterrupts();
 
 	void halt();
 
@@ -53,7 +53,7 @@ public:
 	bool ime { false };
 
 private:
-	int interrupts();
+	int interrupts(uint8_t mask);
 
 private:
 	registers_t mRegisters;

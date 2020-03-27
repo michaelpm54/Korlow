@@ -25,27 +25,27 @@ void CPU::frame()
 	}
 
 	int cycles = 0;
-	while (cycles < kMaxCyclesPerFrame && !mBreak)
+	while (cycles < kMaxCyclesPerFrame && !mBreak && !mHalt)
 	{
 		if (!mHalt)
 		{
 			cycles += executeInstruction();
+
+			if (mDelayedImeEnable)
+			{
+				if (mDelayedImeEnable == 2)
+				{
+					mDelayedImeEnable = 0;
+					ime = true;
+				}
+				else
+				{
+					mDelayedImeEnable = 2;
+				}
+			}
 		}
 
-		if (mDelayedImeEnable)
-		{
-			if (mDelayedImeEnable == 2)
-			{
-				mDelayedImeEnable = 0;
-				ime = true;
-			}
-			else
-			{
-				mDelayedImeEnable++;
-			}
-		}
 		gpu->tick(cycles);
-		cycles += interrupts();
 	}
 }
 
@@ -71,7 +71,8 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 		printf("%04X: ", mRegisters.pc);
 		printf("[%04X] ", sp);
 		printf("[%02X] ", opcode);
-		printf("AF:%04X ", af);
+		printf("A:%02X ", Hi(af));
+		printf("F:%c%c%c%c ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-');
 		printf("BC:%04X ", bc);
 		printf("DE:%04X ", de);
 		printf("HL:%04X%c", hl, n);
@@ -179,7 +180,23 @@ void CPU::executeCB(instruction_t &i, int &cycles)
 int CPU::executeInstruction()
 {
 	int cycles = 0;
+
+	uint8_t mask = 0;
+	if (ime)
+	{
+		ime = false;
+		while (mask = mmu->mem[kIe] & mmu->mem[kIf])
+		{
+			puts("IME && (IE & IF)");
+			cycles += interrupts(mask);
+		}
+	}
+
+	if (cycles)
+		return cycles;
+
 	instruction_t i = fetch();
+
 
 	if (i.code == 0xCB)
 	{
@@ -225,69 +242,63 @@ int CPU::numInstructionsExecuted() const
 	return mInstructionCounter;
 }
 
-int CPU::interrupts()
+int CPU::interrupts(uint8_t mask)
 {
-	if (!ime)
-	{
-		return 0;
-	}
+	sp--;
+	mmu->write8(sp, (pc & 0xFF00) >> 8);
 
-	uint8_t If = mmu->mem[kIf] & mmu->mem[kIe];
+	uint8_t If = mmu->mem[kIe] & mmu->mem[kIf];
 
 	if (!If)
-	{
-		return 0;
-	}
+		pc = 0;
+
+	sp--;
+	mmu->write8(sp, pc & 0xFF);
 
 	int cycles = 0;
 
 	if (If & 0b0000'0001)
 	{
-		// printf("INT VBLANK\n");
-		mHalt = false;
-		RST(this, 0x40);
-		If &= ~(1UL << 0b0000'0001);
-		cycles += 4;
+		puts("INT VBLANK");
+		pc = 0x40;
+		If &= ~0b0000'0001;
 	}
 	if (If & 0b0000'0010)
 	{
-		// printf("INT STAT\n");
-		mHalt = false;
-		RST(this, 0x48);
-		If &= ~(1UL << 0b0000'0010);
-		cycles += 4;
+		puts("INT STAT");
+		pc = 0x48;
+		If &= ~0b0000'0010;
 	}
 	if (If & 0b0000'0100)
 	{
-		// printf("INT TIMER\n");
-		mHalt = false;
-		RST(this, 0x50);
-		If &= ~(1UL << 0b0000'0100);
-		cycles += 4;
+		puts("INT TIMER");
+		pc = 0x50;
+		If &= ~0b0000'0100;
 	}
 	if (If & 0b0000'1000)
 	{
-		// printf("INT SERIAL\n");
-		mHalt = false;
-		RST(this, 0x58);
-		If &= ~(1UL << 0b0000'1000);
-		cycles += 4;
+		puts("INT SERIAL");
+		pc = 0x58;
+		If &= ~0b0000'1000;
 	}
 	if (If & 0b0001'0000)
 	{
-		// printf("INT JOYPAD\n");
-		mHalt = false;
-		RST(this, 0x60);
-		If &= ~(1UL << 0b0001'0000);
-		cycles += 4;
+		puts("INT JOYPAD");
+		pc = 0x60;
+		If &= ~0b0001'0000;
 	}
 
-	mmu->mem[kIf] = If;
+	if (mmu->mem[kIf] != If)
+	{
+		cycles += 4;
+		mHalt = false;
+		mmu->mem[kIf] = If;
+	}
 
 	return cycles;
 }
 
-void CPU::delayImeEnable()
+void CPU::enableInterrupts()
 {
 	mDelayedImeEnable = 1;
 }
@@ -300,6 +311,7 @@ void CPU::initWithoutBios()
 	de = 0x00D8;
 	hl = 0x014D;
 	sp = 0xFFFE;
+	mmu->write8(0xFF00, 0xCF);
 	mmu->write8(0xFF10, 0x80);
 	mmu->write8(0xFF11, 0xBF);
 	mmu->write8(0xFF12, 0xF3);
