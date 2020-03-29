@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "font.h"
-#include "util.h"
+#include "gl_util.h"
 
 static FT_Library ftLib;
 int gW = 0;
@@ -67,8 +67,7 @@ void Font::loadFontFace(const std::string &path)
 		}		
 	}
 
-	FT_Set_Char_Size(*mFace, 0, 15*64, 0, 300);
-	// FT_Set_Pixel_Sizes(*mFace, 0, 2);  
+	FT_Set_Char_Size(*mFace, 0, 12*64, 0, 300);
 
 	buildAtlas();
 }
@@ -79,7 +78,7 @@ void Font::buildAtlas()
 	glGenBuffers(1, &mVbo);
 	glGenTextures(1, &mTex);
 	mProgram = glCreateProgram();
-	loadShaders(mProgram, "../assets/shaders/font.vs", "../assets/shaders/font.fs");
+	loadShaders(mProgram, "assets/shaders/font.vs", "assets/shaders/font.fs");
 
 	glBindVertexArray(mVao);
 	glBindBuffer(GL_ARRAY_BUFFER, mVbo);
@@ -124,7 +123,7 @@ void Font::buildAtlas()
 
 void Font::renderText(const std::string &text, float x, float y)
 {
-	int size = text.size();
+	auto size { text.size() };
 	if (!size)
 	{
 		return;

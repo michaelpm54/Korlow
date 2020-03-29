@@ -14,17 +14,19 @@ struct MMU
 {
 	MMU();
 
+	void reset();
 	void init(GPU *gpu);
 
     // data
 	GPU *mGpu { nullptr };
 	std::vector<std::uint8_t> mem;
-	uint8_t *bios { nullptr };
 	bool inBios { true };
 	std::string serialData;
 
 	// functions
 	void setRom(const std::vector<std::uint8_t> &bytes);
+	void setBios(const std::vector<std::uint8_t> &bytes);
+	void setInBios(bool val);
 
 	uint8_t read8(uint16_t addr);
 	uint16_t read16(uint16_t addr);
@@ -40,6 +42,7 @@ private:
 	void io_write8(uint16_t addr, uint8_t val);
 
 	bool mInBios { false };
+	std::vector<std::uint8_t> bios;
 };
 
 #endif // MMU_H

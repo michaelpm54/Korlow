@@ -16,18 +16,31 @@ MMU::MMU()
 	mem[kIf] = 0xE0;
 }
 
+void MMU::reset()
+{
+	std::memset(mem.data(), 0x0, mem.size());
+}
+
 void MMU::init(GPU* gpu)
 {
 	mGpu = gpu;
 }
 
+void MMU::setBios(const std::vector<std::uint8_t>& bytes)
+{
+	mInBios = true;
+	bios = bytes;
+}
+
 void MMU::setRom(const std::vector<std::uint8_t> &bytes)
 {
-	std::copy_n(bytes.data(), std::min(0x10000, static_cast<int>(bytes.size())), &mem[0]);
+	std::copy_n(bytes.data(), std::min(0xFFFF, static_cast<int>(bytes.size())), &mem[0]);
 }
 
 uint8_t MMU::read8(uint16_t addr)
 {
+	if (mInBios && addr < 0x100)
+		return bios[addr];
 	return mem[addr];
 }
 
@@ -40,7 +53,6 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 {
 	if (addr == kIo) // P1/JOYP
 	{
-		printf("JOYP write %02X = %02X\n", val, val | 0xCF);
 		mem[addr] = val | 0xCF;
 		return;
 	}
@@ -135,6 +147,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 		uint16_t addr = uint16_t(val) << 8;
 		for (int i = 0; i < 0xA0; i++)
 			write8(kOam + i, read8(addr + i));
+		
 	}
 	else if (addr == kBgPalette)
 	{
@@ -142,7 +155,7 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 	}
 	else
 	{
-		printf("io write %02x to %04X\n", val, addr);
+		//printf("io write %02x to %04X\n", val, addr);
 	}
 	mem[addr] = val;
 }
@@ -277,4 +290,9 @@ void MMU::and8(uint16_t addr, uint8_t val)
 void MMU::and16(uint16_t addr, uint16_t val)
 {
 	write16(addr, read16(addr) & val);
+}
+
+void MMU::setInBios(bool val)
+{
+	mInBios = val;
 }

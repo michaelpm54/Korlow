@@ -32,8 +32,12 @@ set(KORLOW_SOURCES
 	src/cpu_base.cpp
 	src/inst_data.cpp
 	src/font.cpp
-	src/util.cpp
 	src/fs.cpp
+	src/gl_util.cpp
+	src/rom_util.cpp
+	src/gameboy_renderer.cpp
+	src/message_manager.cpp
+	src/message_renderer.cpp
 	${KORLOW_GUI_SOURCES}
 )
 
@@ -51,9 +55,14 @@ set(KORLOW_HEADERS
 	src/memory_map.h
 	src/key_receiver.h
 	src/font.h
-	src/util.h
 	src/opengl.h
 	src/fs.h
+	src/gl_util.h
+	src/rom_util.h
+	src/renderer.h
+	src/gameboy_renderer.h
+	src/message_manager.h
+	src/message_renderer.h
 	${KORLOW_GUI_HEADERS}
 )
 

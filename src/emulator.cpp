@@ -6,6 +6,12 @@
 #include <memory>
 #include <thread>
 
+#include <QApplication>
+#include <QFileDialog>
+#include <QKeyEvent>
+#include <QMenuBar>
+#include <QThread>
+
 #include "cpu.h"
 #include "emulator.h"
 #include "font.h"
@@ -13,22 +19,113 @@
 #include "gpu.h"
 #include "mmu.h"
 #include "window.h"
+#include "rom_util.h"
 
-#include "gui/main_window.h"
 #include "gui/opengl_widget.h"
 
-Emulator::Emulator(int argc, char *argv[])
-	: QApplication(argc, argv)
-	, mMainWindow(new MainWindow())
-	, mOpenGLWidget(new OpenGLWidget())
-{
-	mMainWindow->setCentralWidget(mOpenGLWidget.get());
+#include "gameboy_renderer.h"
+#include "message_manager.h"
+#include "message_renderer.h"
 
-	connect(this, &QCoreApplication::aboutToQuit, this, [this](){ mContinue = false; });
-	connect(mMainWindow.get(), &MainWindow::openFile, this, &Emulator::openFile);
+Emulator::Emulator(QWidget *parent)
+	: QMainWindow(parent)
+	, mLastDumpTime(std::chrono::system_clock::now() - std::chrono::seconds(2))
+	, mOpenGLWidget(new OpenGLWidget())
+	, mGameboyRenderer(new GameboyRenderer())
+	, mMessageManager(new MessageManager())
+	, mMessageRenderer(new MessageRenderer(mMessageManager.get()))
+{
+	setupWindow();
+	createMenuBar();
+	show();
+
+	// Important: The renderers are called in order added.
+	mOpenGLWidget->addRenderer(mGameboyRenderer.get());
+	mOpenGLWidget->addRenderer(mMessageRenderer.get());
+
+	setCentralWidget(mOpenGLWidget.get());
+
+	QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this](){ mContinue = false; });
 
 	initHardware();
-	setBios("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+
+	//setBios("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+
+	initGL();
+}
+
+Emulator::~Emulator()
+{
+	FT_Done();
+
+	QApplication::quit();
+}
+
+void Emulator::setupWindow()
+{
+	setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+	setAttribute(Qt::WA_QuitOnClose);
+	resize(860, 660);
+	setWindowTitle("Korlow");
+}
+
+void Emulator::createMenuBar()
+{
+	QMenuBar *mb { menuBar() };
+
+	QMenu *fileMenu(new QMenu("&File"));
+
+	QAction *openAction(new QAction("&Open"));
+	openAction->setShortcut(QKeySequence(Qt::Modifier::CTRL + Qt::Key::Key_O));
+	connect(openAction, &QAction::triggered, this, [this]()
+	{
+		emit openFile(QFileDialog::getOpenFileName(
+			this,
+			"Open File",
+			QDir::currentPath(),
+			"ROM (*.gb *.rom *.bin)"
+			).toStdString());
+	}
+	);
+	fileMenu->addAction(openAction);
+
+	fileMenu->addSeparator();
+
+	QAction *quitAction(new QAction("&Quit"));
+	quitAction->setShortcut(QKeySequence(Qt::Modifier::CTRL + Qt::Key::Key_Q));
+	connect(quitAction, &QAction::triggered, this, [this](){ close(); });
+	fileMenu->addAction(quitAction);
+
+	mb->addMenu(fileMenu);
+}
+
+void Emulator::initGL()
+{
+	QApplication::processEvents();
+
+	mOpenGLWidget->makeCurrent();
+
+	FT_Init();
+	mFont.reset(new Font("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf"));
+	mMessageRenderer->setFont(mFont.get());
+
+	mGameboyRenderer->initGL();
+	mMessageRenderer->initGL();
+
+	glClear(GL_COLOR_BUFFER_BIT);
+	mOpenGLWidget->update();
+	mOpenGLWidget->doneCurrent();
+}
+
+void Emulator::printTotalInstructions()
+{
+	std::string numWithCommas = std::to_string(mCpu->numInstructionsExecuted());
+	int insertPosition { static_cast<int>(numWithCommas.length() - 3) };
+	while (insertPosition > 0) {
+		numWithCommas.insert(insertPosition, ",");
+		insertPosition-=3;
+	}
+	printf("\n%s instructions executed.\n", numWithCommas.c_str());
 }
 
 void Emulator::openFile(const std::string& path)
@@ -83,155 +180,74 @@ void Emulator::initHardware()
 
 void Emulator::setBios(const std::string& path)
 {
-	
+	mMmu->setBios(FS::readBytes(path));
+	mHaveBios = true;
 }
 
 void Emulator::setRom(const std::vector<uint8_t> &bytes)
 {
-	romHeader_t romHeader;
-	std::memcpy(&romHeader, &bytes[0x100], sizeof(romHeader_t));
-	printRomInfo(romHeader);
-
-	mMmu->setRom(bytes);
-
 	mGpu->reset();
 
-	mCpu->initWithoutBios();
-
-	//FT_Init();
-
-	//mFont = new Font("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf");
-
-	loop();
-
-	QCoreApplication::quit();
-}
-
-/*
-Emulator::Emulator(std::string romPath, uint8_t verbosityFlags)
-	:
-	QApplication(1, nullptr),
-	mRomPath(std::move(romPath)),
-	mVerbosityFlags(verbosityFlags),
-	mMmu(new MMU()),
-	mCpu(new CPU()),
-	mGpu(new GPU()),
-	mLastDumpTime(std::chrono::system_clock::now() - std::chrono::seconds(2))
-{}
-*/
-
-void Emulator::run()
-{
-	exec();
-/*
-	mWindow = new Window();
-	mWindow->setTitle("Korlow2");
-	mWindow->setSize(kScreenSizeX, kScreenSizeY);
-	mWindow->create();
-	mWindow->addReceiver(this);
-
-	std::unique_ptr<uint8_t[]> romData;
-
-	int romSize;
-	try
+	/*
+		Special case in case I want to run the boot ROM. :)
+		This places some bytes that would usually be there when the user
+		has a ROM inserted. The boot ROM expects these bytes.
+	*/
+	if (bytes.size() == 0x100)
 	{
-		romData = readFileBytes(mRomPath, romSize);
-	}
-	catch (const std::runtime_error &)
-	{
-		std::cerr << "Failed to open ROM file '" << mRomPath << "'" << std::endl;
-		return 1;
-	}
-
-	if (romSize > 8388608)
-	{
-		std::cerr << "ROM file size is too big (> 8 MiB)" << std::endl;
-		return 1;
-	}
-
-	romHeader_t romHeader;
-	std::memcpy(&romHeader, &romData.get()[0x100], sizeof(romHeader_t));
-	printRomInfo(romHeader);
-
-	mMmu->init();
-	mMmu->gpu = mGpu;
-	mMmu->set_rom(romData.get(), romSize);
-
-	mGpu->setSize(kScreenSizeX, kScreenSizeY);
-	mGpu->reset();
-	mGpu->initOpenGL();
-	mGpu->mmu = mMmu;
-
-	mCpu->mmu = mMmu;
-	mCpu->gpu = mGpu;
-
-	// Special case in case I want to run the boot ROM :)
-	if (romSize == 0x100)
-	{
-		constexpr uint8_t logo[] =
-		{
-			0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
-			0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
-			0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
-			0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
-			0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
-			0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
-		};
-		std::memcpy(&mMmu->mem[0x104], logo, sizeof(logo));
-		// a = 0x19 at this point
-		// a += mem[0x14D] needs to be equal to 0
-		// 0x19 + 0xE7 = 0x100 or 0x00 as a byte
-		mMmu->write8(0x14D, 0xE7);
-		// jr -2
-		mMmu->write8(0x100, 0x18);
-		mMmu->write16(0x101, 0x00FE);
+		auto gr { ghostRom() };
+		std::memcpy(&mMmu->mem[0x100], gr.data(), gr.size());
 	}
 	else
 	{
-		mCpu->initWithoutBios();
+		mCpu->reset(mHaveBios);
+		printRomInfo(bytes);
 	}
 
-	FT_Init();
+	mMmu->setRom(bytes);
 
-	mFont = new Font("../assets/fonts/IBMPlexMono-Semibold.otf");
-
-	return loop();
-*/
+	run();
 }
 
-int Emulator::loop()
+void Emulator::run()
 {
-	while (mContinue && /*!mWindow->closed() &&*/ !mCpu->didBreak() && mMainWindow->isVisible())
+	while (shouldRun())
 	{
-		//updateMessages();
+		mMessageManager->update();
 
-		if (!mPaused)
+		if (mPaused)
 		{
-			mCpu->frame();
-			mGpu->updateMap();
-			mOpenGLWidget->update(mGpu->getPixels());
+			mOpenGLWidget->update();
+			QApplication::processEvents();
+			QApplication::instance()->thread()->msleep(16);
+			continue;
 		}
 
-		//renderMessages();
+		int cycles = 0;
+		while (cycles < kMaxCyclesPerFrame)
+		{
+			cycles += mCpu->executeInstruction();
+			mGpu->tick(cycles);
+		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(16));
+		mGpu->updateMap();
 
-		processEvents();
+		mGameboyRenderer->updatePixels(mGpu->getPixels());
+		mGameboyRenderer->updateMap(mGpu->getMap());
+
+		mOpenGLWidget->update();
+
+		QApplication::processEvents();
+
+		QApplication::instance()->thread()->msleep(16);
 	}
 
-	std::string numWithCommas = std::to_string(mCpu->numInstructionsExecuted());
-	int insertPosition = numWithCommas.length() - 3;
-	while (insertPosition > 0) {
-	    numWithCommas.insert(insertPosition, ",");
-	    insertPosition-=3;
-	}
-	std::cerr << "\n" << numWithCommas << " instructions executed" << std::endl;
+	printTotalInstructions();
+}
 
-	//delete mFont;
-
-	//FT_Done();
-
-	return 0;
+bool Emulator::shouldRun() const
+{
+	return mContinue && isVisible();
 }
 
 void Emulator::sendKey(int key, int scancode, int action, int mods)
@@ -278,36 +294,19 @@ void Emulator::dumpRam()
 	std::cout << "Dumped RAM" << std::endl;
 
 	std::string text = "Dumped RAM to file: 'ramdump.bin'";
-	mMessages.push_back({text, 8, 52, now, std::chrono::milliseconds(2000)});
+	mMessageManager->addMessage(text, 8, 52, 2000);
 }
 
-void Emulator::renderMessages()
+void Emulator::keyPressEvent(QKeyEvent* event)
 {
-	for (const auto &msg : mMessages)
+	switch (event->key())
 	{
-		mFont->renderText(msg.text, msg.x, msg.y);
+		case Qt::Key_Space:
+			mPaused = !mPaused;
+			mMessageManager->addMessage(mPaused ? "Paused" : "Unpaused", 8, 152, 2000);
+			break;
+		default:
+			break;
 	}
-}
-
-void Emulator::updateMessages()
-{
-	auto now = std::chrono::system_clock::now();
-	mMessages.erase(
-		std::remove_if(
-			mMessages.begin(),
-			mMessages.end(),
-			[=](auto &m)
-			{
-				return std::chrono::duration_cast<std::chrono::milliseconds>(now - m.begin) > m.timeout;
-			}
-		),
-		mMessages.end()
-	);
-}
-
-void Emulator::printRomInfo(romHeader_t &header)
-{
-	printf("Title: %s\n", header.title);
-	printf("ROM Size: %d\n", (2 << 14) << header.romSize);
-	printf("Cart type: %s\n", kCartTypes.at(header.cartType));
+	mOpenGLWidget->update();
 }

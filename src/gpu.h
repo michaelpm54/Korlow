@@ -50,6 +50,7 @@ public:
 	void tick(int cycles);
 	void setBgPalette(uint8_t val);
 
+	const uint8_t* getMap();
 	const uint8_t* getPixels();
 	void updateMap();
 
@@ -70,8 +71,6 @@ private:
 		MODE_OAM = 2,
 		MODE_OAM_VRAM = 3,
 	};
-
-	OpenGLWidget *mOpenGL { nullptr };
 
 	uint8_t *mPixels { nullptr };
 	uint8_t mBgPalette[4];

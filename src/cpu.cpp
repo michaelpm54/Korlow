@@ -9,43 +9,15 @@
 
 //#define DEBUG
 
-static constexpr int kCpuFreq = 4194304;
-static constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
-
 void CPU::halt()
 {
-	mHalt = true;
-}
-
-void CPU::frame()
-{
-	if (mBreak)
+	if (ime)
 	{
-		return;
+		mHalt = true;
 	}
-
-	int cycles = 0;
-	while (cycles < kMaxCyclesPerFrame && !mBreak && !mHalt)
+	else
 	{
-		if (!mHalt)
-		{
-			cycles += executeInstruction();
-
-			if (mDelayedImeEnable)
-			{
-				if (mDelayedImeEnable == 2)
-				{
-					mDelayedImeEnable = 0;
-					ime = true;
-				}
-				else
-				{
-					mDelayedImeEnable = 2;
-				}
-			}
-		}
-
-		gpu->tick(cycles);
+		mRepeatNextInstruction = 1;
 	}
 }
 
@@ -61,7 +33,7 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 		printf("%04X: ", mRegisters.pc);
 		printf("[%04X] ", mRegisters.sp);
 		printf("[%02X] ", opcode);
-		printf("AF:%04X %d%d%d%d ", mRegisters.af, mRegisters.af & 0x80, mRegisters.af & 0x40, mRegisters.af & 0x20, mRegisters.af & 0x10);
+		printf("AF:%04X %d%d%d%d IME=%c", mRegisters.af, mRegisters.af & 0x80, mRegisters.af & 0x40, mRegisters.af & 0x20, mRegisters.af & 0x10, ime ? '1' : '0');
 		printf("BC:%04X ", mRegisters.bc);
 		printf("DE:%04X ", mRegisters.de);
 		printf("HL:%04X%c", mRegisters.hl, n);
@@ -72,7 +44,7 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 		printf("[%04X] ", sp);
 		printf("[%02X] ", opcode);
 		printf("A:%02X ", Hi(af));
-		printf("F:%c%c%c%c ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-');
+		printf("F:%c%c%c%c IME=%c ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-', ime ? '1' : '0');
 		printf("BC:%04X ", bc);
 		printf("DE:%04X ", de);
 		printf("HL:%04X%c", hl, n);
@@ -184,10 +156,8 @@ int CPU::executeInstruction()
 	uint8_t mask = 0;
 	if (ime)
 	{
-		ime = false;
 		while (mask = mmu->mem[kIe] & mmu->mem[kIf])
 		{
-			puts("IME && (IE & IF)");
 			cycles += interrupts(mask);
 		}
 	}
@@ -196,7 +166,6 @@ int CPU::executeInstruction()
 		return cycles;
 
 	instruction_t i = fetch();
-
 
 	if (i.code == 0xCB)
 	{
@@ -209,13 +178,43 @@ int CPU::executeInstruction()
 		executeRegular(i, cycles);
 	}
 
+	if (mRepeatNextInstruction == 1)
+	{
+		mRepeatNextInstruction++;
+	}
+	else if (mRepeatNextInstruction == 2)
+	{
+		mRepeatNextInstruction = 0;
+		pc--;
+	}
+
 	mInstructionCounter++;
+
+	if (mDelayedImeEnable)
+	{
+		if (mDelayedImeEnable == 1)
+		{
+			mDelayedImeEnable++;
+		}
+		else if (mDelayedImeEnable == 2)
+		{
+			mDelayedImeEnable = 0;
+			ime = true;
+		}
+	}
 
 	return cycles;
 }
 
 instruction_t CPU::fetch()
 {
+	if (mInBios && pc == 0x100)
+	{
+		puts("Leaving bios");
+		mInBios = false;
+		mmu->setInBios(false);
+	}
+
 	instruction_t instruction =
 	{
 		.code = mmu->read8(pc),
@@ -244,6 +243,7 @@ int CPU::numInstructionsExecuted() const
 
 int CPU::interrupts(uint8_t mask)
 {
+	ime = false;
 	sp--;
 	mmu->write8(sp, (pc & 0xFF00) >> 8);
 
@@ -303,32 +303,48 @@ void CPU::enableInterrupts()
 	mDelayedImeEnable = 1;
 }
 
-void CPU::initWithoutBios()
+void CPU::reset(bool haveBios)
 {
-	pc = 0x0100;
-	af = 0x01B0;
-	bc = 0x0013;
-	de = 0x00D8;
-	hl = 0x014D;
-	sp = 0xFFFE;
-	mmu->write8(0xFF00, 0xCF);
-	mmu->write8(0xFF10, 0x80);
-	mmu->write8(0xFF11, 0xBF);
-	mmu->write8(0xFF12, 0xF3);
-	mmu->write8(0xFF14, 0xBF);
-	mmu->write8(0xFF16, 0x3F);
-	mmu->write8(0xFF19, 0xBF);
-	mmu->write8(0xFF1A, 0x7F);
-	mmu->write8(0xFF1B, 0xFF);
-	mmu->write8(0xFF1C, 0x9F);
-	mmu->write8(0xFF1E, 0xBF);
-	mmu->write8(0xFF20, 0xFF);
-	mmu->write8(0xFF23, 0xBF);
-	mmu->write8(0xFF24, 0x77);
-	mmu->write8(0xFF25, 0xF3);
-	mmu->write8(0xFF26, 0xF1);
-	mmu->write8(0xFF40, 0x91);
-	mmu->write8(0xFF47, 0xFC);
-	mmu->write8(0xFF48, 0xFF);
-	mmu->write8(0xFF49, 0xFF);
+	mInBios = haveBios;
+
+	mmu->reset();
+
+	if (haveBios)
+	{
+		pc = 0x0;
+		af = 0x0;
+		bc = 0x0;
+		de = 0x0;
+		hl = 0x0;
+		sp = 0x0;
+	}
+	else
+	{
+		pc = 0x0100;
+		af = 0x01B0;
+		bc = 0x0013;
+		de = 0x00D8;
+		hl = 0x014D;
+		sp = 0xFFFE;
+		mmu->write8(0xFF00, 0xCF);
+		mmu->write8(0xFF10, 0x80);
+		mmu->write8(0xFF11, 0xBF);
+		mmu->write8(0xFF12, 0xF3);
+		mmu->write8(0xFF14, 0xBF);
+		mmu->write8(0xFF16, 0x3F);
+		mmu->write8(0xFF19, 0xBF);
+		mmu->write8(0xFF1A, 0x7F);
+		mmu->write8(0xFF1B, 0xFF);
+		mmu->write8(0xFF1C, 0x9F);
+		mmu->write8(0xFF1E, 0xBF);
+		mmu->write8(0xFF20, 0xFF);
+		mmu->write8(0xFF23, 0xBF);
+		mmu->write8(0xFF24, 0x77);
+		mmu->write8(0xFF25, 0xF3);
+		mmu->write8(0xFF26, 0xF1);
+		mmu->write8(0xFF40, 0x91);
+		mmu->write8(0xFF47, 0xFC);
+		mmu->write8(0xFF48, 0xFF);
+		mmu->write8(0xFF49, 0xFF);
+	}
 }

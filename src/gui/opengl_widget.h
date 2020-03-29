@@ -6,16 +6,14 @@
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 
-#include <glm/glm.hpp>
+class Renderer;
 
 class OpenGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
 public:
 	OpenGLWidget(QWidget *parent = nullptr);
-	~OpenGLWidget();
 
-	void updateMap(const uint8_t *data);
-	void update(const uint8_t *pixels);
+	void addRenderer(Renderer *renderer);
 
 protected:
 	void initializeGL() override;
@@ -23,23 +21,10 @@ protected:
 	void paintGL() override;
 
 private:
-	void createGLObjects();
-	void destroyGLObjects();
-
-	GLuint mProgram { 0 };
-	GLuint mFrameTexture { 0 };
-	GLuint mVao { 0 };
-	GLuint mVbo { 0 };
+	std::vector<Renderer*> mRenderers;
 
 	int mWidth { 0 };
 	int mHeight { 0 };
-	int mNumPixels { 0 };
-
-	GLuint mMapTex;
-	GLuint mMapBuf;
-	GLuint mMapVao;
-
-	glm::mat4 mProjMatrix { 1.0f };
 };
 
 #endif // OPENGL_WIDGET_H

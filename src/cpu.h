@@ -4,6 +4,9 @@
 #include <cstdint>
 #include "types.h"
 
+constexpr int kCpuFreq = 4194304;
+constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
+
 class GPU;
 struct MMU;
 
@@ -20,9 +23,6 @@ struct registers_t
 class CPU
 {
 public:
-	void setMmu(MMU *mmu);
-	void frame();
-	void setPc(uint16_t addr);
 	instruction_t fetch();
 	void executeRegular(instruction_t &i, int &cycles);
 	void executeCB(instruction_t &i, int &cycles);
@@ -37,7 +37,7 @@ public:
 
 	void halt();
 
-	void initWithoutBios();
+	void reset(bool haveBios);
 
 public:
 	GPU *gpu { nullptr };
@@ -61,6 +61,8 @@ private:
 	int mInstructionCounter { 0 };
 	int mDelayedImeEnable { 0 };
 	bool mHalt { false };
+	int mRepeatNextInstruction { 0 };
+	bool mInBios { false };
 };
 
 #endif // CPU_H

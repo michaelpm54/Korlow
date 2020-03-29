@@ -64,7 +64,7 @@ std::string readText(const std::string &filePath)
 
 std::vector<std::uint8_t> readBytes(const std::string &filePath)
 {
-	return File(filePath, false).readBytes();
+	return File(filePath, true).readBytes();
 }
 
 }

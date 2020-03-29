@@ -7,8 +7,6 @@
 #include "memory_map.h"
 #include "util.h"
 
-#include "gui/opengl_widget.h"
-
 constexpr uint8_t kShades[4] =
 {
 	0x00,
@@ -18,7 +16,7 @@ constexpr uint8_t kShades[4] =
 };
 
 GPU::GPU(GpuRegisters registers, GpuMem mem, OpenGLWidget *openGLWidget)
-	: reg(registers), mem(mem), mOpenGL(openGLWidget)
+	: reg(registers), mem(mem)
 {
 	std::memset(mBgPalette, 0, 4);
 	std::memset(mSpritePalettes, 0, 8);
@@ -206,6 +204,11 @@ void GPU::drawScanline(int line)
 	}
 }
 
+const uint8_t* GPU::getMap()
+{
+	return mMapData;
+}
+
 const uint8_t* GPU::getPixels()
 {
 	return mPixels;
@@ -255,8 +258,6 @@ void GPU::updateMap()
 			mMapData[right + (i * 32)] = 0xFF;
 		}
 	}
-	
-	mOpenGL->updateMap(mMapData);
 }
 
 void GPU::tick(int cycles)
