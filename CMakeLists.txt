@@ -12,58 +12,79 @@ set(OUT_DIR "bin")
 set(CMAKE_AUTOMOC ON)
 
 set(KORLOW_GUI_SOURCES
-	src/gui/main_window.cpp
 	src/gui/opengl_widget.cpp
 )
 
 set(KORLOW_GUI_HEADERS
-	src/gui/main_window.h
 	src/gui/opengl_widget.h
 )
 
+set(KORLOW_FONT_SOURCES
+	src/render/font/ft_font.cpp
+	src/render/font/ft_util.cpp
+)
+
+set(KORLOW_FONT_HEADERS
+	src/render/font/ft_font.h
+	src/render/font/ft_util.h
+)
+
+set(KORLOW_RENDER_SOURCES
+	${KORLOW_FONT_SOURCES}
+	src/render/gl_util.cpp
+	src/render/gameboy_renderer.cpp
+	src/render/message_renderer.cpp
+)
+
+set(KORLOW_RENDER_HEADERS
+	${KORLOW_FONT_HEADERS}
+	src/render/opengl.h
+	src/render/gl_util.h
+	src/render/renderer.h
+	src/render/gameboy_renderer.h
+	src/render/message_renderer.h
+)
+
+set(KORLOW_CPU_SOURCES
+	src/cpu/cpu.cpp
+	src/cpu/cpu_base.cpp
+	src/cpu/cpu_instructions.cpp
+	src/cpu/inst_data.cpp
+)
+
+set(KORLOW_CPU_HEADERS
+	src/cpu/cpu.h
+	src/cpu/cpu_base.h
+	src/cpu/cpu_instructions.h
+	src/cpu/inst_data.h
+)
+
 set(KORLOW_SOURCES
+	${KORLOW_GUI_SOURCES}
+	${KORLOW_RENDER_SOURCES}
+	${KORLOW_CPU_SOURCES}
 	src/main.cpp
 	src/emulator.cpp
-	src/window.cpp
 	src/mmu.cpp
-	src/cpu.cpp
 	src/gpu.cpp
-	src/cpu_instructions.cpp
-	src/cpu_base.cpp
-	src/inst_data.cpp
-	src/font.cpp
 	src/fs.cpp
-	src/gl_util.cpp
 	src/rom_util.cpp
-	src/gameboy_renderer.cpp
 	src/message_manager.cpp
-	src/message_renderer.cpp
-	${KORLOW_GUI_SOURCES}
 )
 
 set(KORLOW_HEADERS
+	${KORLOW_GUI_HEADERS}
+	${KORLOW_RENDER_HEADERS}
+	${KORLOW_CPU_HEADERS}
 	src/args.hxx
 	src/emulator.h
-	src/window.h
 	src/mmu.h
-	src/cpu.h
 	src/gpu.h
-	src/cpu_instructions.h
-	src/cpu_base.h
 	src/types.h
-	src/inst_data.h
-	src/memory_map.h
-	src/key_receiver.h
-	src/font.h
-	src/opengl.h
 	src/fs.h
-	src/gl_util.h
 	src/rom_util.h
-	src/renderer.h
-	src/gameboy_renderer.h
+	src/memory_map.h
 	src/message_manager.h
-	src/message_renderer.h
-	${KORLOW_GUI_HEADERS}
 )
 
 add_executable(app

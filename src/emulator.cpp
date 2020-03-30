@@ -12,28 +12,27 @@
 #include <QMenuBar>
 #include <QThread>
 
-#include "cpu.h"
 #include "emulator.h"
-#include "font.h"
 #include "fs.h"
 #include "gpu.h"
+#include "message_manager.h"
 #include "mmu.h"
-#include "window.h"
 #include "rom_util.h"
 
+#include "cpu/cpu.h"
 #include "gui/opengl_widget.h"
-
-#include "gameboy_renderer.h"
-#include "message_manager.h"
-#include "message_renderer.h"
+#include "render/font/ft_font.h"
+#include "render/gameboy_renderer.h"
+#include "render/message_renderer.h"
 
 Emulator::Emulator(QWidget *parent)
 	: QMainWindow(parent)
+	, mFont(new FTFont())
 	, mLastDumpTime(std::chrono::system_clock::now() - std::chrono::seconds(2))
 	, mOpenGLWidget(new OpenGLWidget())
 	, mGameboyRenderer(new GameboyRenderer())
 	, mMessageManager(new MessageManager())
-	, mMessageRenderer(new MessageRenderer(mMessageManager.get()))
+	, mMessageRenderer(new MessageRenderer(mMessageManager.get(), mFont.get()))
 {
 	setupWindow();
 	createMenuBar();
@@ -42,6 +41,8 @@ Emulator::Emulator(QWidget *parent)
 	// Important: The renderers are called in order added.
 	mOpenGLWidget->addRenderer(mGameboyRenderer.get());
 	mOpenGLWidget->addRenderer(mMessageRenderer.get());
+
+	mGameboyRenderer->setEnabled(false);
 
 	setCentralWidget(mOpenGLWidget.get());
 
@@ -52,12 +53,14 @@ Emulator::Emulator(QWidget *parent)
 	//setBios("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
 
 	initGL();
+
+	QObject::connect(&mFrameTimer, &QTimer::timeout, this, &Emulator::run);
+	mFrameTimer.setInterval((1.0f / 60.0f) * 1000.0f);
+	mFrameTimer.start();
 }
 
 Emulator::~Emulator()
 {
-	FT_Done();
-
 	QApplication::quit();
 }
 
@@ -79,15 +82,25 @@ void Emulator::createMenuBar()
 	openAction->setShortcut(QKeySequence(Qt::Modifier::CTRL + Qt::Key::Key_O));
 	connect(openAction, &QAction::triggered, this, [this]()
 	{
-		emit openFile(QFileDialog::getOpenFileName(
+		openFile(QFileDialog::getOpenFileName(
 			this,
 			"Open File",
 			QDir::currentPath(),
 			"ROM (*.gb *.rom *.bin)"
-			).toStdString());
+		).toStdString());
 	}
 	);
 	fileMenu->addAction(openAction);
+
+	QAction *closeAction(new QAction("&Close"));
+	closeAction->setShortcut(QKeySequence(Qt::Modifier::CTRL + Qt::Key::Key_W));
+	connect(closeAction, &QAction::triggered, this, [this]()
+	{
+		mHaveRom = false;
+		mGameboyRenderer->setEnabled(false);
+	}
+	);
+	fileMenu->addAction(closeAction);
 
 	fileMenu->addSeparator();
 
@@ -105,15 +118,12 @@ void Emulator::initGL()
 
 	mOpenGLWidget->makeCurrent();
 
-	FT_Init();
-	mFont.reset(new Font("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf"));
-	mMessageRenderer->setFont(mFont.get());
+	mFont->load("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf", 12);
 
+	mMessageRenderer->setFont(mFont.get());
 	mGameboyRenderer->initGL();
 	mMessageRenderer->initGL();
 
-	glClear(GL_COLOR_BUFFER_BIT);
-	mOpenGLWidget->update();
 	mOpenGLWidget->doneCurrent();
 }
 
@@ -134,6 +144,8 @@ void Emulator::openFile(const std::string& path)
 
 	try {
 		setRom(FS::readBytes(path));
+		mHaveRom = true;
+		mGameboyRenderer->setEnabled(true);
 	}
 	catch (const std::runtime_error& e) {
 		std::cerr << e.what() << std::endl;
@@ -205,8 +217,6 @@ void Emulator::setRom(const std::vector<uint8_t> &bytes)
 	}
 
 	mMmu->setRom(bytes);
-
-	run();
 }
 
 void Emulator::run()
@@ -223,17 +233,20 @@ void Emulator::run()
 			continue;
 		}
 
-		int cycles = 0;
-		while (cycles < kMaxCyclesPerFrame)
+		if (mHaveRom)
 		{
-			cycles += mCpu->executeInstruction();
-			mGpu->tick(cycles);
+			int cycles = 0;
+			while (cycles < kMaxCyclesPerFrame)
+			{
+				cycles += mCpu->executeInstruction();
+				mGpu->tick(cycles);
+			}
+
+			mGpu->updateMap();
+
+			mGameboyRenderer->updatePixels(mGpu->getPixels());
+			mGameboyRenderer->updateMap(mGpu->getMap());
 		}
-
-		mGpu->updateMap();
-
-		mGameboyRenderer->updatePixels(mGpu->getPixels());
-		mGameboyRenderer->updateMap(mGpu->getMap());
 
 		mOpenGLWidget->update();
 
@@ -250,9 +263,9 @@ bool Emulator::shouldRun() const
 	return mContinue && isVisible();
 }
 
+/*
 void Emulator::sendKey(int key, int scancode, int action, int mods)
 {
-	/*
 	if (action == GLFW_PRESS)
 	{
 		if (key == GLFW_KEY_D)
@@ -269,8 +282,8 @@ void Emulator::sendKey(int key, int scancode, int action, int mods)
 			mMessages.push_back({mPaused ? "Paused" : "Unpaused", 8, 52, std::chrono::system_clock::now(), std::chrono::milliseconds(2000)});
 		}
 	}
-	*/
 }
+*/
 
 void Emulator::dumpRam()
 {
@@ -294,7 +307,7 @@ void Emulator::dumpRam()
 	std::cout << "Dumped RAM" << std::endl;
 
 	std::string text = "Dumped RAM to file: 'ramdump.bin'";
-	mMessageManager->addMessage(text, 8, 52, 2000);
+	mMessageManager->addMessage(text, 8, 40, 2000);
 }
 
 void Emulator::keyPressEvent(QKeyEvent* event)
@@ -303,7 +316,7 @@ void Emulator::keyPressEvent(QKeyEvent* event)
 	{
 		case Qt::Key_Space:
 			mPaused = !mPaused;
-			mMessageManager->addMessage(mPaused ? "Paused" : "Unpaused", 8, 152, 2000);
+			mMessageManager->addMessage(mPaused ? "Paused" : "Unpaused", 8, 40, 2000);
 			break;
 		default:
 			break;

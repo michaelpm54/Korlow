@@ -3,7 +3,7 @@
 #include <iostream>
 #include <QApplication>
 
-#include "renderer.h"
+#include "render/renderer.h"
 
 constexpr int kScreenScale = 3;
 constexpr int kScreenSizeX = 160 * kScreenScale + (32 * 2 * kScreenScale);
@@ -46,6 +46,7 @@ void OpenGLWidget::resizeGL(int w, int h)
 
 void OpenGLWidget::paintGL()
 {
+	glClear(GL_COLOR_BUFFER_BIT);
 	for (Renderer* renderer : mRenderers)
 	{
 		renderer->render();

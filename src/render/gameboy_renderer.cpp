@@ -27,6 +27,9 @@ void GameboyRenderer::initGL()
 
 void GameboyRenderer::render()
 {
+	if (!mEnabled)
+		return;
+
 	glUseProgram(mProgram);
 	glBindVertexArray(mVao);
 

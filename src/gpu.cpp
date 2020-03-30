@@ -5,7 +5,6 @@
 
 #include "gpu.h"
 #include "memory_map.h"
-#include "util.h"
 
 constexpr uint8_t kShades[4] =
 {

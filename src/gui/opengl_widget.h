@@ -1,7 +1,7 @@
 #ifndef OPENGL_WIDGET_H
 #define OPENGL_WIDGET_H
 
-#include "opengl.h"
+#include "render/opengl.h"
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
