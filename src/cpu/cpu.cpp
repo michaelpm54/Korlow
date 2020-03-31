@@ -7,7 +7,7 @@
 #include "memory_map.h"
 #include "mmu.h"
 
-//#define DEBUG
+#define DEBUG
 
 void CPU::halt()
 {

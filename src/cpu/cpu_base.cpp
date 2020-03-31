@@ -76,7 +76,7 @@ void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags)
 {
 	*flags = 0;
 	*result = a + b;
-	if ((a & 0xF) + (b & 0xF) > 0xF)
+	if ((((a & 0x00FF) + (b & 0x00FF)) & 0x0100) == 0x0100)
 	{
 		*flags |= FLAGS_HALFCARRY;
 	}
@@ -198,4 +198,14 @@ void SUB(CPU *cpu, uint8_t r)
 	SUB8(Hi(cpu->af), r, &result, &flags);
 	SetLo(cpu->af, flags);
 	SetHi(cpu->af, result);
+}
+
+void TestBit(CPU *cpu, uint8_t bit)
+{
+	uint8_t flags = FLAGS_HALFCARRY;
+	if (!bit)
+	{
+		flags |= FLAGS_ZERO;
+	}
+	SetLo(cpu->af, (Lo(cpu->af) & FLAGS_CARRY) | flags);
 }

@@ -45,17 +45,18 @@ void SWAP_RL(CPU *cpu, uint16_t &r)
 
 void SRL_RH(CPU *cpu, uint16_t &r)
 {
+	/* Shift register right into carry. MSB set to 0. */
 	// Z00C
-	uint8_t carry = r & 0x1;
+	uint8_t carry = Hi(r) & 0x1;
 	uint8_t result = Hi(r) >> 1;
 	uint8_t flags = 0;
 	if (result == 0)
 	{
-		flags |= 0x80;
+		flags |= FLAGS_ZERO;
 	}
-	if (carry)
+	if (carry != 0)
 	{
-		flags |= 0x10;
+		flags |= FLAGS_CARRY;
 	}
 	SetHi(r, result);
 	SetLo(cpu->af, flags);
@@ -1226,6 +1227,7 @@ void XOR_A_L(CPU *cpu, instruction_t &i)
 void XOR_A_AHL(CPU *cpu, instruction_t &i)
 {
 	XOR_A_R(cpu, cpu->mmu->read8(cpu->hl));
+	printf("(HL)=%02X\n", cpu->mmu->read8(cpu->hl));
 }
 
 void XOR_A_A(CPU *cpu, instruction_t &i)
@@ -2212,16 +2214,6 @@ void SRL_A(CPU *cpu, instruction_t &i)
 }
 
 // 0xCB 0x40
-
-void TestBit(CPU *cpu, uint8_t bit)
-{
-	uint8_t flags = FLAGS_HALFCARRY;
-	if (!bit)
-	{
-		flags |= FLAGS_ZERO;
-	}
-	SetLo(cpu->af, (Lo(cpu->af) & FLAGS_CARRY) | flags);
-}
 
 void BIT_0_B(CPU *cpu, instruction_t &i)
 {

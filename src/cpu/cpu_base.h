@@ -55,5 +55,6 @@ void DEC8_HI(CPU *cpu, uint16_t &reg);
 void DEC8_LO(CPU *cpu, uint16_t &reg);
 void CP(CPU *cpu, uint8_t r);
 void SUB(CPU *cpu, uint8_t r);
+void TestBit(CPU *cpu, uint8_t bit);
 
 #endif // CPU_BASE_H
