@@ -1,7 +1,8 @@
 #include "doctest.h"
-#include "cpu.h"
+#include "cpu/cpu.h"
+#include "cpu/cpu_base.h"
+#include "gpu.h"
 #include "mmu.h"
-#include "cpu_base.h"
 #include "types.h"
 
 TEST_CASE("Load instructions")
@@ -11,7 +12,8 @@ TEST_CASE("Load instructions")
 
 	CPU cpu;
 	MMU mmu;
-	mmu.init();
+	GPU gpu;
+	mmu.init(&gpu);
 	cpu.mmu = &mmu;
 
 	SUBCASE("0X")
@@ -453,8 +455,11 @@ TEST_CASE("Load instructions")
 
 	SUBCASE("EX")
 	{
+		// LD (C), A -> LD (FF00+C), A
+
 		i.code = 0xE2;
-		SetHi(cpu.af, 0x3A)	;
+		cpu.af = 0x3A00;
+		cpu.bc = 0x0099;
 		cpu.executeRegular(i, cycles);
 		CHECK(mmu.mem[0xFF00 + Lo(cpu.bc)] == 0x3A);
 

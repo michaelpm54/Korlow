@@ -76,11 +76,11 @@ void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags)
 {
 	*flags = 0;
 	*result = a + b;
-	if ((((a & 0x00FF) + (b & 0x00FF)) & 0x0100) == 0x0100)
+	if (((a & 0xFFF) + (b & 0xFFF)) & 0x1000)
 	{
 		*flags |= FLAGS_HALFCARRY;
 	}
-	if ((a & 0xFF) + (b & 0xFF) > 0xFF)
+	if ((uint32_t(a) + uint32_t(b)) & 0x10000)
 	{
 		*flags |= FLAGS_CARRY;
 	}

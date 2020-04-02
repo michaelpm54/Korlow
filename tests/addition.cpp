@@ -1,6 +1,7 @@
 #include "doctest.h"
-#include "cpu.h"
-#include "cpu_base.h"
+#include "cpu/cpu.h"
+#include "cpu/cpu_base.h"
+#include "gpu.h"
 #include "mmu.h"
 #include "types.h"
 
@@ -54,15 +55,15 @@ TEST_CASE("ADD16 sets flags Z0HC")
 		{
 			ADD16(0x8000, 0x8000, &result, &flags);
 			CHECK(result == 0);
-			CHECK(flags == 0x80); // z000
+			CHECK(flags == (FLAGS_ZERO | FLAGS_CARRY)); // z00c
 		}
 	}
 	SUBCASE("Half-carry is set correctly")
 	{
 		flags = 0;
-		ADD16(0b0000'1111, 1, &result, &flags);
-		CHECK(result == 0x10);
-		CHECK(flags == 0x20);
+		ADD16(0x0FFF, 0x1, &result, &flags);
+		CHECK(result == 0x1000);
+		CHECK(flags == FLAGS_HALFCARRY);
 	}
 }
 
@@ -72,31 +73,42 @@ TEST_CASE("'ADD' instructions")
 	instruction_t i;
 	CPU cpu;
 	MMU mmu;
-	mmu.init();
+	GPU gpu;
+	mmu.init(&gpu);
 	cpu.mmu = &mmu;
 
 	SUBCASE("0x09 - ADD HL, BC")
 	{
 		i.code = 0x09;
 
-		SetLo(cpu.af, FLAGS_ZERO);
-		cpu.hl = 0x100;
-		cpu.bc = 0x100;
-		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 0x200);
-		CHECK(Lo(cpu.af) == FLAGS_ZERO);
+		cpu.af = FLAGS_ZERO;
 
-		cpu.hl = 1;
-		cpu.bc = 0xF;
-		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 16);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SUBCASE("Z remains unchanged")
+		{
+			cpu.hl = 0x100;
+			cpu.bc = 0x100;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x200);
+			CHECK(Lo(cpu.af) == FLAGS_ZERO);
+		}
 
-		cpu.hl = 0x80;
-		cpu.bc = 0x80;
-		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 0x100);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+		SUBCASE("Doesn't produce unnecessary HC")
+		{
+			cpu.hl = 0x01;
+			cpu.bc = 0x0F;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x10);
+			CHECK(Lo(cpu.af) == FLAGS_ZERO); // FLAGS_ZERO remains unchanged
+		}
+
+		SUBCASE("Doesn't produce unnecessary C")
+		{
+			cpu.hl = 0x80;
+			cpu.bc = 0x80;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x100);
+			CHECK(Lo(cpu.af) == FLAGS_ZERO); // FLAGS_ZERO remains unchanged
+		}
 
 		cpu.bc = 0;
 	}
@@ -105,24 +117,52 @@ TEST_CASE("'ADD' instructions")
 	{
 		i.code = 0x19;
 
-		SetLo(cpu.af, FLAGS_ZERO);
-		cpu.hl = 0x100;
-		cpu.de = 0x100;
-		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 0x200);
-		CHECK(Lo(cpu.af) == FLAGS_ZERO);
+		cpu.af = FLAGS_ZERO;
 
-		cpu.hl = 1;
-		cpu.de = 0xF;
-		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 16);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		SUBCASE("Z remains unchanged")
+		{
+			cpu.hl = 0x100;
+			cpu.de = 0x100;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x200);
+			CHECK(cpu.af == FLAGS_ZERO);
+		}
+		
+		SUBCASE("Doesn't produce unneccessary HC")
+		{
+			cpu.hl = 1;
+			cpu.de = 0xF;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 16);
+			CHECK(cpu.af == FLAGS_ZERO);
+		}
 
-		cpu.hl = 0x80;
-		cpu.de = 0x80;
-		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 0x100);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+		SUBCASE("Doesn't produce unneccessary C")
+		{
+			cpu.hl = 0x80;
+			cpu.de = 0x80;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x100);
+			CHECK(cpu.af == FLAGS_ZERO);
+		}
+
+		SUBCASE("Produces HC")
+		{
+			cpu.hl = 0x0FFF;
+			cpu.de = 0x0001;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x1000);
+			CHECK(cpu.af == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		}
+
+		SUBCASE("Produces HC+C")
+		{
+			cpu.hl = 0xFFFF;
+			cpu.de = 0x0001;
+			cpu.executeRegular(i, cycles);
+			CHECK(cpu.hl == 0x0);
+			CHECK(cpu.af == (FLAGS_ZERO | FLAGS_HALFCARRY | FLAGS_CARRY));
+		}
 
 		cpu.de = 0;
 	}
@@ -132,6 +172,7 @@ TEST_CASE("'ADD' instructions")
 		i.code = 0x29;
 
 		SetLo(cpu.af, FLAGS_ZERO);
+
 		cpu.hl = 0x100;
 		cpu.executeRegular(i, cycles);
 		CHECK(cpu.hl == 0x200);
@@ -139,13 +180,13 @@ TEST_CASE("'ADD' instructions")
 
 		cpu.hl = 0x8;
 		cpu.executeRegular(i, cycles);
-		CHECK(cpu.hl == 16);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		CHECK(cpu.hl == 0x10);
+		CHECK(Lo(cpu.af) == FLAGS_ZERO);
 
 		cpu.hl = 0x80;
 		cpu.executeRegular(i, cycles);
 		CHECK(cpu.hl == 0x100);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+		CHECK(Lo(cpu.af) == FLAGS_ZERO);
 
 		cpu.hl = 0;
 	}
@@ -165,13 +206,13 @@ TEST_CASE("'ADD' instructions")
 		cpu.sp = 0xF;
 		cpu.executeRegular(i, cycles);
 		CHECK(cpu.hl == 16);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_HALFCARRY));
+		CHECK(Lo(cpu.af) == FLAGS_ZERO);
 
 		cpu.hl = 0x80;
 		cpu.sp = 0x80;
 		cpu.executeRegular(i, cycles);
 		CHECK(cpu.hl == 0x100);
-		CHECK(Lo(cpu.af) == (FLAGS_ZERO | FLAGS_CARRY));
+		CHECK(Lo(cpu.af) == FLAGS_ZERO);
 
 		cpu.sp = 0;
 	}

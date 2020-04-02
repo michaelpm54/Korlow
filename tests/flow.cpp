@@ -2,9 +2,10 @@
 
 #include <functional>
 
-#include "cpu.h"
-#include "cpu_base.h"
-#include "inst_data.h"
+#include "cpu/cpu.h"
+#include "cpu/cpu_base.h"
+#include "cpu/inst_data.h"
+#include "gpu.h"
 #include "mmu.h"
 #include "types.h"
 
@@ -15,7 +16,8 @@ TEST_CASE("Flow")
 
 	CPU cpu;
 	MMU mmu;
-	mmu.init();
+	GPU gpu;
+	mmu.init(&gpu);
 	cpu.mmu = &mmu;
 
 	SUBCASE("1X")

@@ -43,8 +43,10 @@ struct sprite_t
 class GPU
 {
 public:
+	GPU();
 	GPU(GpuRegisters, GpuMem, OpenGLWidget*);
 	~GPU();
+
 	void drawScanline(int line);
 	void reset();
 	void tick(int cycles);

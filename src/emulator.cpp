@@ -221,6 +221,9 @@ void Emulator::setRom(const std::vector<uint8_t> &bytes)
 
 void Emulator::run()
 {
+	int dividerCounter = 0;
+	int timerCounter = 0;
+
 	while (shouldRun())
 	{
 		mMessageManager->update();
@@ -240,6 +243,55 @@ void Emulator::run()
 			{
 				cycles += mCpu->executeInstruction();
 				mGpu->tick(cycles);
+
+				dividerCounter += cycles;
+				if (dividerCounter >= 256)
+				{
+					dividerCounter = 0;
+					mMmu->mem[0xFF04]++;
+				}
+
+				if (mMmu->mem[0xFF07] & 0b0000'0100)
+				{
+					timerCounter += cycles;
+					switch (mMmu->mem[0xFF07] & 0b0000'0011)
+					{
+					case 0:
+						if (timerCounter >= 1024)
+						{
+							timerCounter = 0;
+							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
+							mMmu->write8(kIf, 0b0000'0100);
+						}
+						break;
+					case 1:
+						if (timerCounter >= 16)
+						{
+							timerCounter = 0;
+							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
+							//mMmu->write8(kIf, 0b0000'0100);
+						}
+						break;
+					case 2:
+						if (timerCounter >= 64)
+						{
+							timerCounter = 0;
+							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
+							mMmu->write8(kIf, 0b0000'0100);
+						}
+						break;
+					case 3:
+						if (timerCounter >= 256)
+						{
+							timerCounter = 0;
+							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
+							mMmu->write8(kIf, 0b0000'0100);
+						}
+						break;
+					default:
+						break;
+					}
+				}
 			}
 
 			mGpu->updateMap();

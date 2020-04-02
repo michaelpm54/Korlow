@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
+option(DO_TESTS "Enable testing" ON)
+
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
       CACHE STRING "")
@@ -110,6 +112,7 @@ find_package(GLEW REQUIRED)
 find_package(freetype CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(Qt5 COMPONENTS Widgets Gui CONFIG REQUIRED)
+find_package(doctest CONFIG REQUIRED)
 
 target_link_libraries(
 	app
@@ -131,6 +134,50 @@ add_custom_command(TARGET app PRE_BUILD
               ${CMAKE_CURRENT_LIST_DIR}/assets $<TARGET_FILE_DIR:app>/assets
 )
 
-#add_subdirectory(tests)
-#enable_testing()
-#add_test(NAME KorlowTest COMMAND test_app)
+if (DO_TESTS)
+	set(KORLOW_TEST_SOURCES
+	    ${KORLOW_CPU_SOURCES}
+		src/mmu.cpp
+		src/gpu.cpp
+		tests/main.cpp
+		tests/rotation.cpp
+		tests/addition.cpp
+		tests/subtraction.cpp
+		tests/decrement.cpp
+		tests/increment.cpp
+		tests/load.cpp
+		tests/flow.cpp
+		tests/stack.cpp
+		tests/logic.cpp
+	)
+
+	set(KORLOW_TEST_HEADERS
+		${KORLOW_CPU_HEADERS}
+		#doctest.h
+	)
+
+	add_executable(test_app
+		${KORLOW_TEST_SOURCES}
+		${KORLOW_TEST_HEADERS}
+	)
+
+	target_include_directories(test_app PUBLIC src)
+
+	target_link_libraries(test_app PRIVATE doctest::doctest)
+
+	set_target_properties(test_app
+		PROPERTIES
+			RUNTIME_OUTPUT_DIRECTORY
+				${OUT_DIR}
+	)
+
+	set_property(TARGET test_app PROPERTY CXX_STANDARD 20)
+	set_property(TARGET test_app PROPERTY CXX_STANDARD_REQUIRED ON)
+
+	if (MSVC_VERSION GREATER_EQUAL "1900")
+		target_compile_features(test_app PRIVATE cxx_std_20)
+	endif()
+
+	include(doctest)
+	doctest_discover_tests(test_app)
+endif (DO_TESTS)

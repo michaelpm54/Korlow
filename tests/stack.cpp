@@ -1,7 +1,8 @@
 #include "doctest.h"
-#include "cpu.h"
+#include "cpu/cpu.h"
+#include "cpu/cpu_base.h"
+#include "gpu.h"
 #include "mmu.h"
-#include "cpu_base.h"
 #include "types.h"
 
 TEST_CASE("Stack instructions")
@@ -11,7 +12,8 @@ TEST_CASE("Stack instructions")
 
 	CPU cpu;
 	MMU mmu;
-	mmu.init();
+	GPU gpu;
+	mmu.init(&gpu);
 	cpu.mmu = &mmu;
 
 	cpu.sp = 0xC800;

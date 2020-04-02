@@ -61,11 +61,62 @@ void MMU::io_write8(uint16_t addr, uint8_t val)
 		serialData.push_back(val);
 		printf("Serial data: %02X\n", val);
 		printf("Serial data total:\n{\n%s\n}\n\n", serialData.c_str());
-		or8(kIf, 0x4);
+		//or8(kIf, 0x4);
 	}
 	else if (addr == 0xFF02)
 	{
 		// Serial transfer control
+		mem[0xFF02] = val | 0b0111'1100;
+		return;
+	}
+	else if (addr == 0xFF04) // DIV
+	{
+		mem[0xFF04] = 0;
+		return;
+	}
+	else if (addr == 0xFF05) // TIMA
+	{
+
+	}
+	else if (addr == 0xFF06) // TMA
+	{
+
+	}
+	else if (addr == 0xFF07) // TAC
+	{
+		mem[0xFF07] = val | 0b1111'1000;
+		return;
+	}
+	else if (addr == kIf)
+	{
+		if (!val)
+		{
+			printf("Fired no interrupts\n");
+		}
+		printf("Fired interrupt ");
+		if (val & 0b0000'0001)
+		{
+			printf("VBLANK ");
+		}
+		if (val & 0b0000'0010)
+		{
+			printf("LCD STAT ");
+		}
+		if (val & 0b0000'0100)
+		{
+			printf("TIMER ");
+		}
+		if (val & 0b0000'1000)
+		{
+			printf("SERIAL ");
+		}
+		if (val & 0b0001'0000)
+		{
+			printf("JOYPAD ");
+		}
+		printf("\n");
+		mem[kIf] = val | 0b1110'0000;
+		return;
 	}
 	else if (addr > 0xFF0F && addr < kLcdc)
 	{
@@ -204,35 +255,6 @@ void MMU::write8(uint16_t addr, uint8_t val)
 			printf("Disabled all interrupts\n");
 		}
 		printf("Enabled interrupt ");
-		if (val & 0b0000'0001)
-		{
-			printf("VBLANK ");
-		}
-		if (val & 0b0000'0010)
-		{
-			printf("LCD STAT ");
-		}
-		if (val & 0b0000'0100)
-		{
-			printf("TIMER ");
-		}
-		if (val & 0b0000'1000)
-		{
-			printf("SERIAL ");
-		}
-		if (val & 0b0001'0000)
-		{
-			printf("JOYPAD ");
-		}
-		printf("\n");
-	}
-	else if (addr == kIf)
-	{
-		if (!val)
-		{
-			printf("Fired no interrupts\n");
-		}
-		printf("Fired interrupt ");
 		if (val & 0b0000'0001)
 		{
 			printf("VBLANK ");

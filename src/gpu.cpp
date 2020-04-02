@@ -14,6 +14,12 @@ constexpr uint8_t kShades[4] =
 	0xFF
 };
 
+static uint8_t dummy;
+
+GPU::GPU()
+	: reg({dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy})
+{}
+
 GPU::GPU(GpuRegisters registers, GpuMem mem, OpenGLWidget *openGLWidget)
 	: reg(registers), mem(mem)
 {

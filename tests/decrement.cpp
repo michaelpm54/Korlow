@@ -1,7 +1,8 @@
 #include "doctest.h"
 
-#include "cpu.h"
-#include "cpu_base.h"
+#include "cpu/cpu.h"
+#include "cpu/cpu_base.h"
+#include "gpu.h"
 #include "mmu.h"
 #include "types.h"
 
@@ -35,7 +36,8 @@ TEST_CASE("decrement")
 
 	CPU cpu;
 	MMU mmu;
-	mmu.init();
+	GPU gpu;
+	mmu.init(&gpu);
 	cpu.mmu = &mmu;
 
 	SUBCASE("0X")

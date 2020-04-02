@@ -7,7 +7,7 @@
 #include "memory_map.h"
 #include "mmu.h"
 
-#define DEBUG
+//#define DEBUG
 
 void CPU::halt()
 {
@@ -44,7 +44,7 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 		printf("[%04X] ", sp);
 		printf("[%02X] ", opcode);
 		printf("A:%02X ", Hi(af));
-		printf("F:%c%c%c%c IME=%c ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-', ime ? '1' : '0');
+		printf("F:%c%c%c%c  IE=%02X IF=%02X IME=%c  ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-', mmu->mem[kIe], mmu->mem[kIf], ime ? '1' : '0');
 		printf("BC:%04X ", bc);
 		printf("DE:%04X ", de);
 		printf("HL:%04X%c", hl, n);
@@ -198,6 +198,7 @@ int CPU::executeInstruction()
 		}
 		else if (mDelayedImeEnable == 2)
 		{
+			puts("ENABLED");
 			mDelayedImeEnable = 0;
 			ime = true;
 		}
@@ -327,6 +328,7 @@ void CPU::reset(bool haveBios)
 		hl = 0x014D;
 		sp = 0xFFFE;
 		mmu->write8(0xFF00, 0xCF);
+		mmu->mem[0xFF0F] = 0xE1;
 		mmu->write8(0xFF10, 0x80);
 		mmu->write8(0xFF11, 0xBF);
 		mmu->write8(0xFF12, 0xF3);
