@@ -5,139 +5,100 @@
 
 // Generic
 
-void UNIMPL(CPU *cpu, instruction_t &i)
+void INVALID(Core &c)
 {
-	cpu->doBreak();
+	c.paused = true;
 }
 
-void INVALID(CPU *cpu, instruction_t &i)
+void RST(Core &c, uint16_t addr)
 {
-	cpu->doBreak();
+	c.r.sp -= 2;
+	c.mmu.write16(c.r.sp, c.r.pc);
+	c.r.pc = addr;
 }
 
-void RST(CPU *cpu, uint16_t addr)
+void SWAP(uint8_t &n, uint8_t &f)
 {
-	cpu->sp -= 2;
-	cpu->mmu->write16(cpu->sp, cpu->pc);
-	cpu->pc = addr;
-	cpu->ime = false;
-}
-
-void SWAP_RH(CPU *cpu, uint16_t &r)
-{
-	uint8_t n = Hi(r);
 	uint8_t hi = (n & 0xF0) >> 4;
 	uint8_t lo = (n & 0x0F);
-	uint8_t result = (lo << 4) | hi;
-	SetHi(r, result);
-	SetLo(cpu->af, (!result) ? 0x80 : 0x0);
+	n = (lo << 4) | hi;
+	f = (!n) ? 0x80 : 0x0;
 }
 
-void SWAP_RL(CPU *cpu, uint16_t &r)
-{
-	uint8_t n = Lo(r);
-	uint8_t hi = (n & 0xF0) >> 4;
-	uint8_t lo = (n & 0x0F);
-	uint8_t result = (lo << 4) | hi;
-	SetLo(r, result);
-	SetLo(cpu->af, (!result) ? 0x80 : 0x0);
-}
-
-void SRL_RH(CPU *cpu, uint16_t &r)
+void SRL(uint8_t &r, uint8_t &f)
 {
 	/* Shift register right into carry. MSB set to 0. */
 	// Z00C
-	uint8_t carry = Hi(r) & 0x1;
-	uint8_t result = Hi(r) >> 1;
+	uint8_t carry = r & 0x1;
+	r >>= 1;
 	uint8_t flags = 0;
-	if (result == 0)
+	if (r == 0)
 	{
 		flags |= FLAGS_ZERO;
 	}
-	if (carry != 0)
+	if (carry)
 	{
 		flags |= FLAGS_CARRY;
 	}
-	SetHi(r, result);
-	SetLo(cpu->af, flags);
+	f = flags;
 }
 
-void SRL_RL(CPU *cpu, uint16_t &r)
-{
-	// Z00C
-	uint8_t carry = r & 0x1;
-	uint8_t result = Lo(r) >> 1;
-	uint8_t flags = 0;
-	if (result == 0)
-	{
-		flags |= 0x80;
-	}
-	if (carry)
-	{
-		flags |= 0x10;
-	}
-	SetLo(r, result);
-	SetLo(cpu->af, flags);
-}
-
-void XOR_A_R(CPU *cpu, uint8_t r)
+void XOR(uint8_t &a, uint8_t r, uint8_t &f)
 {
 	// Z000
-	SetHi(cpu->af, Hi(cpu->af) ^ r);
-	SetLo(cpu->af, !Hi(cpu->af) ? FLAGS_ZERO : 0);
+	a ^= r;
+	f = a ? 0 : FLAGS_ZERO;
 }
 
-void AND_A_R(CPU *cpu, uint8_t r)
+void AND(uint8_t &a, uint8_t r, uint8_t &f)
 {
 	// Z010
-	SetHi(cpu->af, Hi(cpu->af) & r);
-	SetLo(cpu->af, !Hi(cpu->af) ? (FLAGS_ZERO | FLAGS_HALFCARRY) : FLAGS_HALFCARRY);
+	a &= r;
+	f = a ? FLAGS_HALFCARRY : (FLAGS_ZERO | FLAGS_HALFCARRY);
 }
 
-void OR_A_R(CPU *cpu, uint8_t r)
+void OR(uint8_t &a, uint8_t r, uint8_t &f)
 {
 	// Z000
-	SetHi(cpu->af, Hi(cpu->af) | r);
-	SetLo(cpu->af, !Hi(cpu->af) ? FLAGS_ZERO : 0);
+	a |= r;
+	f = a ? 0 : FLAGS_ZERO;
 }
 
-uint8_t SLA_REG8(CPU *cpu, uint8_t r)
+void SLA(uint8_t &r, uint8_t &f)
 {
 	// Z00C
-	uint8_t c = r & 0b1000'0000;
+	uint8_t carry = r & 0b1000'0000;
 	r <<= 1;
-	uint8_t f = 0;
+	uint8_t flags = 0;
 	if (!r)
-		f |= FLAGS_ZERO;
-	if (c)
-		f |= FLAGS_CARRY;
-	SetLo(cpu->af, f);
-	return r;
+		flags |= FLAGS_ZERO;
+	if (carry)
+		flags |= FLAGS_CARRY;
+	f = flags;
 }
 
-uint8_t SRA_REG8(CPU *cpu, uint8_t r)
+void SRA(uint8_t &r, uint8_t &f)
 {
 	// Z00C
 	uint8_t msb = r & 0b1000'0000;
-	uint8_t c = r & 0b0000'0001;
+	uint8_t carry = r & 0b0000'0001;
 	r >>= 1;
 	r |= msb;
 	uint8_t flags = 0;
 	if (!r)
 		flags |= FLAGS_ZERO;
-	if (c)
+	if (carry)
 		flags |= FLAGS_CARRY;
-	SetLo(cpu->af, flags);
-	return r;
+	f = flags;
 }
 
-void ADC_A_R(CPU *cpu, uint8_t r)
+void ADC(uint8_t &a, uint8_t r, uint8_t &f)
 {
-	uint8_t carry = (cpu->af & FLAGS_CARRY) >> 4;
+	uint8_t carry = (f & FLAGS_CARRY) >> 4;
 	uint8_t flags = 0;
 
-	uint16_t a, r_, c;
-	a = Hi(cpu->af);
+	uint16_t a_, r_, c;
+	a_ = a;
 	r_ = r;
 	c = carry;
 
@@ -156,270 +117,268 @@ void ADC_A_R(CPU *cpu, uint8_t r)
 		flags |= FLAGS_ZERO;
 	}
 
-	SetLo(cpu->af, flags);
-	SetHi(cpu->af, result & 0xFF);
+	f = flags;
+	a = result & 0xFF;
 }
 
-void SBC_A_R(CPU *cpu, uint8_t d)
+void SBC(uint8_t &a, uint8_t r, uint8_t &f)
 {
-	uint8_t c = (cpu->af & FLAGS_CARRY) >> 4;
-	uint8_t a = Hi(cpu->af);
-	uint8_t f = FLAGS_SUBTRACT;
+	uint8_t carry = (f & FLAGS_CARRY) >> 4;
+	uint8_t flags = FLAGS_SUBTRACT;
 
-	if ((int(Hi(cpu->af)) - int(d) - int(c)) < 0)
-		f |= FLAGS_CARRY;
+	if ((int(a) - int(r) - int(carry)) < 0)
+		flags |= FLAGS_CARRY;
 
-	if ((int(Hi(cpu->af) & 0xF) - int(d & 0xF) - int(c)) < 0)
-		f |= FLAGS_HALFCARRY;
+	if ((int(a & 0xF) - int(r & 0xF) - int(carry)) < 0)
+		flags |= FLAGS_HALFCARRY;
 
-	SetHi(cpu->af, Hi(cpu->af) - d);
-	SetHi(cpu->af, Hi(cpu->af) - c);
+	a -= r;
+	a -= carry;
 
-	if (!Hi(cpu->af))
-		f |= FLAGS_ZERO;
+	if (!a)
+		flags |= FLAGS_ZERO;
 
-	SetLo(cpu->af, f);
+	f = flags;
 }
 
 // Merges flags according to mask
-void SetFlags(uint16_t &af, uint8_t flags, uint8_t mask)
+void SetFlags(uint8_t &f, uint8_t flags, uint8_t mask)
 {
-	uint8_t f = Lo(af);
-	SetLo(af, f ^ ((f ^ flags) & mask));
+	f = f ^ ((f ^ flags) & mask);
 }
 
 // 0x00
 
-void NOP(CPU *cpu, instruction_t &i)
+void NOP(Core &c)
 {
 }
 
-void LD_BC_IMM16(CPU *cpu, instruction_t &i)
+void LD_BC_IMM16(Core &c)
 {
-	cpu->bc = i.op16;
+	c.r.bc = c.d16;
 }
 
-void LD_ABC_A(CPU *cpu, instruction_t &i)
+void LD_ABC_A(Core &c)
 {
-	cpu->mmu->write8(cpu->bc, Hi(cpu->af));
+	c.mmu.write8(c.r.bc, c.r.a);
 }
 
-void INC_BC(CPU *cpu, instruction_t &i)
+void INC_BC(Core &c)
 {
-	cpu->bc++;
+	c.r.bc++;
 }
 
-void INC_B(CPU *cpu, instruction_t &i)
+void INC_B(Core &c)
 {
-	INC8_HI(cpu, cpu->bc);
+	INC8(c.r.b, c.r.f);
 }
 
-void DEC_B(CPU *cpu, instruction_t &i)
+void DEC_B(Core &c)
 {
-	DEC8_HI(cpu, cpu->bc);
+	DEC8(c.r.b, c.r.f);
 }
 
-void LD_B_IMM8(CPU *cpu, instruction_t &i)
+void LD_B_IMM8(Core &c)
 {
-	SetHi(cpu->bc, i.op8);
+	c.r.b = c.d8;
 }
 
 // x = cpu.a.bit[7]
 // carry = x
 // cpu.a << 1
 // cpu.a |= x
-void RLCA(CPU *cpu, instruction_t &i)
+void RLCA(Core &c)
 {
-	uint8_t bit7 = !!(cpu->af & 0b1000'0000'0000'0000);
-	SetLo(cpu->af, bit7 << 4);
-	SetHi(cpu->af, (Hi(cpu->af) << 1) | bit7);
+	uint8_t bit7 = !!(c.r.af & 0b1000'0000'0000'0000);
+	c.r.f = bit7 << 4;
+	c.r.a = (c.r.a << 1) | bit7;
 }
 
-void LD_AIMM16_SP(CPU *cpu, instruction_t &i)
+void LD_AIMM16_SP(Core &c)
 {
-	cpu->mmu->write16(i.op16, cpu->sp);
+	c.mmu.write16(c.d16, c.r.sp);
 }
 
-void ADD_HL_BC(CPU *cpu, instruction_t &i)
+void ADD_HL_BC(Core &c)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(cpu->hl, cpu->bc, &result, &flags);
-	cpu->hl = result;
+	ADD16(c.r.hl, c.r.bc, &result, &flags);
+	c.r.hl = result;
 	flags &= 0b0111'0000;
-	SetLo(cpu->af, (cpu->af & FLAGS_ZERO) | flags);
+	c.r.f = (c.r.af & FLAGS_ZERO) | flags;
 }
 
-void LD_A_ABC(CPU *cpu, instruction_t &i)
+void LD_A_ABC(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->bc));
+	c.r.a = c.mmu.read8(c.r.bc);
 }
 
-void DEC_BC(CPU *cpu, instruction_t &i)
+void DEC_BC(Core &c)
 {
-	cpu->bc--;
+	c.r.bc--;
 }
 
-void INC_C(CPU *cpu, instruction_t &i)
+void INC_C(Core &c)
 {
-	INC8_LO(cpu, cpu->bc);
+	INC8(c.r.c, c.r.f);
 }
 
-void DEC_C(CPU *cpu, instruction_t &i)
+void DEC_C(Core &c)
 {
-	DEC8_LO(cpu, cpu->bc);
+	DEC8(c.r.c, c.r.f);
 }
 
-void LD_C_IMM8(CPU *cpu, instruction_t &i)
+void LD_C_IMM8(Core &c)
 {
-	cpu->bc = (cpu->bc & 0xFF00) + i.op8;
+	c.r.bc = (c.r.bc & 0xFF00) + c.d8;
 }
 
-void RRCA(CPU *cpu, instruction_t &i)
+void RRCA(Core &c)
 {
-	uint8_t bit0 = !!(cpu->af & 0b0000'0001'0000'0000);
-	SetLo(cpu->af, bit0 << 4);
-	SetHi(cpu->af, ((Hi(cpu->af) >> 1) & 0b0111'1111) | (bit0 << 7));
+	uint8_t bit0 = !!(c.r.af & 0b0000'0001'0000'0000);
+	c.r.f = bit0 << 4;
+	c.r.a = ((c.r.a >> 1) & 0b0111'1111) | (bit0 << 7);
 }
 
 // 0x10
 
-void STOP(CPU *cpu, instruction_t &i)
+void STOP(Core &c)
 {
 }
 
-void LD_DE_IMM16(CPU *cpu, instruction_t &i)
+void LD_DE_IMM16(Core &c)
 {
-	cpu->de = i.op16;
+	c.r.de = c.d16;
 }
 
-void LD_ADE_A(CPU *cpu, instruction_t &i)
+void LD_ADE_A(Core &c)
 {
-	cpu->mmu->write8(cpu->de, Hi(cpu->af));
+	c.mmu.write8(c.r.de, c.r.a);
 }
 
-void INC_DE(CPU *cpu, instruction_t &i)
+void INC_DE(Core &c)
 {
-	cpu->de++;
+	c.r.de++;
 }
 
-void INC_D(CPU *cpu, instruction_t &i)
+void INC_D(Core &c)
 {
-	INC8_HI(cpu, cpu->de);
+	INC8(c.r.d, c.r.f);
 }
 
-void DEC_D(CPU *cpu, instruction_t &i)
+void DEC_D(Core &c)
 {
-	DEC8_HI(cpu, cpu->de);
+	DEC8(c.r.d, c.r.f);
 }
 
-void LD_D_IMM8(CPU *cpu, instruction_t &i)
+void LD_D_IMM8(Core &c)
 {
-	SetHi(cpu->de, i.op8);
+	c.r.d = c.d8;
 }
 
-void RLA(CPU *cpu, instruction_t &i)
+void RLA(Core &c)
 {
-	uint8_t flags = Lo(cpu->af);
+	uint8_t flags = c.r.f;
 	uint8_t result = 0;
-	RL(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags & 0b0111'0000);
+	RL(c.r.a, &result, &flags);
+	c.r.a = result;
+	c.r.f = flags & 0b0111'0000;
 }
 
-void JR_IMM8(CPU *cpu, instruction_t &i)
+void JR_IMM8(Core &c)
 {
-	cpu->pc += int8_t(i.op8);
+	c.r.pc += int8_t(c.d8);
 }
 
-void ADD_HL_DE(CPU *cpu, instruction_t &i)
+void ADD_HL_DE(Core &c)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(cpu->hl, cpu->de, &result, &flags);
-	cpu->hl = result;
-	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));
+	ADD16(c.r.hl, c.r.de, &result, &flags);
+	c.r.hl = result;
+	c.r.f = (flags & 0x70) | (c.r.f & 0x80);
 }
 
-void LD_A_ADE(CPU *cpu, instruction_t &i)
+void LD_A_ADE(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->de));
+	c.r.a = c.mmu.read8(c.r.de);
 }
 
-void DEC_DE(CPU *cpu, instruction_t &i)
+void DEC_DE(Core &c)
 {
-	cpu->de--;
+	c.r.de--;
 }
 
-void INC_E(CPU *cpu, instruction_t &i)
+void INC_E(Core &c)
 {
-	INC8_LO(cpu, cpu->de);
+	INC8(c.r.e, c.r.f);
 }
 
-void DEC_E(CPU *cpu, instruction_t &i)
+void DEC_E(Core &c)
 {
-	DEC8_LO(cpu, cpu->de);
+	DEC8(c.r.e, c.r.f);
 }
 
-void LD_E_IMM8(CPU *cpu, instruction_t &i)
+void LD_E_IMM8(Core &c)
 {
-	SetLo(cpu->de, i.op8);
+	c.r.e = c.d8;
 }
 
-void RRA(CPU *cpu, instruction_t &i)
+void RRA(Core &c)
 {
-	uint8_t flags = Lo(cpu->af);
+	uint8_t flags = c.r.f;
 	uint8_t result = 0;
-	RR(Hi(cpu->af), &result, &flags);
-	SetLo(cpu->af, flags & FLAGS_CARRY);
-	SetHi(cpu->af, result);
+	RR(c.r.a, &result, &flags);
+	c.r.f = flags & FLAGS_CARRY;
+	c.r.a = result;
 }
 
 // 0x20
 
-void JR_NZ_IMM8(CPU *cpu, instruction_t &i)
+void JR_NZ_IMM8(Core &c)
 {
-	if (!(cpu->af & FLAGS_ZERO))
+	if (!(c.r.af & FLAGS_ZERO))
 	{
-		cpu->pc += int8_t(i.op8);
+		c.r.pc += int8_t(c.d8);
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void LD_HL_IMM16(CPU *cpu, instruction_t &i)
+void LD_HL_IMM16(Core &c)
 {
-	cpu->hl = i.op16;
+	c.r.hl = c.d16;
 }
 
-void LDI_HL_A(CPU *cpu, instruction_t &i)
+void LDI_HL_A(Core &c)
 {
-	cpu->mmu->write8(cpu->hl++, Hi(cpu->af));
+	c.mmu.write8(c.r.hl++, c.r.a);
 }
 
-void INC_H(CPU *cpu, instruction_t &i)
+void INC_H(Core &c)
 {
-	INC8_HI(cpu, cpu->hl);
+	INC8(c.r.h, c.r.f);
 }
 
-void DEC_H(CPU *cpu, instruction_t &i)
+void DEC_H(Core &c)
 {
-	DEC8_HI(cpu, cpu->hl);
+	DEC8(c.r.h, c.r.f);
 }
 
-void LD_H_IMM8(CPU *cpu, instruction_t &i)
+void LD_H_IMM8(Core &c)
 {
-	SetHi(cpu->hl, i.op8);
+	c.r.h = c.d8;
 }
 
-void DAA(CPU *cpu, instruction_t &i)
+void DAA(Core &c)
 {
-	uint8_t a = Hi(cpu->af);
-	uint8_t f = Lo(cpu->af);
+	uint8_t a = c.r.a;
+	uint8_t f = c.r.f;
 
 	if (!(f & FLAGS_SUBTRACT)) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
 		if ((f & FLAGS_CARRY) || a > 0x99) {
@@ -439,2731 +398,2693 @@ void DAA(CPU *cpu, instruction_t &i)
 	f &= 0b1101'0000;
 	f = a ? f & 0b0111'0000 : f | 0b1000'0000;
 
-	SetHi(cpu->af, a);
-	SetLo(cpu->af, f);
+	c.r.a = a;
+	c.r.f = f;
 }
 
-void JR_Z_IMM8(CPU *cpu, instruction_t &i)
+void JR_Z_IMM8(Core &c)
 {
-	if (cpu->af & FLAGS_ZERO)
+	if (c.r.af & FLAGS_ZERO)
 	{
-		cpu->pc += int8_t(i.op8);
+		c.r.pc += int8_t(c.d8);
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void INC_HL(CPU *cpu, instruction_t &i)
+void INC_HL(Core &c)
 {
-	cpu->hl++;
+	c.r.hl++;
 }
 
-void ADD_HL_HL(CPU *cpu, instruction_t &i)
+void ADD_HL_HL(Core &c)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(cpu->hl, cpu->hl, &result, &flags);
-	cpu->hl = result;
-	SetLo(cpu->af, (flags & 0x70) | (Lo(cpu->af) & 0x80));
+	ADD16(c.r.hl, c.r.hl, &result, &flags);
+	c.r.hl = result;
+	c.r.f = (flags & 0x70) | (c.r.f & 0x80);
 }
 
-void LDI_A_HL(CPU *cpu, instruction_t &i)
+void LDI_A_HL(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl));
-	cpu->hl++;
+	c.r.a = c.mmu.read8(c.r.hl);
+	c.r.hl++;
 }
 
-void DEC_HL(CPU *cpu, instruction_t &i)
+void DEC_HL(Core &c)
 {
-	cpu->hl--;
+	c.r.hl--;
 }
 
-void INC_L(CPU *cpu, instruction_t &i)
+void INC_L(Core &c)
 {
-	INC8_LO(cpu, cpu->hl);
+	INC8(c.r.l, c.r.f);
 }
 
-void DEC_L(CPU *cpu, instruction_t &i)
+void DEC_L(Core &c)
 {
-	DEC8_LO(cpu, cpu->hl);
+	DEC8(c.r.l, c.r.f);
 }
 
-void LD_L_IMM8(CPU *cpu, instruction_t &i)
+void LD_L_IMM8(Core &c)
 {
-	SetLo(cpu->hl, i.op8);
+	c.r.l = c.d8;
 }
 
-void CPL(CPU *cpu, instruction_t &i)
+void CPL(Core &c)
 {
-	SetHi(cpu->af, ~Hi(cpu->af));
-	uint8_t old_flags = Lo(cpu->af);
+	c.r.a = ~c.r.a;
+	uint8_t old_flags = c.r.f;
 	uint8_t new_flags = (old_flags & (FLAGS_ZERO | FLAGS_CARRY)) | (FLAGS_SUBTRACT | FLAGS_HALFCARRY);
-	SetLo(cpu->af, new_flags);
+	c.r.f = new_flags;
 }
 
 // 0x30
 
-void JR_NC_IMM8(CPU *cpu, instruction_t &i)
+void JR_NC_IMM8(Core &c)
 {
-	if (!(cpu->af & FLAGS_CARRY))
+	if (!(c.r.af & FLAGS_CARRY))
 	{
-		cpu->pc += int8_t(i.op8);
+		c.r.pc += int8_t(c.d8);
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void LD_SP_IMM16(CPU *cpu, instruction_t &i)
+void LD_SP_IMM16(Core &c)
 {
-	cpu->sp = i.op16;
+	c.r.sp = c.d16;
 }
 
-void LDD_HL_A(CPU *cpu, instruction_t &i)
+void LDD_HL_A(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Hi(cpu->af));
-	cpu->hl--;
+	c.mmu.write8(c.r.hl, c.r.a);
+	c.r.hl--;
 }
 
-void INC_SP(CPU *cpu, instruction_t &i)
+void INC_SP(Core &c)
 {
-	cpu->sp++;
+	c.r.sp++;
 }
 
-void INC_AHL(CPU *cpu, instruction_t &i)
+void INC_AHL(Core &c)
 {
-	uint8_t flags = Lo(cpu->af);
-	uint8_t result = 0;
-	INC8(cpu->mmu->read8(cpu->hl), &result, &flags);
-	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	uint8_t result = c.mmu.read8(c.r.hl);
+	INC8(result, c.r.f);
+	c.mmu.write8(c.r.hl, result);
 }
 
-void DEC_AHL(CPU *cpu, instruction_t &i)
+void DEC_AHL(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	SUB8(cpu->mmu->read8(cpu->hl), 1, &result, &flags);
-	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, (flags & 0b1110'0000) | (cpu->af & 0x10));
+	uint8_t f = 0;
+	uint8_t result = c.mmu.read8(c.r.hl);
+	DEC8(result, f);
+	c.mmu.write8(c.r.hl, result);
+	c.r.f = (f & 0b1110'0000) | (c.r.af & FLAGS_CARRY);
 }
 
-void LD_AHL_IMM8(CPU *cpu, instruction_t &i)
+void LD_AHL_IMM8(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, i.op8);
+	c.mmu.write8(c.r.hl, c.d8);
 }
 
-void SCF(CPU *cpu, instruction_t &i)
+void SCF(Core &c)
 {
-	SetLo(cpu->af, (Lo(cpu->af) & 0b1000'0000) | 0x10);
+	c.r.f = (c.r.f & 0b1000'0000) | 0x10;
 }
 
-void JR_C_IMM8(CPU *cpu, instruction_t &i)
+void JR_C_IMM8(Core &c)
 {
-	if (cpu->af & FLAGS_CARRY)
+	if (c.r.af & FLAGS_CARRY)
 	{
-		cpu->pc += int8_t(i.op8);
+		c.r.pc += int8_t(c.d8);
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void ADD_HL_SP(CPU *cpu, instruction_t &i)
+void ADD_HL_SP(Core &c)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(cpu->hl, cpu->sp, &result, &flags);
-	cpu->hl = result;
+	ADD16(c.r.hl, c.r.sp, &result, &flags);
+	c.r.hl = result;
 	flags &= 0b0011'0000;
-	SetLo(cpu->af, (Lo(cpu->af) & 0b1000'0000) | flags);
+	c.r.f = (c.r.f & 0b1000'0000) | flags;
 }
 
-void LDD_A_HL(CPU *cpu, instruction_t &i)
+void LDD_A_HL(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl--));
+	c.r.a = c.mmu.read8(c.r.hl--);
 }
 
-void DEC_SP(CPU *cpu, instruction_t &i)
+void DEC_SP(Core &c)
 {
-	cpu->sp--;
+	c.r.sp--;
 }
 
-void INC_A(CPU *cpu, instruction_t &i)
+void INC_A(Core &c)
 {
-	INC8_HI(cpu, cpu->af);
+	INC8(c.r.a, c.r.f);
 }
 
-void DEC_A(CPU *cpu, instruction_t &i)
+void DEC_A(Core &c)
 {
-	DEC8_HI(cpu, cpu->af);
+	DEC8(c.r.a, c.r.f);
 }
 
-void LD_A_IMM8(CPU *cpu, instruction_t &i)
+void LD_A_IMM8(Core &c)
 {
-	SetHi(cpu->af, i.op8);
+	c.r.a = c.d8;
 }
 
-void CCF(CPU *cpu, instruction_t &i)
+void CCF(Core &c)
 {
-	uint8_t old_flags = Lo(cpu->af);
+	uint8_t old_flags = c.r.f;
 	uint8_t new_flags = (old_flags & FLAGS_ZERO) | ((~(old_flags & FLAGS_CARRY)) & FLAGS_CARRY);
-	SetLo(cpu->af, new_flags);
+	c.r.f = new_flags;
 }
 
 // 0x40
 
-void LD_B_B(CPU *cpu, instruction_t &i)
+void LD_B_B(Core &c)
 {
-	// SetHi(cpu->bc, Hi(cpu->bc));
+	// c.r.b = c.r.b;
 }
 
-void LD_B_C(CPU *cpu, instruction_t &i)
+void LD_B_C(Core &c)
 {
-	SetHi(cpu->bc, Lo(cpu->bc));
+	c.r.b = c.r.c;
 }
 
-void LD_B_D(CPU *cpu, instruction_t &i)
+void LD_B_D(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->de));
+	c.r.b = c.r.d;
 }
 
-void LD_B_E(CPU *cpu, instruction_t &i)
+void LD_B_E(Core &c)
 {
-	SetHi(cpu->bc, Lo(cpu->de));
+	c.r.b = c.r.e;
 }
 
-void LD_B_H(CPU *cpu, instruction_t &i)
+void LD_B_H(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->hl));
+	c.r.b = c.r.h;
 }
 
-void LD_B_L(CPU *cpu, instruction_t &i)
+void LD_B_L(Core &c)
 {
-	SetHi(cpu->bc, Lo(cpu->hl));
+	c.r.b = c.r.l;
 }
 
-void LD_B_AHL(CPU *cpu, instruction_t &i)
+void LD_B_AHL(Core &c)
 {
-	SetHi(cpu->bc, cpu->mmu->read8(cpu->hl));
+	c.r.b = c.mmu.read8(c.r.hl);
 }
 
-void LD_B_A(CPU *cpu, instruction_t &i)
+void LD_B_A(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->af));
+	c.r.b = c.r.a;
 }
 
-void LD_C_B(CPU *cpu, instruction_t &i)
+void LD_C_B(Core &c)
 {
-	SetLo(cpu->bc, Hi(cpu->bc));
+	c.r.c = c.r.b;
 }
 
-void LD_C_C(CPU *cpu, instruction_t &i)
+void LD_C_C(Core &c)
 {
-	// SetLo(cpu->bc, Lo(cpu->bc));
+	//
 }
 
-void LD_C_D(CPU *cpu, instruction_t &i)
+void LD_C_D(Core &c)
 {
-	SetLo(cpu->bc, Hi(cpu->de));
+	c.r.c = c.r.d;
 }
 
-void LD_C_E(CPU *cpu, instruction_t &i)
+void LD_C_E(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->de));
+	c.r.c = c.r.e;
 }
 
-void LD_C_H(CPU *cpu, instruction_t &i)
+void LD_C_H(Core &c)
 {
-	SetLo(cpu->bc, Hi(cpu->hl));
+	c.r.c = c.r.h;
 }
 
-void LD_C_L(CPU *cpu, instruction_t &i)
+void LD_C_L(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->hl));
+	c.r.c = c.r.l;
 }
 
-void LD_C_AHL(CPU *cpu, instruction_t &i)
+void LD_C_AHL(Core &c)
 {
-	SetLo(cpu->bc, cpu->mmu->read8(cpu->hl));
+	c.r.c = c.mmu.read8(c.r.hl);
 }
 
-void LD_C_A(CPU *cpu, instruction_t &i)
+void LD_C_A(Core &c)
 {
-	SetLo(cpu->bc, Hi(cpu->af));
+	c.r.c = c.r.a;
 }
 
 // 0x50
 
-void LD_D_B(CPU *cpu, instruction_t &i)
+void LD_D_B(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->bc));
+	c.r.d = c.r.b;
 }
 
-void LD_D_C(CPU *cpu, instruction_t &i)
+void LD_D_C(Core &c)
 {
-	SetHi(cpu->de, Lo(cpu->bc));
+	c.r.d = c.r.c;
 }
 
-void LD_D_D(CPU *cpu, instruction_t &i)
+void LD_D_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de));
+	//
 }
 
-void LD_D_E(CPU *cpu, instruction_t &i)
+void LD_D_E(Core &c)
 {
-	SetHi(cpu->de, Lo(cpu->de));
+	c.r.d = c.r.e;
 }
 
-void LD_D_H(CPU *cpu, instruction_t &i)
+void LD_D_H(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->hl));
+	c.r.d = c.r.h;
 }
 
-void LD_D_L(CPU *cpu, instruction_t &i)
+void LD_D_L(Core &c)
 {
-	SetHi(cpu->de, Lo(cpu->hl));
+	c.r.d = c.r.l;
 }
 
-void LD_D_AHL(CPU *cpu, instruction_t &i)
+void LD_D_AHL(Core &c)
 {
-	SetHi(cpu->de, cpu->mmu->read8(cpu->hl));
+	c.r.d = c.mmu.read8(c.r.hl);
 }
 
-void LD_D_A(CPU *cpu, instruction_t &i)
+void LD_D_A(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->af));
+	c.r.d = c.r.a;
 }
 
-void LD_E_B(CPU *cpu, instruction_t &i)
+void LD_E_B(Core &c)
 {
-	SetLo(cpu->de, Hi(cpu->bc));
+	c.r.e = c.r.b;
 }
 
-void LD_E_C(CPU *cpu, instruction_t &i)
+void LD_E_C(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->bc));
+	c.r.e = c.r.c;
 }
 
-void LD_E_D(CPU *cpu, instruction_t &i)
+void LD_E_D(Core &c)
 {
-	SetLo(cpu->de, Hi(cpu->de));
+	c.r.e = c.r.d;
 }
 
-void LD_E_E(CPU *cpu, instruction_t &i)
+void LD_E_E(Core &c)
 {
-	// SetLo(cpu->de, Lo(cpu->de));
+	//
 }
 
-void LD_E_H(CPU *cpu, instruction_t &i)
+void LD_E_H(Core &c)
 {
-	SetLo(cpu->de, Hi(cpu->hl));
+	c.r.e = c.r.h;
 }
 
-void LD_E_L(CPU *cpu, instruction_t &i)
+void LD_E_L(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->hl));
+	c.r.e = c.r.l;
 }
 
-void LD_E_AHL(CPU *cpu, instruction_t &i)
+void LD_E_AHL(Core &c)
 {
-	SetLo(cpu->de, cpu->mmu->read8(cpu->hl));
+	c.r.e = c.mmu.read8(c.r.hl);
 }
 
-void LD_E_A(CPU *cpu, instruction_t &i)
+void LD_E_A(Core &c)
 {
-	SetLo(cpu->de, Hi(cpu->af));
+	c.r.e = c.r.a;
 }
 
 // 0x60
 
-void LD_H_B(CPU *cpu, instruction_t &i)
+void LD_H_B(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->bc));
+	c.r.h = c.r.b;
 }
 
-void LD_H_C(CPU *cpu, instruction_t &i)
+void LD_H_C(Core &c)
 {
-	SetHi(cpu->hl, Lo(cpu->bc));
+	c.r.h = c.r.c;
 }
 
-void LD_H_D(CPU *cpu, instruction_t &i)
+void LD_H_D(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->de));
+	c.r.h = c.r.d;
 }
 
-void LD_H_E(CPU *cpu, instruction_t &i)
+void LD_H_E(Core &c)
 {
-	SetHi(cpu->hl, Lo(cpu->de));
+	c.r.h = c.r.e;
 }
 
-void LD_H_H(CPU *cpu, instruction_t &i)
+void LD_H_H(Core &c)
 {
-	// SetHi(cpu->hl, Hi(cpu->hl));
+	//
 }
 
-void LD_H_L(CPU *cpu, instruction_t &i)
+void LD_H_L(Core &c)
 {
-	SetHi(cpu->hl, Lo(cpu->hl));
+	c.r.h = c.r.l;
 }
 
-void LD_H_AHL(CPU *cpu, instruction_t &i)
+void LD_H_AHL(Core &c)
 {
-	SetHi(cpu->hl, cpu->mmu->read8(cpu->hl));
+	c.r.h = c.mmu.read8(c.r.hl);
 }
 
-void LD_H_A(CPU *cpu, instruction_t &i)
+void LD_H_A(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->af));
+	c.r.h = c.r.a;
 }
 
-void LD_L_B(CPU *cpu, instruction_t &i)
+void LD_L_B(Core &c)
 {
-	SetLo(cpu->hl, Hi(cpu->bc));
+	c.r.l = c.r.b;
 }
 
-void LD_L_C(CPU *cpu, instruction_t &i)
+void LD_L_C(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->bc));
+	c.r.l = c.r.c;
 }
 
-void LD_L_D(CPU *cpu, instruction_t &i)
+void LD_L_D(Core &c)
 {
-	SetLo(cpu->hl, Hi(cpu->de));
+	c.r.l = c.r.d;
 }
 
-void LD_L_E(CPU *cpu, instruction_t &i)
+void LD_L_E(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->de));
+	c.r.l = c.r.e;
 }
 
-void LD_L_H(CPU *cpu, instruction_t &i)
+void LD_L_H(Core &c)
 {
-	SetLo(cpu->hl, Hi(cpu->hl));
+	c.r.l = c.r.h;
 }
 
-void LD_L_L(CPU *cpu, instruction_t &i)
+void LD_L_L(Core &c)
 {
-	// SetLo(cpu->hl, Hi(cpu->hl));
+	//
 }
 
-void LD_L_AHL(CPU *cpu, instruction_t &i)
+void LD_L_AHL(Core &c)
 {
-	SetLo(cpu->hl, cpu->mmu->read8(cpu->hl));
+	c.r.l = c.mmu.read8(c.r.hl);
 }
 
-void LD_L_A(CPU *cpu, instruction_t &i)
+void LD_L_A(Core &c)
 {
-	SetLo(cpu->hl, Hi(cpu->af));
+	c.r.l = c.r.a;
 }
 
 // 0x70
 
-void LD_AHL_B(CPU *cpu, instruction_t &i)
+void LD_AHL_B(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Hi(cpu->bc));
+	c.mmu.write8(c.r.hl, c.r.b);
 }
 
-void LD_AHL_C(CPU *cpu, instruction_t &i)
+void LD_AHL_C(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Lo(cpu->bc));
+	c.mmu.write8(c.r.hl, c.r.c);
 }
 
-void LD_AHL_D(CPU *cpu, instruction_t &i)
+void LD_AHL_D(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Hi(cpu->de));
+	c.mmu.write8(c.r.hl, c.r.d);
 }
 
-void LD_AHL_E(CPU *cpu, instruction_t &i)
+void LD_AHL_E(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Lo(cpu->de));
+	c.mmu.write8(c.r.hl, c.r.e);
 }
 
-void LD_AHL_H(CPU *cpu, instruction_t &i)
+void LD_AHL_H(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Hi(cpu->hl));
+	c.mmu.write8(c.r.hl, c.r.h);
 }
 
-void LD_AHL_L(CPU *cpu, instruction_t &i)
+void LD_AHL_L(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Lo(cpu->hl));
+	c.mmu.write8(c.r.hl, c.r.l);
 }
 
-void HALT(CPU *cpu, instruction_t &i)
+void HALT(Core &c)
 {
-	cpu->halt();
+	c.halt = true;
 }
 
-void LD_AHL_A(CPU *cpu, instruction_t &i)
+void LD_AHL_A(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, Hi(cpu->af));
+	c.mmu.write8(c.r.hl, c.r.a);
 }
 
-void LD_A_B(CPU *cpu, instruction_t &i)
+void LD_A_B(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->bc));
+	c.r.a = c.r.b;
 }
 
-void LD_A_C(CPU *cpu, instruction_t &i)
+void LD_A_C(Core &c)
 {
-	SetHi(cpu->af, Lo(cpu->bc));
+	c.r.a = c.r.c;
 }
 
-void LD_A_D(CPU *cpu, instruction_t &i)
+void LD_A_D(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->de));
+	c.r.a = c.r.d;
 }
 
-void LD_A_E(CPU *cpu, instruction_t &i)
+void LD_A_E(Core &c)
 {
-	SetHi(cpu->af, Lo(cpu->de));
+	c.r.a = c.r.e;
 }
 
-void LD_A_H(CPU *cpu, instruction_t &i)
+void LD_A_H(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->hl));
+	c.r.a = c.r.h;
 }
 
-void LD_A_L(CPU *cpu, instruction_t &i)
+void LD_A_L(Core &c)
 {
-	SetHi(cpu->af, Lo(cpu->hl));
+	c.r.a = c.r.l;
 }
 
-void LD_A_AHL(CPU *cpu, instruction_t &i)
+void LD_A_AHL(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(cpu->hl));
+	c.r.a = c.mmu.read8(c.r.hl);
 }
 
-void LD_A_A(CPU *cpu, instruction_t &i)
+void LD_A_A(Core &c)
 {
-	// SetHi(cpu->af, Hi(cpu->af));
+	// c.r.a = c.r.a;
 }
 
 // 0x80
 
-void ADD_A_B(CPU *cpu, instruction_t &i)
+void ADD_A_B(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.b, c.r.f);
 }
 
-void ADD_A_C(CPU *cpu, instruction_t &i)
+void ADD_A_C(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Lo(cpu->bc), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.c, c.r.f);
 }
 
-void ADD_A_D(CPU *cpu, instruction_t &i)
+void ADD_A_D(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Hi(cpu->de), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.d, c.r.f);
 }
 
-void ADD_A_E(CPU *cpu, instruction_t &i)
+void ADD_A_E(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Lo(cpu->de), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.e, c.r.f);
 }
 
-void ADD_A_H(CPU *cpu, instruction_t &i)
+void ADD_A_H(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.h, c.r.f);
 }
 
-void ADD_A_L(CPU *cpu, instruction_t &i)
+void ADD_A_L(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Lo(cpu->hl), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.l, c.r.f);
 }
 
-void ADD_A_AHL(CPU *cpu, instruction_t &i)
+void ADD_A_AHL(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), cpu->mmu->read8(cpu->hl), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void ADD_A_A(CPU *cpu, instruction_t &i)
+void ADD_A_A(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.r.a, c.r.f);
 }
 
-void ADC_A_B(CPU *cpu, instruction_t &i)
+void ADC_A_B(Core &c)
 {
-	ADC_A_R(cpu, Hi(cpu->bc));
+	ADC(c.r.a, c.r.b, c.r.f);
 }
 
-void ADC_A_C(CPU *cpu, instruction_t &i)
+void ADC_A_C(Core &c)
 {
-	ADC_A_R(cpu, Lo(cpu->bc));
+	ADC(c.r.a, c.r.c, c.r.f);
 }
 
-void ADC_A_D(CPU *cpu, instruction_t &i)
+void ADC_A_D(Core &c)
 {
-	ADC_A_R(cpu, Hi(cpu->de));
+	ADC(c.r.a, c.r.d, c.r.f);
 }
 
-void ADC_A_E(CPU *cpu, instruction_t &i)
+void ADC_A_E(Core &c)
 {
-	ADC_A_R(cpu, Lo(cpu->de));
+	ADC(c.r.a, c.r.e, c.r.f);
 }
 
-void ADC_A_H(CPU *cpu, instruction_t &i)
+void ADC_A_H(Core &c)
 {
-	ADC_A_R(cpu, Hi(cpu->hl));
+	ADC(c.r.a, c.r.h, c.r.f);
 }
 
-void ADC_A_L(CPU *cpu, instruction_t &i)
+void ADC_A_L(Core &c)
 {
-	ADC_A_R(cpu, Lo(cpu->hl));
+	ADC(c.r.a, c.r.l, c.r.f);
 }
 
-void ADC_A_AHL(CPU *cpu, instruction_t &i)
+void ADC_A_AHL(Core &c)
 {
-	ADC_A_R(cpu, cpu->mmu->read8(cpu->hl));
+	ADC(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void ADC_A_A(CPU *cpu, instruction_t &i)
+void ADC_A_A(Core &c)
 {
-	ADC_A_R(cpu, Hi(cpu->af));
+	ADC(c.r.a, c.r.a, c.r.f);
 }
 
 // 0x90
 
-void SUB_A_B(CPU *cpu, instruction_t &i)
+void SUB_A_B(Core &c)
 {
-	SUB(cpu, Hi(cpu->bc));
+	c.r.a = SUB8(c.r.a, c.r.b, c.r.f);
 }
 
-void SUB_A_C(CPU *cpu, instruction_t &i)
+void SUB_A_C(Core &c)
 {
-	SUB(cpu, Lo(cpu->bc));
+	c.r.a = SUB8(c.r.a, c.r.c, c.r.f);
 }
 
-void SUB_A_D(CPU *cpu, instruction_t &i)
+void SUB_A_D(Core &c)
 {
-	SUB(cpu, Hi(cpu->de));
+	c.r.a = SUB8(c.r.a, c.r.d, c.r.f);
 }
 
-void SUB_A_E(CPU *cpu, instruction_t &i)
+void SUB_A_E(Core &c)
 {
-	SUB(cpu, Lo(cpu->de));
+	c.r.a = SUB8(c.r.a, c.r.e, c.r.f);
 }
 
-void SUB_A_H(CPU *cpu, instruction_t &i)
+void SUB_A_H(Core &c)
 {
-	SUB(cpu, Hi(cpu->hl));
+	c.r.a = SUB8(c.r.a, c.r.h, c.r.f);
 }
 
-void SUB_A_L(CPU *cpu, instruction_t &i)
+void SUB_A_L(Core &c)
 {
-	SUB(cpu, Lo(cpu->hl));
+	c.r.a = SUB8(c.r.a, c.r.l, c.r.f);
 }
 
-void SUB_A_AHL(CPU *cpu, instruction_t &i)
+void SUB_A_AHL(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	SUB8(Hi(cpu->af), cpu->mmu->read8(cpu->hl), &result, &flags);
-	SetLo(cpu->af, flags);
-	SetHi(cpu->af, result);
+	c.r.a = SUB8(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void SUB_A_A(CPU *cpu, instruction_t &i)
+void SUB_A_A(Core &c)
 {
-	SUB(cpu, Hi(cpu->af));
+	c.r.a = SUB8(c.r.a, c.r.a, c.r.f);
 }
 
-void SBC_A_B(CPU *cpu, instruction_t &i)
+void SBC_A_B(Core &c)
 {
-	SBC_A_R(cpu, Hi(cpu->bc));
+	SBC(c.r.a, c.r.b, c.r.f);
 }
 
-void SBC_A_C(CPU *cpu, instruction_t &i)
+void SBC_A_C(Core &c)
 {
-	SBC_A_R(cpu, Lo(cpu->bc));
+	SBC(c.r.a, c.r.c, c.r.f);
 }
 
-void SBC_A_D(CPU *cpu, instruction_t &i)
+void SBC_A_D(Core &c)
 {
-	SBC_A_R(cpu, Hi(cpu->de));
+	SBC(c.r.a, c.r.d, c.r.f);
 }
 
-void SBC_A_E(CPU *cpu, instruction_t &i)
+void SBC_A_E(Core &c)
 {
-	SBC_A_R(cpu, Lo(cpu->de));
+	SBC(c.r.a, c.r.e, c.r.f);
 }
 
-void SBC_A_H(CPU *cpu, instruction_t &i)
+void SBC_A_H(Core &c)
 {
-	SBC_A_R(cpu, Hi(cpu->hl));
+	SBC(c.r.a, c.r.h, c.r.f);
 }
 
-void SBC_A_L(CPU *cpu, instruction_t &i)
+void SBC_A_L(Core &c)
 {
-	SBC_A_R(cpu, Lo(cpu->hl));
+	SBC(c.r.a, c.r.l, c.r.f);
 }
 
-void SBC_A_AHL(CPU *cpu, instruction_t &i)
+void SBC_A_AHL(Core &c)
 {
-	SBC_A_R(cpu, cpu->mmu->read8(cpu->hl));
+	SBC(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void SBC_A_A(CPU *cpu, instruction_t &i)
+void SBC_A_A(Core &c)
 {
-	SBC_A_R(cpu, Hi(cpu->af));
+	SBC(c.r.a, c.r.a, c.r.f);
 }
 
 // 0xA0
 
-void AND_A_B(CPU *cpu, instruction_t &i)
+void AND_A_B(Core &c)
 {
-	AND_A_R(cpu, Hi(cpu->bc));
+	AND(c.r.a, c.r.b, c.r.f);
 }
 
-void AND_A_C(CPU *cpu, instruction_t &i)
+void AND_A_C(Core &c)
 {
-	AND_A_R(cpu, Lo(cpu->bc));
+	AND(c.r.a, c.r.c, c.r.f);
 }
 
-void AND_A_D(CPU *cpu, instruction_t &i)
+void AND_A_D(Core &c)
 {
-	AND_A_R(cpu, Hi(cpu->de));
+	AND(c.r.a, c.r.d, c.r.f);
 }
 
-void AND_A_E(CPU *cpu, instruction_t &i)
+void AND_A_E(Core &c)
 {
-	AND_A_R(cpu, Lo(cpu->de));
+	AND(c.r.a, c.r.e, c.r.f);
 }
 
-void AND_A_H(CPU *cpu, instruction_t &i)
+void AND_A_H(Core &c)
 {
-	AND_A_R(cpu, Hi(cpu->hl));
+	AND(c.r.a, c.r.h, c.r.f);
 }
 
-void AND_A_L(CPU *cpu, instruction_t &i)
+void AND_A_L(Core &c)
 {
-	AND_A_R(cpu, Lo(cpu->hl));
+	AND(c.r.a, c.r.l, c.r.f);
 }
 
-void AND_A_AHL(CPU *cpu, instruction_t &i)
+void AND_A_AHL(Core &c)
 {
-	AND_A_R(cpu, cpu->mmu->read8(cpu->hl));
+	AND(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void AND_A_A(CPU *cpu, instruction_t &i)
+void AND_A_A(Core &c)
 {
-	AND_A_R(cpu, Hi(cpu->af));
+	AND(c.r.a, c.r.a, c.r.f);
 }
 
-void XOR_A_B(CPU *cpu, instruction_t &i)
+void XOR_A_B(Core &c)
 {
-	XOR_A_R(cpu, Hi(cpu->bc));
+	XOR(c.r.a, c.r.b, c.r.f);
 }
 
-void XOR_A_C(CPU *cpu, instruction_t &i)
+void XOR_A_C(Core &c)
 {
-	XOR_A_R(cpu, Lo(cpu->bc));
+	XOR(c.r.a, c.r.c, c.r.f);
 }
 
-void XOR_A_D(CPU *cpu, instruction_t &i)
+void XOR_A_D(Core &c)
 {
-	XOR_A_R(cpu, Hi(cpu->de));
+	XOR(c.r.a, c.r.d, c.r.f);
 }
 
-void XOR_A_E(CPU *cpu, instruction_t &i)
+void XOR_A_E(Core &c)
 {
-	XOR_A_R(cpu, Lo(cpu->de));
+	XOR(c.r.a, c.r.e, c.r.f);
 }
 
-void XOR_A_H(CPU *cpu, instruction_t &i)
+void XOR_A_H(Core &c)
 {
-	XOR_A_R(cpu, Hi(cpu->hl));
+	XOR(c.r.a, c.r.h, c.r.f);
 }
 
-void XOR_A_L(CPU *cpu, instruction_t &i)
+void XOR_A_L(Core &c)
 {
-	XOR_A_R(cpu, Lo(cpu->hl));
+	XOR(c.r.a, c.r.l, c.r.f);
 }
 
-void XOR_A_AHL(CPU *cpu, instruction_t &i)
+void XOR_A_AHL(Core &c)
 {
-	XOR_A_R(cpu, cpu->mmu->read8(cpu->hl));
+	XOR(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void XOR_A_A(CPU *cpu, instruction_t &i)
+void XOR_A_A(Core &c)
 {
-	XOR_A_R(cpu, Hi(cpu->af));
+	XOR(c.r.a, c.r.a, c.r.f);
 }
 
 // 0xB0
 
-void OR_A_B(CPU *cpu, instruction_t &i)
+void OR_A_B(Core &c)
 {
-	OR_A_R(cpu, Hi(cpu->bc));
+	OR(c.r.a, c.r.b, c.r.f);
 }
 
-void OR_A_C(CPU *cpu, instruction_t &i)
+void OR_A_C(Core &c)
 {
-	OR_A_R(cpu, Lo(cpu->bc));
+	OR(c.r.a, c.r.c, c.r.f);
 }
 
-void OR_A_D(CPU *cpu, instruction_t &i)
+void OR_A_D(Core &c)
 {
-	OR_A_R(cpu, Hi(cpu->de));
+	OR(c.r.a, c.r.d, c.r.f);
 }
 
-void OR_A_E(CPU *cpu, instruction_t &i)
+void OR_A_E(Core &c)
 {
-	OR_A_R(cpu, Lo(cpu->de));
+	OR(c.r.a, c.r.e, c.r.f);
 }
 
-void OR_A_H(CPU *cpu, instruction_t &i)
+void OR_A_H(Core &c)
 {
-	OR_A_R(cpu, Hi(cpu->hl));
+	OR(c.r.a, c.r.h, c.r.f);
 }
 
-void OR_A_L(CPU *cpu, instruction_t &i)
+void OR_A_L(Core &c)
 {
-	OR_A_R(cpu, Lo(cpu->hl));
+	OR(c.r.a, c.r.l, c.r.f);
 }
 
-void OR_A_AHL(CPU *cpu, instruction_t &i)
+void OR_A_AHL(Core &c)
 {
-	OR_A_R(cpu, cpu->mmu->read8(cpu->hl));
+	OR(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void OR_A_A(CPU *cpu, instruction_t &i)
+void OR_A_A(Core &c)
 {
-	OR_A_R(cpu, Hi(cpu->af));
+	OR(c.r.a, c.r.a, c.r.f);
 }
 
-void CP_A_B(CPU *cpu, instruction_t &i)
+void CP_A_B(Core &c)
 {
-	CP(cpu, Hi(cpu->bc));
+	CP(c.r.a, c.r.b, c.r.f);
 }
 
-void CP_A_C(CPU *cpu, instruction_t &i)
+void CP_A_C(Core &c)
 {
-	CP(cpu, Lo(cpu->bc));
+	CP(c.r.a, c.r.c, c.r.f);
 }
 
-void CP_A_D(CPU *cpu, instruction_t &i)
+void CP_A_D(Core &c)
 {
-	CP(cpu, Hi(cpu->de));
+	CP(c.r.a, c.r.d, c.r.f);
 }
 
-void CP_A_E(CPU *cpu, instruction_t &i)
+void CP_A_E(Core &c)
 {
-	CP(cpu, Lo(cpu->de));
+	CP(c.r.a, c.r.e, c.r.f);
 }
 
-void CP_A_H(CPU *cpu, instruction_t &i)
+void CP_A_H(Core &c)
 {
-	CP(cpu, Hi(cpu->hl));
+	CP(c.r.a, c.r.h, c.r.f);
 }
 
-void CP_A_L(CPU *cpu, instruction_t &i)
+void CP_A_L(Core &c)
 {
-	CP(cpu, Lo(cpu->hl));
+	CP(c.r.a, c.r.l, c.r.f);
 }
 
-void CP_A_AHL(CPU *cpu, instruction_t &i)
+void CP_A_AHL(Core &c)
 {
-	CP(cpu, cpu->mmu->read8(cpu->hl));
+	CP(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
 }
 
-void CP_A_A(CPU *cpu, instruction_t &i)
+void CP_A_A(Core &c)
 {
-	CP(cpu, Hi(cpu->af));
+	CP(c.r.a, c.r.a, c.r.f);
 }
 
 // 0xC0
 
-void RET_NZ(CPU *cpu, instruction_t &i)
+void RET_NZ(Core &c)
 {
-	if (!(cpu->af & FLAGS_ZERO))
+	if (!(c.r.af & FLAGS_ZERO))
 	{
-		cpu->pc = cpu->mmu->read16(cpu->sp);
-		cpu->sp += 2;
+		c.r.pc = c.mmu.read16(c.r.sp);
+		c.r.sp += 2;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void POP_BC(CPU *cpu, instruction_t &i)
+void POP_BC(Core &c)
 {
-	cpu->bc = cpu->mmu->read16(cpu->sp);
-	cpu->sp += 2;
+	c.r.bc = c.mmu.read16(c.r.sp);
+	c.r.sp += 2;
 }
 
-void JP_NZ_IMM16(CPU *cpu, instruction_t &i)
+void JP_NZ_IMM16(Core &c)
 {
-	if (!(cpu->af & FLAGS_ZERO))
+	if (!(c.r.af & FLAGS_ZERO))
 	{
-		cpu->pc = i.op16;
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void JP_IMM16(CPU *cpu, instruction_t &i)
+void JP_IMM16(Core &c)
 {
-	cpu->pc = i.op16;
+	c.r.pc = c.d16;
 }
 
-void CALL_NZ_IMM16(CPU *cpu, instruction_t &i)
+void CALL_NZ_IMM16(Core &c)
 {
-	if (!(cpu->af & FLAGS_ZERO))
+	if (!(c.r.af & FLAGS_ZERO))
 	{
-		cpu->sp -= 2;
-		cpu->mmu->write16(cpu->sp, cpu->pc);
-		cpu->pc = i.op16;
+		c.r.sp -= 2;
+		c.mmu.write16(c.r.sp, c.r.pc);
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void PUSH_BC(CPU *cpu, instruction_t &i)
+void PUSH_BC(Core &c)
 {
-	cpu->sp -= 2;
-	cpu->mmu->write16(cpu->sp, cpu->bc);
+	c.r.sp -= 2;
+	c.mmu.write16(c.r.sp, c.r.bc);
 }
 
-void ADD_A_IMM8(CPU *cpu, instruction_t &i)
+void ADD_A_IMM8(Core &c)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	ADD8(Hi(cpu->af), i.op8, &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	c.r.a = ADD8(c.r.a, c.d8, c.r.f);
 }
 
-void RST_00(CPU *cpu, instruction_t &i)
+void RST_00(Core &c)
 {
-	RST(cpu, 0x00);
+	RST(c, 0x00);
 }
 
-void RET_Z(CPU *cpu, instruction_t &i)
+void RET_Z(Core &c)
 {
-	if (cpu->af & FLAGS_ZERO)
+	if (c.r.af & FLAGS_ZERO)
 	{
-		cpu->pc = cpu->mmu->read16(cpu->sp);
-		cpu->sp += 2;
+		c.r.pc = c.mmu.read16(c.r.sp);
+		c.r.sp += 2;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void RET(CPU *cpu, instruction_t &i)
+void RET(Core &c)
 {
-	cpu->pc = cpu->mmu->read16(cpu->sp);
-	cpu->sp += 2;
+	c.r.pc = c.mmu.read16(c.r.sp);
+	c.r.sp += 2;
 }
 
-void JP_Z_IMM16(CPU *cpu, instruction_t &i)
+void JP_Z_IMM16(Core &c)
 {
-	if (cpu->af & FLAGS_ZERO)
+	if (c.r.af & FLAGS_ZERO)
 	{
-		cpu->pc = i.op16;
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void CB(CPU *cpu, instruction_t &i)
+void CB(Core &c)
 {
 }
 
-void CALL_Z_IMM16(CPU *cpu, instruction_t &i)
+void CALL_Z_IMM16(Core &c)
 {
-	if (cpu->af & FLAGS_ZERO)
+	if (c.r.af & FLAGS_ZERO)
 	{
-		cpu->sp -= 2;
-		cpu->mmu->write16(cpu->sp, cpu->pc);
-		cpu->pc = i.op16;
+		c.r.sp -= 2;
+		c.mmu.write16(c.r.sp, c.r.pc);
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void CALL_IMM16(CPU *cpu, instruction_t &i)
+void CALL_IMM16(Core &c)
 {
-	cpu->sp -= 2;
-	cpu->mmu->write16(cpu->sp, cpu->pc);
-	cpu->pc = i.op16;
+	c.r.sp -= 2;
+	c.mmu.write16(c.r.sp, c.r.pc);
+	c.r.pc = c.d16;
 }
 
-void ADC_A_IMM8(CPU *cpu, instruction_t &i)
+void ADC_A_IMM8(Core &c)
 {
-	ADC_A_R(cpu, i.op8);
+	ADC(c.r.a, c.d8, c.r.f);
 }
 
-void RST_08(CPU *cpu, instruction_t &i)
+void RST_08(Core &c)
 {
-	RST(cpu, 0x08);
+	RST(c, 0x08);
 }
 
 // 0xD0
 
-void RET_NC(CPU *cpu, instruction_t &i)
+void RET_NC(Core &c)
 {
-	if (!(cpu->af & FLAGS_CARRY))
+	if (!(c.r.af & FLAGS_CARRY))
 	{
-		cpu->pc = cpu->mmu->read16(cpu->sp);
-		cpu->sp += 2;
+		c.r.pc = c.mmu.read16(c.r.sp);
+		c.r.sp += 2;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void POP_DE(CPU *cpu, instruction_t &i)
+void POP_DE(Core &c)
 {
-	cpu->de = cpu->mmu->read16(cpu->sp);
-	cpu->sp += 2;
+	c.r.de = c.mmu.read16(c.r.sp);
+	c.r.sp += 2;
 }
 
-void JP_NC_IMM16(CPU *cpu, instruction_t &i)
+void JP_NC_IMM16(Core &c)
 {
-	if (!(cpu->af & FLAGS_CARRY))
+	if (!(c.r.af & FLAGS_CARRY))
 	{
-		cpu->pc = i.op16;
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void CALL_NC_IMM16(CPU *cpu, instruction_t &i)
+void CALL_NC_IMM16(Core &c)
 {
-	if (!(cpu->af & FLAGS_CARRY))
+	if (!(c.r.af & FLAGS_CARRY))
 	{
-		cpu->sp -= 2;
-		cpu->mmu->write16(cpu->sp, cpu->pc);
-		cpu->pc = i.op16;
+		c.r.sp -= 2;
+		c.mmu.write16(c.r.sp, c.r.pc);
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void PUSH_DE(CPU *cpu, instruction_t &i)
+void PUSH_DE(Core &c)
 {
-	cpu->sp -= 2;
-	cpu->mmu->write16(cpu->sp, cpu->de);
+	c.r.sp -= 2;
+	c.mmu.write16(c.r.sp, c.r.de);
 }
 
-void RET_C(CPU *cpu, instruction_t &i)
+void RET_C(Core &c)
 {
-	if (cpu->af & FLAGS_CARRY)
+	if (c.r.af & FLAGS_CARRY)
 	{
-		cpu->pc = cpu->mmu->read16(cpu->sp);
-		cpu->sp += 2;
+		c.r.pc = c.mmu.read16(c.r.sp);
+		c.r.sp += 2;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void RETI(CPU* cpu, instruction_t& i)
+void RETI(Core &c)
 {
-	cpu->ime = true;
-	cpu->pc = cpu->mmu->read16(cpu->sp);
-	cpu->sp += 2;
+	c.ime = true;
+	c.r.pc = c.mmu.read16(c.r.sp);
+	c.r.sp += 2;
 }
 
-void JP_C_IMM16(CPU* cpu, instruction_t& i)
+void JP_C_IMM16(Core &c)
 {
-	if (cpu->af & FLAGS_CARRY)
+	if (c.r.af & FLAGS_CARRY)
 	{
-		cpu->pc = i.op16;
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void SUB_A_IMM8(CPU* cpu, instruction_t& i)
+void SUB_A_IMM8(Core &c)
 {
-	SUB(cpu, i.op8);
+	c.r.a = SUB8(c.r.a, c.d8, c.r.f);
 }
 
-void RST_10(CPU* cpu, instruction_t& i)
+void RST_10(Core &c)
 {
-	RST(cpu, 0x10);
+	RST(c, 0x10);
 }
 
-void CALL_C_IMM16(CPU* cpu, instruction_t& i)
+void CALL_C_IMM16(Core &c)
 {
-	if (cpu->af & FLAGS_CARRY)
+	if (c.r.af & FLAGS_CARRY)
 	{
-		cpu->sp -= 2;
-		cpu->mmu->write16(cpu->sp, cpu->pc);
-		cpu->pc = i.op16;
+		c.r.sp -= 2;
+		c.mmu.write16(c.r.sp, c.r.pc);
+		c.r.pc = c.d16;
 	}
 	else
 	{
-		i.didAction = false;
+		c.extraCycles = false;
 	}
 }
 
-void SBC_A_IMM8(CPU* cpu, instruction_t& i)
+void SBC_A_IMM8(Core &c)
 {
-	SBC_A_R(cpu, i.op8);
+	SBC(c.r.a, c.d8, c.r.f);
 }
 
-void RST_18(CPU* cpu, instruction_t& i)
+void RST_18(Core &c)
 {
-	RST(cpu, 0x18);
+	RST(c, 0x18);
 }
 
 // 0xE0
 
-void LDH_IMM8_A(CPU* cpu, instruction_t& i)
+void LDH_IMM8_A(Core &c)
 {
-	cpu->mmu->write8(0xFF00 + i.op8, Hi(cpu->af));
+	c.mmu.write8(0xFF00 + c.d8, c.r.a);
 }
 
-void POP_HL(CPU* cpu, instruction_t& i)
+void POP_HL(Core &c)
 {
-	cpu->hl = cpu->mmu->read16(cpu->sp);
-	cpu->sp += 2;
+	c.r.hl = c.mmu.read16(c.r.sp);
+	c.r.sp += 2;
 }
 
-void LDH_C_A(CPU* cpu, instruction_t& i)
+void LDH_C_A(Core &c)
 {
-	cpu->mmu->write8(0xFF00 + Lo(cpu->bc), Hi(cpu->af));
+	c.mmu.write8(0xFF00 + c.r.c, c.r.a);
 }
 
-void PUSH_HL(CPU* cpu, instruction_t& i)
+void PUSH_HL(Core &c)
 {
-	cpu->sp -= 2;
-	cpu->mmu->write16(cpu->sp, cpu->hl);
+	c.r.sp -= 2;
+	c.mmu.write16(c.r.sp, c.r.hl);
 }
 
-void AND_A_IMM8(CPU* cpu, instruction_t& i)
+void AND_A_IMM8(Core &c)
 {
-	AND_A_R(cpu, i.op8);
+	AND(c.r.a, c.d8, c.r.f);
 }
 
-void RST_20(CPU* cpu, instruction_t& i)
+void RST_20(Core &c)
 {
-	RST(cpu, 0x20);
+	RST(c, 0x20);
 }
 
-void ADD_SP_IMM8(CPU* cpu, instruction_t& i)
+void ADD_SP_IMM8(Core &c)
 {
 	// 00HC
 	uint8_t flags = 0;
 	
-	if (((cpu->sp & 0xF) + (i.op8 & 0xF)) & 0x10)
+	if (((c.r.sp & 0xF) + (c.d8 & 0xF)) & 0x10)
 		flags |= FLAGS_HALFCARRY;
 
-	if (((cpu->sp & 0xFF) + i.op8) > 0xFF)
+	if (((c.r.sp & 0xFF) + c.d8) > 0xFF)
 		flags |= FLAGS_CARRY;
 
-	cpu->sp = cpu->sp + int8_t(i.op8);
-	SetLo(cpu->af, flags);
+	c.r.sp = c.r.sp + int8_t(c.d8);
+	c.r.f = flags;
 }
 
-void JP_HL(CPU *cpu, instruction_t &i)
+void JP_HL(Core &c)
 {
-	cpu->pc = cpu->hl;
+	c.r.pc = c.r.hl;
 }
 
-void LD_AIMM16_A(CPU *cpu, instruction_t &i)
+void LD_AIMM16_A(Core &c)
 {
-	cpu->mmu->write8(i.op16, Hi(cpu->af));
+	c.mmu.write8(c.d16, c.r.a);
 }
 
-void XOR_A_IMM8(CPU *cpu, instruction_t &i)
+void XOR_A_IMM8(Core &c)
 {
-	XOR_A_R(cpu, i.op8);
+	XOR(c.r.a, c.d8, c.r.f);
 }
 
-void RST_28(CPU *cpu, instruction_t &i)
+void RST_28(Core &c)
 {
-	RST(cpu, 0x28);
+	RST(c, 0x28);
 }
 
 // 0xF0
 
-void LDH_A_IMM8(CPU *cpu, instruction_t &i)
+void LDH_A_IMM8(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(0xFF00 + i.op8));
+	c.r.a = c.mmu.read8(0xFF00 + c.d8);
 }
 
-void POP_AF(CPU *cpu, instruction_t &i)
+void POP_AF(Core &c)
 {
-	cpu->af = cpu->mmu->read16(cpu->sp) & 0xFFF0;
-	cpu->sp += 2;
+	c.r.af = c.mmu.read16(c.r.sp) & 0xFFF0;
+	c.r.sp += 2;
 }
 
-void LDH_A_C(CPU *cpu, instruction_t &i)
+void LDH_A_C(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(0xFF00 + Lo(cpu->bc)));
+	c.r.a = c.mmu.read8(0xFF00 + c.r.c);
 }
 
-void DI(CPU *cpu, instruction_t &i)
+void DI(Core &c)
 {
-	cpu->ime = false;
+	c.ime = false;
 }
 
-void PUSH_AF(CPU *cpu, instruction_t &i)
+void PUSH_AF(Core &c)
 {
-	cpu->sp -= 2;
-	cpu->mmu->write16(cpu->sp, cpu->af);	
+	c.r.sp -= 2;
+	c.mmu.write16(c.r.sp, c.r.af);	
 }
 
-void OR_A_IMM8(CPU *cpu, instruction_t &i)
+void OR_A_IMM8(Core &c)
 {
-	OR_A_R(cpu, i.op8);
+	OR(c.r.a, c.d8, c.r.f);
 }
 
-void RST_30(CPU *cpu, instruction_t &i)
+void RST_30(Core &c)
 {
-	RST(cpu, 0x30);
+	RST(c, 0x30);
 }
 
-void LD_HL_SPIMM8(CPU *cpu, instruction_t &i)
+void LD_HL_SPIMM8(Core &c)
 {
 	uint8_t flags = 0;
 
-	int8_t s8 = i.op8;
-	uint16_t sp = cpu->sp + s8;
+	int8_t s8 = c.d8;
+	uint16_t sp = c.r.sp + s8;
 	if (s8 > 0)
 	{
-		if (((cpu->sp & 0xFF) + s8) > 0xFF)
+		if (((c.r.sp & 0xFF) + s8) > 0xFF)
 		{
 			flags |= FLAGS_CARRY;
 		}
-		if (((cpu->sp & 0xF) + (s8 & 0xF)) > 0xF)
+		if (((c.r.sp & 0xF) + (s8 & 0xF)) > 0xF)
 		{
 			flags |= FLAGS_HALFCARRY;
 		}
 	}
 	else
 	{
-		if ((sp & 0xFF) < (cpu->sp & 0xFF))
+		if ((sp & 0xFF) < (c.r.sp & 0xFF))
 		{
 			flags |= FLAGS_CARRY;
 		}
-		if ((sp & 0xF) < (cpu->sp & 0xF))
+		if ((sp & 0xF) < (c.r.sp & 0xF))
 		{
 			flags |= FLAGS_HALFCARRY;
 		}
 	}
 
-	SetLo(cpu->af, flags);
+	c.r.f = flags;
 
-	cpu->hl = sp;
+	c.r.hl = sp;
 }
 
-void LD_SP_HL(CPU *cpu, instruction_t &i)
+void LD_SP_HL(Core &c)
 {
-	cpu->sp = cpu->hl;
+	c.r.sp = c.r.hl;
 }
 
-void LD_A_AIMM16(CPU *cpu, instruction_t &i)
+void LD_A_AIMM16(Core &c)
 {
-	SetHi(cpu->af, cpu->mmu->read8(i.op16));
+	c.r.a = c.mmu.read8(c.d16);
 }
 
-void EI(CPU *cpu, instruction_t &i)
+void EI(Core &c)
 {
-	cpu->enableInterrupts();
+	c.ime = true;
 }
 
-void CP_A_IMM8(CPU *cpu, instruction_t &i)
+void CP_A_IMM8(Core &c)
 {
-	CP(cpu, i.op8);
+	CP(c.r.a, c.d8, c.r.f);
 }
 
-void RST_38(CPU *cpu, instruction_t &i)
+void RST_38(Core &c)
 {
-	RST(cpu, 0x38);
+	RST(c, 0x38);
 }
 
 // 0xCB // Extended
 
 // 0xCB 0x00
 
-void RLC_B(CPU *cpu, instruction_t &i)
+void RLC_B(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.b, &result, &flags);
+	c.r.b = result;
+	c.r.f = flags;
 }
 
-void RLC_C(CPU *cpu, instruction_t &i)
+void RLC_C(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.c, &result, &flags);
+	c.r.c = result;
+	c.r.f = flags;
 }
 
-void RLC_D(CPU *cpu, instruction_t &i)
+void RLC_D(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.d, &result, &flags);
+	c.r.d = result;
+	c.r.f = flags;
 }
 
-void RLC_E(CPU *cpu, instruction_t &i)
+void RLC_E(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.e, &result, &flags);
+	c.r.e = result;
+	c.r.f = flags;
 }
 
-void RLC_H(CPU *cpu, instruction_t &i)
+void RLC_H(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.h, &result, &flags);
+	c.r.h = result;
+	c.r.f = flags;
 }
 
-void RLC_L(CPU *cpu, instruction_t &i)
+void RLC_L(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.l, &result, &flags);
+	c.r.l = result;
+	c.r.f = flags;
 }
 
-void RLC_AHL(CPU *cpu, instruction_t &i)
+void RLC_AHL(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(cpu->mmu->read8(cpu->hl), &result, &flags);
-	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RLC(c.mmu.read8(c.r.hl), &result, &flags);
+	c.mmu.write8(c.r.hl, result);
+	c.r.f = flags;
 }
 
-void RLC_A(CPU *cpu, instruction_t &i)
+void RLC_A(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	RLC(c.r.a, &result, &flags);
+	c.r.a = result;
+	c.r.f = flags;
 }
 
-void RRC_B(CPU *cpu, instruction_t &i)
+void RRC_B(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.b, &result, &flags);
+	c.r.b = result;
+	c.r.f = flags;
 }
 
-void RRC_C(CPU *cpu, instruction_t &i)
+void RRC_C(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.c, &result, &flags);
+	c.r.c = result;
+	c.r.f = flags;
 }
 
-void RRC_D(CPU *cpu, instruction_t &i)
+void RRC_D(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.d, &result, &flags);
+	c.r.d = result;
+	c.r.f = flags;
 }
 
-void RRC_E(CPU *cpu, instruction_t &i)
+void RRC_E(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.e, &result, &flags);
+	c.r.e = result;
+	c.r.f = flags;
 }
 
-void RRC_H(CPU *cpu, instruction_t &i)
+void RRC_H(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.h, &result, &flags);
+	c.r.h = result;
+	c.r.f = flags;
 }
 
-void RRC_L(CPU *cpu, instruction_t &i)
+void RRC_L(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.l, &result, &flags);
+	c.r.l = result;
+	c.r.f = flags;
 }
 
-void RRC_AHL(CPU *cpu, instruction_t &i)
+void RRC_AHL(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(cpu->mmu->read8(cpu->hl), &result, &flags);
-	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RRC(c.mmu.read8(c.r.hl), &result, &flags);
+	c.mmu.write8(c.r.hl, result);
+	c.r.f = flags;
 }
 
-void RRC_A(CPU *cpu, instruction_t &i)
+void RRC_A(Core &c)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	RRC(c.r.a, &result, &flags);
+	c.r.a = result;
+	c.r.f = flags;
 }
 
 // 0xCB 0x10
 
-void RL_B(CPU *cpu, instruction_t &i)
+void RL_B(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.b, &result, &flags);
+	c.r.b = result;
+	c.r.f = flags;
 }
 
-void RL_C(CPU *cpu, instruction_t &i)
+void RL_C(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.c, &result, &flags);
+	c.r.c = result;
+	c.r.f = flags;
 }
 
-void RL_D(CPU *cpu, instruction_t &i)
+void RL_D(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.d, &result, &flags);
+	c.r.d = result;
+	c.r.f = flags;
 }
 
-void RL_E(CPU *cpu, instruction_t &i)
+void RL_E(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.e, &result, &flags);
+	c.r.e = result;
+	c.r.f = flags;
 }
 
-void RL_H(CPU *cpu, instruction_t &i)
+void RL_H(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.h, &result, &flags);
+	c.r.h = result;
+	c.r.f = flags;
 }
 
-void RL_L(CPU *cpu, instruction_t &i)
+void RL_L(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.l, &result, &flags);
+	c.r.l = result;
+	c.r.f = flags;
 }
 
-void RL_AHL(CPU *cpu, instruction_t &i)
+void RL_AHL(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(cpu->mmu->read8(cpu->hl), &result, &flags);
-	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RL(c.mmu.read8(c.r.hl), &result, &flags);
+	c.mmu.write8(c.r.hl, result);
+	c.r.f = flags;
 }
 
-void RL_A(CPU *cpu, instruction_t &i)
+void RL_A(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RL(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	RL(c.r.a, &result, &flags);
+	c.r.a = result;
+	c.r.f = flags;
 }
 
-void RR_B(CPU *cpu, instruction_t &i)
+void RR_B(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Hi(cpu->bc), &result, &flags);
-	SetHi(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.b, &result, &flags);
+	c.r.b = result;
+	c.r.f = flags;
 }
 
-void RR_C(CPU *cpu, instruction_t &i)
+void RR_C(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Lo(cpu->bc), &result, &flags);
-	SetLo(cpu->bc, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.c, &result, &flags);
+	c.r.c = result;
+	c.r.f = flags;
 }
 
-void RR_D(CPU *cpu, instruction_t &i)
+void RR_D(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Hi(cpu->de), &result, &flags);
-	SetHi(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.d, &result, &flags);
+	c.r.d = result;
+	c.r.f = flags;
 }
 
-void RR_E(CPU *cpu, instruction_t &i)
+void RR_E(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Lo(cpu->de), &result, &flags);
-	SetLo(cpu->de, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.e, &result, &flags);
+	c.r.e = result;
+	c.r.f = flags;
 }
 
-void RR_H(CPU *cpu, instruction_t &i)
+void RR_H(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Hi(cpu->hl), &result, &flags);
-	SetHi(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.h, &result, &flags);
+	c.r.h = result;
+	c.r.f = flags;
 }
 
-void RR_L(CPU *cpu, instruction_t &i)
+void RR_L(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Lo(cpu->hl), &result, &flags);
-	SetLo(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.l, &result, &flags);
+	c.r.l = result;
+	c.r.f = flags;
 }
 
-void RR_AHL(CPU *cpu, instruction_t &i)
+void RR_AHL(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(cpu->mmu->read8(cpu->hl), &result, &flags);
-	cpu->mmu->write8(cpu->hl, result);
-	SetLo(cpu->af, flags);
+	RR(c.mmu.read8(c.r.hl), &result, &flags);
+	c.mmu.write8(c.r.hl, result);
+	c.r.f = flags;
 }
 
-void RR_A(CPU *cpu, instruction_t &i)
+void RR_A(Core &c)
 {
-	uint8_t flags = cpu->af & 0x10;
+	uint8_t flags = c.r.af & 0x10;
 	uint8_t result = 0;
-	RR(Hi(cpu->af), &result, &flags);
-	SetHi(cpu->af, result);
-	SetLo(cpu->af, flags);
+	RR(c.r.a, &result, &flags);
+	c.r.a = result;
+	c.r.f = flags;
 }
 
 // 0xCB 0x20
 
-void SLA_B(CPU *cpu, instruction_t &i)
+void SLA_B(Core &c)
 {
-	SetHi(cpu->bc, SLA_REG8(cpu, Hi(cpu->bc)));
+	SLA(c.r.b, c.r.f);
 }
 
-void SLA_C(CPU *cpu, instruction_t &i)
+void SLA_C(Core &c)
 {
-	SetLo(cpu->bc, SLA_REG8(cpu, Lo(cpu->bc)));
+	SLA(c.r.c, c.r.f);
 }
 
-void SLA_D(CPU *cpu, instruction_t &i)
+void SLA_D(Core &c)
 {
-	SetHi(cpu->de, SLA_REG8(cpu, Hi(cpu->de)));
+	SLA(c.r.d, c.r.f);
 }
 
-void SLA_E(CPU *cpu, instruction_t &i)
+void SLA_E(Core &c)
 {
-	SetLo(cpu->de, SLA_REG8(cpu, Lo(cpu->de)));
+	SLA(c.r.e, c.r.f);
 }
 
-void SLA_H(CPU *cpu, instruction_t &i)
+void SLA_H(Core &c)
 {
-	SetHi(cpu->hl, SLA_REG8(cpu, Hi(cpu->hl)));
+	SLA(c.r.h, c.r.f);
 }
 
-void SLA_L(CPU *cpu, instruction_t &i)
+void SLA_L(Core &c)
 {
-	SetLo(cpu->hl, SLA_REG8(cpu, Lo(cpu->hl)));
+	SLA(c.r.l, c.r.f);
 }
 
-void SLA_AHL(CPU *cpu, instruction_t &i)
+void SLA_AHL(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, SLA_REG8(cpu, cpu->mmu->read8(cpu->hl)));
+	uint8_t r { c.mmu.read8(c.r.hl) };
+	SLA(r, c.r.f);
+	c.mmu.write8(c.r.hl, r);
 }
 
-void SLA_A(CPU *cpu, instruction_t &i)
+void SLA_A(Core &c)
 {
-	SetHi(cpu->af, SLA_REG8(cpu, Hi(cpu->af)));
+	SLA(c.r.a, c.r.f);
 }
 
-void SRA_B(CPU *cpu, instruction_t &i)
+void SRA_B(Core &c)
 {
-	SetHi(cpu->bc, SRA_REG8(cpu, Hi(cpu->bc)));
+	SRA(c.r.b, c.r.f);
 }
 
-void SRA_C(CPU *cpu, instruction_t &i)
+void SRA_C(Core &c)
 {
-	SetLo(cpu->bc, SRA_REG8(cpu, Lo(cpu->bc)));
+	SRA(c.r.c, c.r.f);
 }
 
-void SRA_D(CPU *cpu, instruction_t &i)
+void SRA_D(Core &c)
 {
-	SetHi(cpu->de, SRA_REG8(cpu, Hi(cpu->de)));
+	SRA(c.r.d, c.r.f);
 }
 
-void SRA_E(CPU *cpu, instruction_t &i)
+void SRA_E(Core &c)
 {
-	SetLo(cpu->de, SRA_REG8(cpu, Lo(cpu->de)));
+	SRA(c.r.e, c.r.f);
 }
 
-void SRA_H(CPU *cpu, instruction_t &i)
+void SRA_H(Core &c)
 {
-	SetHi(cpu->hl, SRA_REG8(cpu, Hi(cpu->hl)));
+	SRA(c.r.h, c.r.f);
 }
 
-void SRA_L(CPU *cpu, instruction_t &i)
+void SRA_L(Core &c)
 {
-	SetLo(cpu->hl, SRA_REG8(cpu, Lo(cpu->hl)));
+	SRA(c.r.l, c.r.f);
 }
 
-void SRA_AHL(CPU *cpu, instruction_t &i)
+void SRA_AHL(Core &c)
 {
-	cpu->mmu->write8(cpu->hl, SRA_REG8(cpu, cpu->mmu->read8(cpu->hl)));
+	uint8_t r { c.mmu.read8(c.r.hl) };
+	SRA(r, c.r.f);
+	c.mmu.write8(c.r.hl, r);
 }
 
-void SRA_A(CPU *cpu, instruction_t &i)
+void SRA_A(Core &c)
 {
-	SetHi(cpu->af, SRA_REG8(cpu, Hi(cpu->af)));
+	SRA(c.r.a, c.r.f);
 }
 
 // 0xCB 0x30
 
-void SWAP_B(CPU *cpu, instruction_t &i)
+void SWAP_B(Core &c)
 {
-	SWAP_RH(cpu, cpu->bc);
+	SWAP(c.r.b, c.r.f);
 }
 
-void SWAP_C(CPU *cpu, instruction_t &i)
+void SWAP_C(Core &c)
 {
-	SWAP_RL(cpu, cpu->bc);
+	SWAP(c.r.c, c.r.f);
 }
 
-void SWAP_D(CPU *cpu, instruction_t &i)
+void SWAP_D(Core &c)
 {
-	SWAP_RH(cpu, cpu->de);
+	SWAP(c.r.d, c.r.f);
 }
 
-void SWAP_E(CPU *cpu, instruction_t &i)
+void SWAP_E(Core &c)
 {
-	SWAP_RL(cpu, cpu->de);
+	SWAP(c.r.e, c.r.f);
 }
 
-void SWAP_H(CPU *cpu, instruction_t &i)
+void SWAP_H(Core &c)
 {
-	SWAP_RH(cpu, cpu->hl);
+	SWAP(c.r.h, c.r.f);
 }
 
-void SWAP_L(CPU *cpu, instruction_t &i)
+void SWAP_L(Core &c)
 {
-	SWAP_RL(cpu, cpu->hl);
+	SWAP(c.r.l, c.r.f);
 }
 
-void SWAP_AHL(CPU *cpu, instruction_t &i)
+void SWAP_AHL(Core &c)
 {
-	uint16_t b = cpu->mmu->read8(cpu->hl);
-	SWAP_RL(cpu, b);
-	cpu->mmu->write8(cpu->hl, b & 0xFF);
+	uint8_t r = c.mmu.read8(c.r.hl);
+	SWAP(r, c.r.f);
+	c.mmu.write8(c.r.hl, r);
 }
 
-void SWAP_A(CPU *cpu, instruction_t &i)
+void SWAP_A(Core &c)
 {
-	SWAP_RH(cpu, cpu->af);
+	SWAP(c.r.a, c.r.f);
 }
 
-void SRL_B(CPU *cpu, instruction_t &i)
+void SRL_B(Core &c)
 {
-	SRL_RH(cpu, cpu->bc);
+	SRL(c.r.b, c.r.f);
 }
 
-void SRL_C(CPU *cpu, instruction_t &i)
+void SRL_C(Core &c)
 {
-	SRL_RL(cpu, cpu->bc);
+	SRL(c.r.c, c.r.f);
 }
 
-void SRL_D(CPU *cpu, instruction_t &i)
+void SRL_D(Core &c)
 {
-	SRL_RH(cpu, cpu->de);
+	SRL(c.r.d, c.r.f);
 }
 
-void SRL_E(CPU *cpu, instruction_t &i)
+void SRL_E(Core &c)
 {
-	SRL_RL(cpu, cpu->de);
+	SRL(c.r.e, c.r.f);
 }
 
-void SRL_H(CPU *cpu, instruction_t &i)
+void SRL_H(Core &c)
 {
-	SRL_RH(cpu, cpu->hl);
+	SRL(c.r.h, c.r.f);
 }
 
-void SRL_L(CPU *cpu, instruction_t &i)
+void SRL_L(Core &c)
 {
-	SRL_RL(cpu, cpu->hl);
+	SRL(c.r.l, c.r.f);
 }
 
-void SRL_AHL(CPU *cpu, instruction_t &i)
+void SRL_AHL(Core &c)
 {
-	uint8_t r = cpu->mmu->read8(cpu->hl);
-	uint8_t c = r & 0b0000'0001;
+	uint8_t r = c.mmu.read8(c.r.hl);
+	uint8_t carryBit = r & 0b0000'0001;
 	uint8_t f = 0;
 	r >>= 1;
-	cpu->mmu->write8(cpu->hl, r);
+	c.mmu.write8(c.r.hl, r);
 	if (!r)
 		f |= FLAGS_ZERO;
-	f |= (c << 4);
-	SetLo(cpu->af, f);
+	f |= (carryBit << 4);
+	c.r.f = f;
 }
 
-void SRL_A(CPU *cpu, instruction_t &i)
+void SRL_A(Core &c)
 {
-	SRL_RH(cpu, cpu->af);
+	SRL(c.r.a, c.r.f);
 }
 
 // 0xCB 0x40
 
-void BIT_0_B(CPU *cpu, instruction_t &i)
+void BIT_0_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0000'0001);
+	TestBit(c.r.b & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_C(CPU *cpu, instruction_t &i)
+void BIT_0_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0000'0001);
+	TestBit(c.r.c & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_D(CPU *cpu, instruction_t &i)
+void BIT_0_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0000'0001);
+	TestBit(c.r.d & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_E(CPU *cpu, instruction_t &i)
+void BIT_0_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0000'0001);
+	TestBit(c.r.e & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_H(CPU *cpu, instruction_t &i)
+void BIT_0_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0000'0001);
+	TestBit(c.r.h & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_L(CPU *cpu, instruction_t &i)
+void BIT_0_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0000'0001);
+	TestBit(c.r.l & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_AHL(CPU *cpu, instruction_t &i)
+void BIT_0_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0000'0001);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0000'0001, c.r.f);
 }
 
-void BIT_0_A(CPU *cpu, instruction_t &i)
+void BIT_0_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0000'0001);
+	TestBit(c.r.a & 0b0000'0001, c.r.f);
 }
 
-void BIT_1_B(CPU *cpu, instruction_t &i)
+void BIT_1_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0000'0010);
+	TestBit(c.r.b & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_C(CPU *cpu, instruction_t &i)
+void BIT_1_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0000'0010);
+	TestBit(c.r.c & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_D(CPU *cpu, instruction_t &i)
+void BIT_1_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0000'0010);
+	TestBit(c.r.d & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_E(CPU *cpu, instruction_t &i)
+void BIT_1_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0000'0010);
+	TestBit(c.r.e & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_H(CPU *cpu, instruction_t &i)
+void BIT_1_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0000'0010);
+	TestBit(c.r.h & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_L(CPU *cpu, instruction_t &i)
+void BIT_1_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0000'0010);
+	TestBit(c.r.l & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_AHL(CPU *cpu, instruction_t &i)
+void BIT_1_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0000'0010);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0000'0010, c.r.f);
 }
 
-void BIT_1_A(CPU *cpu, instruction_t &i)
+void BIT_1_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0000'0010);
+	TestBit(c.r.a & 0b0000'0010, c.r.f);
 }
 
-void BIT_2_B(CPU *cpu, instruction_t &i)
+void BIT_2_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0000'0100);
+	TestBit(c.r.b & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_C(CPU *cpu, instruction_t &i)
+void BIT_2_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0000'0100);
+	TestBit(c.r.c & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_D(CPU *cpu, instruction_t &i)
+void BIT_2_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0000'0100);
+	TestBit(c.r.d & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_E(CPU *cpu, instruction_t &i)
+void BIT_2_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0000'0100);
+	TestBit(c.r.e & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_H(CPU *cpu, instruction_t &i)
+void BIT_2_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0000'0100);
+	TestBit(c.r.h & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_L(CPU *cpu, instruction_t &i)
+void BIT_2_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0000'0100);
+	TestBit(c.r.l & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_AHL(CPU *cpu, instruction_t &i)
+void BIT_2_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0000'0100);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0000'0100, c.r.f);
 }
 
-void BIT_2_A(CPU *cpu, instruction_t &i)
+void BIT_2_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0000'0100);
+	TestBit(c.r.a & 0b0000'0100, c.r.f);
 }
 
-void BIT_3_B(CPU *cpu, instruction_t &i)
+void BIT_3_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0000'1000);
+	TestBit(c.r.b & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_C(CPU *cpu, instruction_t &i)
+void BIT_3_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0000'1000);
+	TestBit(c.r.c & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_D(CPU *cpu, instruction_t &i)
+void BIT_3_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0000'1000);
+	TestBit(c.r.d & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_E(CPU *cpu, instruction_t &i)
+void BIT_3_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0000'1000);
+	TestBit(c.r.e & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_H(CPU *cpu, instruction_t &i)
+void BIT_3_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0000'1000);
+	TestBit(c.r.h & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_L(CPU *cpu, instruction_t &i)
+void BIT_3_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0000'1000);
+	TestBit(c.r.l & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_AHL(CPU *cpu, instruction_t &i)
+void BIT_3_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0000'1000);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0000'1000, c.r.f);
 }
 
-void BIT_3_A(CPU *cpu, instruction_t &i)
+void BIT_3_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0000'1000);
+	TestBit(c.r.a & 0b0000'1000, c.r.f);
 }
 
-void BIT_4_B(CPU *cpu, instruction_t &i)
+void BIT_4_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0001'0000);
+	TestBit(c.r.b & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_C(CPU *cpu, instruction_t &i)
+void BIT_4_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0001'0000);
+	TestBit(c.r.c & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_D(CPU *cpu, instruction_t &i)
+void BIT_4_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0001'0000);
+	TestBit(c.r.d & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_E(CPU *cpu, instruction_t &i)
+void BIT_4_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0001'0000);
+	TestBit(c.r.e & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_H(CPU *cpu, instruction_t &i)
+void BIT_4_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0001'0000);
+	TestBit(c.r.h & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_L(CPU *cpu, instruction_t &i)
+void BIT_4_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0001'0000);
+	TestBit(c.r.l & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_AHL(CPU *cpu, instruction_t &i)
+void BIT_4_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0001'0000);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0001'0000, c.r.f);
 }
 
-void BIT_4_A(CPU *cpu, instruction_t &i)
+void BIT_4_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0001'0000);
+	TestBit(c.r.a & 0b0001'0000, c.r.f);
 }
 
-void BIT_5_B(CPU *cpu, instruction_t &i)
+void BIT_5_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0010'0000);
+	TestBit(c.r.b & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_C(CPU *cpu, instruction_t &i)
+void BIT_5_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0010'0000);
+	TestBit(c.r.c & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_D(CPU *cpu, instruction_t &i)
+void BIT_5_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0010'0000);
+	TestBit(c.r.d & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_E(CPU *cpu, instruction_t &i)
+void BIT_5_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0010'0000);
+	TestBit(c.r.e & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_H(CPU *cpu, instruction_t &i)
+void BIT_5_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0010'0000);
+	TestBit(c.r.h & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_L(CPU *cpu, instruction_t &i)
+void BIT_5_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0010'0000);
+	TestBit(c.r.l & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_AHL(CPU *cpu, instruction_t &i)
+void BIT_5_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0010'0000);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0010'0000, c.r.f);
 }
 
-void BIT_5_A(CPU *cpu, instruction_t &i)
+void BIT_5_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0010'0000);
+	TestBit(c.r.a & 0b0010'0000, c.r.f);
 }
 
-void BIT_6_B(CPU *cpu, instruction_t &i)
+void BIT_6_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b0100'0000);
+	TestBit(c.r.b & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_C(CPU *cpu, instruction_t &i)
+void BIT_6_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b0100'0000);
+	TestBit(c.r.c & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_D(CPU *cpu, instruction_t &i)
+void BIT_6_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b0100'0000);
+	TestBit(c.r.d & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_E(CPU *cpu, instruction_t &i)
+void BIT_6_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b0100'0000);
+	TestBit(c.r.e & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_H(CPU *cpu, instruction_t &i)
+void BIT_6_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b0100'0000);
+	TestBit(c.r.h & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_L(CPU *cpu, instruction_t &i)
+void BIT_6_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b0100'0000);
+	TestBit(c.r.l & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_AHL(CPU *cpu, instruction_t &i)
+void BIT_6_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b0100'0000);
+	TestBit(c.mmu.read8(c.r.hl) & 0b0100'0000, c.r.f);
 }
 
-void BIT_6_A(CPU *cpu, instruction_t &i)
+void BIT_6_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b0100'0000);
+	TestBit(c.r.a & 0b0100'0000, c.r.f);
 }
 
-void BIT_7_B(CPU *cpu, instruction_t &i)
+void BIT_7_B(Core &c)
 {
-	TestBit(cpu, Hi(cpu->bc) & 0b1000'0000);
+	TestBit(c.r.b & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_C(CPU *cpu, instruction_t &i)
+void BIT_7_C(Core &c)
 {
-	TestBit(cpu, Lo(cpu->bc) & 0b1000'0000);
+	TestBit(c.r.c & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_D(CPU *cpu, instruction_t &i)
+void BIT_7_D(Core &c)
 {
-	TestBit(cpu, Hi(cpu->de) & 0b1000'0000);
+	TestBit(c.r.d & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_E(CPU *cpu, instruction_t &i)
+void BIT_7_E(Core &c)
 {
-	TestBit(cpu, Lo(cpu->de) & 0b1000'0000);
+	TestBit(c.r.e & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_H(CPU *cpu, instruction_t &i)
+void BIT_7_H(Core &c)
 {
-	TestBit(cpu, Hi(cpu->hl) & 0b1000'0000);
+	TestBit(c.r.h & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_L(CPU *cpu, instruction_t &i)
+void BIT_7_L(Core &c)
 {
-	TestBit(cpu, Lo(cpu->hl) & 0b1000'0000);
+	TestBit(c.r.l & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_AHL(CPU *cpu, instruction_t &i)
+void BIT_7_AHL(Core &c)
 {
-	TestBit(cpu, cpu->mmu->read8(cpu->hl) & 0b1000'0000);
+	TestBit(c.mmu.read8(c.r.hl) & 0b1000'0000, c.r.f);
 }
 
-void BIT_7_A(CPU *cpu, instruction_t &i)
+void BIT_7_A(Core &c)
 {
-	TestBit(cpu, Hi(cpu->af) & 0b1000'0000);
+	TestBit(c.r.a & 0b1000'0000, c.r.f);
 }
 
-void RES_0_B(CPU *cpu, instruction_t &i)
+void RES_0_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0000'0001));
+	c.r.b = c.r.b & ~(0b0000'0001);
 }
 
-void RES_0_C(CPU *cpu, instruction_t &i)
+void RES_0_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0000'0001));
+	c.r.c = c.r.c & ~(0b0000'0001);
 }
 
-void RES_0_D(CPU *cpu, instruction_t &i)
+void RES_0_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0000'0001));
+	c.r.d = c.r.d & ~(0b0000'0001);
 }
 
-void RES_0_E(CPU *cpu, instruction_t &i)
+void RES_0_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0000'0001));
+	c.r.e = c.r.e & ~(0b0000'0001);
 }
 
-void RES_0_H(CPU *cpu, instruction_t &i)
+void RES_0_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0000'0001));
+	c.r.h = c.r.h & ~(0b0000'0001);
 }
 
-void RES_0_L(CPU *cpu, instruction_t &i)
+void RES_0_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0000'0001));
+	c.r.l = c.r.l & ~(0b0000'0001);
 }
 
-void RES_0_AHL(CPU *cpu, instruction_t &i)
+void RES_0_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0000'0001));
+	c.mmu.and8(c.r.hl, ~(0b0000'0001));
 }
 
-void RES_0_A(CPU *cpu, instruction_t &i)
+void RES_0_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0000'0001));
+	c.r.a = c.r.a & ~(0b0000'0001);
 }
 
-void RES_1_B(CPU *cpu, instruction_t &i)
+void RES_1_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0000'0010));
+	c.r.b = c.r.b & ~(0b0000'0010);
 }
 
-void RES_1_C(CPU *cpu, instruction_t &i)
+void RES_1_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0000'0010));
+	c.r.c = c.r.c & ~(0b0000'0010);
 }
 
-void RES_1_D(CPU *cpu, instruction_t &i)
+void RES_1_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0000'0010));
+	c.r.d = c.r.d & ~(0b0000'0010);
 }
 
-void RES_1_E(CPU *cpu, instruction_t &i)
+void RES_1_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0000'0010));
+	c.r.e = c.r.e & ~(0b0000'0010);
 }
 
-void RES_1_H(CPU *cpu, instruction_t &i)
+void RES_1_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0000'0010));
+	c.r.h = c.r.h & ~(0b0000'0010);
 }
 
-void RES_1_L(CPU *cpu, instruction_t &i)
+void RES_1_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0000'0010));
+	c.r.l = c.r.l & ~(0b0000'0010);
 }
 
-void RES_1_AHL(CPU *cpu, instruction_t &i)
+void RES_1_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0000'0010));
+	c.mmu.and8(c.r.hl, ~(0b0000'0010));
 }
 
-void RES_1_A(CPU *cpu, instruction_t &i)
+void RES_1_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0000'0010));
+	c.r.a = c.r.a & ~(0b0000'0010);
 }
 
-void RES_2_B(CPU *cpu, instruction_t &i)
+void RES_2_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0000'0100));
+	c.r.b = c.r.b & ~(0b0000'0100);
 }
 
-void RES_2_C(CPU *cpu, instruction_t &i)
+void RES_2_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0000'0100));
+	c.r.c = c.r.c & ~(0b0000'0100);
 }
 
-void RES_2_D(CPU *cpu, instruction_t &i)
+void RES_2_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0000'0100));
+	c.r.d = c.r.d & ~(0b0000'0100);
 }
 
-void RES_2_E(CPU *cpu, instruction_t &i)
+void RES_2_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0000'0100));
+	c.r.e = c.r.e & ~(0b0000'0100);
 }
 
-void RES_2_H(CPU *cpu, instruction_t &i)
+void RES_2_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0000'0100));
+	c.r.h = c.r.h & ~(0b0000'0100);
 }
 
-void RES_2_L(CPU *cpu, instruction_t &i)
+void RES_2_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0000'0100));
+	c.r.l = c.r.l & ~(0b0000'0100);
 }
 
-void RES_2_AHL(CPU *cpu, instruction_t &i)
+void RES_2_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0000'0100));
+	c.mmu.and8(c.r.hl, ~(0b0000'0100));
 }
 
-void RES_2_A(CPU *cpu, instruction_t &i)
+void RES_2_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0000'0100));
+	c.r.a = c.r.a & ~(0b0000'0100);
 }
 
-void RES_3_B(CPU *cpu, instruction_t &i)
+void RES_3_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0000'1000));
+	c.r.b = c.r.b & ~(0b0000'1000);
 }
 
-void RES_3_C(CPU *cpu, instruction_t &i)
+void RES_3_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0000'1000));
+	c.r.c = c.r.c & ~(0b0000'1000);
 }
 
-void RES_3_D(CPU *cpu, instruction_t &i)
+void RES_3_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0000'1000));
+	c.r.d = c.r.d & ~(0b0000'1000);
 }
 
-void RES_3_E(CPU *cpu, instruction_t &i)
+void RES_3_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0000'1000));
+	c.r.e = c.r.e & ~(0b0000'1000);
 }
 
-void RES_3_H(CPU *cpu, instruction_t &i)
+void RES_3_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0000'1000));
+	c.r.h = c.r.h & ~(0b0000'1000);
 }
 
-void RES_3_L(CPU *cpu, instruction_t &i)
+void RES_3_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0000'1000));
+	c.r.l = c.r.l & ~(0b0000'1000);
 }
 
-void RES_3_AHL(CPU *cpu, instruction_t &i)
+void RES_3_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0000'1000));
+	c.mmu.and8(c.r.hl, ~(0b0000'1000));
 }
 
-void RES_3_A(CPU *cpu, instruction_t &i)
+void RES_3_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0000'1000));
+	c.r.a = c.r.a & ~(0b0000'1000);
 }
 
-void RES_4_B(CPU *cpu, instruction_t &i)
+void RES_4_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0001'0000));
+	c.r.b = c.r.b & ~(0b0001'0000);
 }
 
-void RES_4_C(CPU *cpu, instruction_t &i)
+void RES_4_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0001'0000));
+	c.r.c = c.r.c & ~(0b0001'0000);
 }
 
-void RES_4_D(CPU *cpu, instruction_t &i)
+void RES_4_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0001'0000));
+	c.r.d = c.r.d & ~(0b0001'0000);
 }
 
-void RES_4_E(CPU *cpu, instruction_t &i)
+void RES_4_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0001'0000));
+	c.r.e = c.r.e & ~(0b0001'0000);
 }
 
-void RES_4_H(CPU *cpu, instruction_t &i)
+void RES_4_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0001'0000));
+	c.r.h = c.r.h & ~(0b0001'0000);
 }
 
-void RES_4_L(CPU *cpu, instruction_t &i)
+void RES_4_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0001'0000));
+	c.r.l = c.r.l & ~(0b0001'0000);
 }
 
-void RES_4_AHL(CPU *cpu, instruction_t &i)
+void RES_4_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0001'0000));
+	c.mmu.and8(c.r.hl, ~(0b0001'0000));
 }
 
-void RES_4_A(CPU *cpu, instruction_t &i)
+void RES_4_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0001'0000));
+	c.r.a = c.r.a & ~(0b0001'0000);
 }
 
-void RES_5_B(CPU *cpu, instruction_t &i)
+void RES_5_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0010'0000));
+	c.r.b = c.r.b & ~(0b0010'0000);
 }
 
-void RES_5_C(CPU *cpu, instruction_t &i)
+void RES_5_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0010'0000));
+	c.r.c = c.r.c & ~(0b0010'0000);
 }
 
-void RES_5_D(CPU *cpu, instruction_t &i)
+void RES_5_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0010'0000));
+	c.r.d = c.r.d & ~(0b0010'0000);
 }
 
-void RES_5_E(CPU *cpu, instruction_t &i)
+void RES_5_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0010'0000));
+	c.r.e = c.r.e & ~(0b0010'0000);
 }
 
-void RES_5_H(CPU *cpu, instruction_t &i)
+void RES_5_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0010'0000));
+	c.r.h = c.r.h & ~(0b0010'0000);
 }
 
-void RES_5_L(CPU *cpu, instruction_t &i)
+void RES_5_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0010'0000));
+	c.r.l = c.r.l & ~(0b0010'0000);
 }
 
-void RES_5_AHL(CPU *cpu, instruction_t &i)
+void RES_5_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0010'0000));
+	c.mmu.and8(c.r.hl, ~(0b0010'0000));
 }
 
-void RES_5_A(CPU *cpu, instruction_t &i)
+void RES_5_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0010'0000));
+	c.r.a = c.r.a & ~(0b0010'0000);
 }
 
-void RES_6_B(CPU *cpu, instruction_t &i)
+void RES_6_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b0100'0000));
+	c.r.b = c.r.b & ~(0b0100'0000);
 }
 
-void RES_6_C(CPU *cpu, instruction_t &i)
+void RES_6_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b0100'0000));
+	c.r.c = c.r.c & ~(0b0100'0000);
 }
 
-void RES_6_D(CPU *cpu, instruction_t &i)
+void RES_6_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b0100'0000));
+	c.r.d = c.r.d & ~(0b0100'0000);
 }
 
-void RES_6_E(CPU *cpu, instruction_t &i)
+void RES_6_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b0100'0000));
+	c.r.e = c.r.e & ~(0b0100'0000);
 }
 
-void RES_6_H(CPU *cpu, instruction_t &i)
+void RES_6_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b0100'0000));
+	c.r.h = c.r.h & ~(0b0100'0000);
 }
 
-void RES_6_L(CPU *cpu, instruction_t &i)
+void RES_6_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b0100'0000));
+	c.r.l = c.r.l & ~(0b0100'0000);
 }
 
-void RES_6_AHL(CPU *cpu, instruction_t &i)
+void RES_6_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, ~(0b0100'0000));
+	c.mmu.and8(c.r.hl, ~(0b0100'0000));
 }
 
-void RES_6_A(CPU *cpu, instruction_t &i)
+void RES_6_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b0100'0000));
+	c.r.a = c.r.a & ~(0b0100'0000);
 }
 
-void RES_7_B(CPU *cpu, instruction_t &i)
+void RES_7_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) & ~(0b1000'0000));
+	c.r.b = c.r.b & ~(0b1000'0000);
 }
 
-void RES_7_C(CPU *cpu, instruction_t &i)
+void RES_7_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) & ~(0b1000'0000));
+	c.r.c = c.r.c & ~(0b1000'0000);
 }
 
-void RES_7_D(CPU *cpu, instruction_t &i)
+void RES_7_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) & ~(0b1000'0000));
+	c.r.d = c.r.d & ~(0b1000'0000);
 }
 
-void RES_7_E(CPU *cpu, instruction_t &i)
+void RES_7_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) & ~(0b1000'0000));
+	c.r.e = c.r.e & ~(0b1000'0000);
 }
 
-void RES_7_H(CPU *cpu, instruction_t &i)
+void RES_7_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) & ~(0b1000'0000));
+	c.r.h = c.r.h & ~(0b1000'0000);
 }
 
-void RES_7_L(CPU *cpu, instruction_t &i)
+void RES_7_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) & ~(0b1000'0000));
+	c.r.l = c.r.l & ~(0b1000'0000);
 }
 
-void RES_7_AHL(CPU *cpu, instruction_t &i)
+void RES_7_AHL(Core &c)
 {
-	cpu->mmu->and8(cpu->hl, static_cast<uint8_t>(~0x80));
+	c.mmu.and8(c.r.hl, static_cast<uint8_t>(~0x80));
 }
 
-void RES_7_A(CPU *cpu, instruction_t &i)
+void RES_7_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) & ~(0b1000'0000));
+	c.r.a = c.r.a & ~(0b1000'0000);
 }
 
-void SET_0_B(CPU *cpu, instruction_t &i)
+void SET_0_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0000'0001));
+	c.r.b |= 0b0000'0001;
 }
 
-void SET_0_C(CPU *cpu, instruction_t &i)
+void SET_0_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0000'0001));
+	c.r.c |= 0b0000'0001;
 }
 
-void SET_0_D(CPU *cpu, instruction_t &i)
+void SET_0_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0000'0001));
+	c.r.d |= 0b0000'0001;
 }
 
-void SET_0_E(CPU *cpu, instruction_t &i)
+void SET_0_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0000'0001));
+	c.r.e |= 0b0000'0001;
 }
 
-void SET_0_H(CPU *cpu, instruction_t &i)
+void SET_0_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'0001));
+	c.r.h |= 0b0000'0001;
 }
 
-void SET_0_L(CPU *cpu, instruction_t &i)
+void SET_0_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'0001));
+	c.r.l |= 0b0000'0001;
 }
 
-void SET_0_AHL(CPU *cpu, instruction_t &i)
+void SET_0_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0000'0001);
+	c.mmu.or8(c.r.hl, 0b0000'0001);
 }
 
-void SET_0_A(CPU *cpu, instruction_t &i)
+void SET_0_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0000'0001));
+	c.r.a |= 0b0000'0001;
 }
 
-void SET_1_B(CPU *cpu, instruction_t &i)
+void SET_1_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0000'0010));
+	c.r.b |= 0b0000'0010;
 }
 
-void SET_1_C(CPU *cpu, instruction_t &i)
+void SET_1_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0000'0010));
+	c.r.c |= 0b0000'0010;
 }
 
-void SET_1_D(CPU *cpu, instruction_t &i)
+void SET_1_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0000'0010));
+	c.r.d |= 0b0000'0010;
 }
 
-void SET_1_E(CPU *cpu, instruction_t &i)
+void SET_1_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0000'0010));
+	c.r.e |= 0b0000'0010;
 }
 
-void SET_1_H(CPU *cpu, instruction_t &i)
+void SET_1_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'0010));
+	c.r.h |= 0b0000'0010;
 }
 
-void SET_1_L(CPU *cpu, instruction_t &i)
+void SET_1_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'0010));
+	c.r.l |= 0b0000'0010;
 }
 
-void SET_1_AHL(CPU *cpu, instruction_t &i)
+void SET_1_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0000'0010);
+	c.mmu.or8(c.r.hl, 0b0000'0010);
 }
 
-void SET_1_A(CPU *cpu, instruction_t &i)
+void SET_1_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0000'0010));
+	c.r.a |= 0b0000'0010;
 }
 
-void SET_2_B(CPU *cpu, instruction_t &i)
+void SET_2_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0000'0100));
+	c.r.b |= 0b0000'0100;
 }
 
-void SET_2_C(CPU *cpu, instruction_t &i)
+void SET_2_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0000'0100));
+	c.r.c |= 0b0000'0100;
 }
 
-void SET_2_D(CPU *cpu, instruction_t &i)
+void SET_2_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0000'0100));
+	c.r.d |= 0b0000'0100;
 }
 
-void SET_2_E(CPU *cpu, instruction_t &i)
+void SET_2_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0000'0100));
+	c.r.e |= 0b0000'0100;
 }
 
-void SET_2_H(CPU *cpu, instruction_t &i)
+void SET_2_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'0100));
+	c.r.h |= 0b0000'0100;
 }
 
-void SET_2_L(CPU *cpu, instruction_t &i)
+void SET_2_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'0100));
+	c.r.l |= 0b0000'0100;
 }
 
-void SET_2_AHL(CPU *cpu, instruction_t &i)
+void SET_2_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0000'0100);
+	c.mmu.or8(c.r.hl, 0b0000'0100);
 }
 
-void SET_2_A(CPU *cpu, instruction_t &i)
+void SET_2_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0000'0100));
+	c.r.a |= 0b0000'0100;
 }
 
-void SET_3_B(CPU *cpu, instruction_t &i)
+void SET_3_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0000'1000));
+	c.r.b |= 0b0000'1000;
 }
 
-void SET_3_C(CPU *cpu, instruction_t &i)
+void SET_3_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0000'1000));
+	c.r.c |= 0b0000'1000;
 }
 
-void SET_3_D(CPU *cpu, instruction_t &i)
+void SET_3_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0000'1000));
+	c.r.d |= 0b0000'1000;
 }
 
-void SET_3_E(CPU *cpu, instruction_t &i)
+void SET_3_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0000'1000));
+	c.r.e |= 0b0000'1000;
 }
 
-void SET_3_H(CPU *cpu, instruction_t &i)
+void SET_3_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0000'1000));
+	c.r.h |= 0b0000'1000;
 }
 
-void SET_3_L(CPU *cpu, instruction_t &i)
+void SET_3_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0000'1000));
+	c.r.l |= 0b0000'1000;
 }
 
-void SET_3_AHL(CPU *cpu, instruction_t &i)
+void SET_3_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0000'1000);
+	c.mmu.or8(c.r.hl, 0b0000'1000);
 }
 
-void SET_3_A(CPU *cpu, instruction_t &i)
+void SET_3_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0000'1000));
+	c.r.a |= 0b0000'1000;
 }
 
-void SET_4_B(CPU *cpu, instruction_t &i)
+void SET_4_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0001'0000));
+	c.r.b |= 0b0001'0000;
 }
 
-void SET_4_C(CPU *cpu, instruction_t &i)
+void SET_4_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0001'0000));
+	c.r.c |= 0b0001'0000;
 }
 
-void SET_4_D(CPU *cpu, instruction_t &i)
+void SET_4_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0001'0000));
+	c.r.d |= 0b0001'0000;
 }
 
-void SET_4_E(CPU *cpu, instruction_t &i)
+void SET_4_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0001'0000));
+	c.r.e |= 0b0001'0000;
 }
 
-void SET_4_H(CPU *cpu, instruction_t &i)
+void SET_4_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0001'0000));
+	c.r.h |= 0b0001'0000;
 }
 
-void SET_4_L(CPU *cpu, instruction_t &i)
+void SET_4_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0001'0000));
+	c.r.l |= 0b0001'0000;
 }
 
-void SET_4_AHL(CPU *cpu, instruction_t &i)
+void SET_4_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0001'0000);
+	c.mmu.or8(c.r.hl, 0b0001'0000);
 }
 
-void SET_4_A(CPU *cpu, instruction_t &i)
+void SET_4_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0001'0000));
+	c.r.a |= 0b0001'0000;
 }
 
-void SET_5_B(CPU *cpu, instruction_t &i)
+void SET_5_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0010'0000));
+	c.r.b |= 0b0010'0000;
 }
 
-void SET_5_C(CPU *cpu, instruction_t &i)
+void SET_5_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0010'0000));
+	c.r.c |= 0b0010'0000;
 }
 
-void SET_5_D(CPU *cpu, instruction_t &i)
+void SET_5_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0010'0000));
+	c.r.d |= 0b0010'0000;
 }
 
-void SET_5_E(CPU *cpu, instruction_t &i)
+void SET_5_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0010'0000));
+	c.r.e |= 0b0010'0000;
 }
 
-void SET_5_H(CPU *cpu, instruction_t &i)
+void SET_5_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0010'0000));
+	c.r.h |= 0b0010'0000;
 }
 
-void SET_5_L(CPU *cpu, instruction_t &i)
+void SET_5_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0010'0000));
+	c.r.l |= 0b0010'0000;
 }
 
-void SET_5_AHL(CPU *cpu, instruction_t &i)
+void SET_5_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0010'0000);
+	c.mmu.or8(c.r.hl, 0b0010'0000);
 }
 
-void SET_5_A(CPU *cpu, instruction_t &i)
+void SET_5_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0010'0000));
+	c.r.a |= 0b0010'0000;
 }
 
-void SET_6_B(CPU *cpu, instruction_t &i)
+void SET_6_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b0100'0000));
+	c.r.b |= 0b0100'0000;
 }
 
-void SET_6_C(CPU *cpu, instruction_t &i)
+void SET_6_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b0100'0000));
+	c.r.c |= 0b0100'0000;
 }
 
-void SET_6_D(CPU *cpu, instruction_t &i)
+void SET_6_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b0100'0000));
+	c.r.d |= 0b0100'0000;
 }
 
-void SET_6_E(CPU *cpu, instruction_t &i)
+void SET_6_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b0100'0000));
+	c.r.e |= 0b0100'0000;
 }
 
-void SET_6_H(CPU *cpu, instruction_t &i)
+void SET_6_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b0100'0000));
+	c.r.h |= 0b0100'0000;
 }
 
-void SET_6_L(CPU *cpu, instruction_t &i)
+void SET_6_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b0100'0000));
+	c.r.l |= 0b0100'0000;
 }
 
-void SET_6_AHL(CPU *cpu, instruction_t &i)
+void SET_6_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b0100'0000);
+	c.mmu.or8(c.r.hl, 0b0100'0000);
 }
 
-void SET_6_A(CPU *cpu, instruction_t &i)
+void SET_6_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b0100'0000));
+	c.r.a |= 0b0100'0000;
 }
 
-void SET_7_B(CPU *cpu, instruction_t &i)
+void SET_7_B(Core &c)
 {
-	SetHi(cpu->bc, Hi(cpu->bc) | (0b1000'0000));
+	c.r.b |= 0b1000'0000;
 }
 
-void SET_7_C(CPU *cpu, instruction_t &i)
+void SET_7_C(Core &c)
 {
-	SetLo(cpu->bc, Lo(cpu->bc) | (0b1000'0000));
+	c.r.c |= 0b1000'0000;
 }
 
-void SET_7_D(CPU *cpu, instruction_t &i)
+void SET_7_D(Core &c)
 {
-	SetHi(cpu->de, Hi(cpu->de) | (0b1000'0000));
+	c.r.d |= 0b1000'0000;
 }
 
-void SET_7_E(CPU *cpu, instruction_t &i)
+void SET_7_E(Core &c)
 {
-	SetLo(cpu->de, Lo(cpu->de) | (0b1000'0000));
+	c.r.e |= 0b1000'0000;
 }
 
-void SET_7_H(CPU *cpu, instruction_t &i)
+void SET_7_H(Core &c)
 {
-	SetHi(cpu->hl, Hi(cpu->hl) | (0b1000'0000));
+	c.r.h |= 0b1000'0000;
 }
 
-void SET_7_L(CPU *cpu, instruction_t &i)
+void SET_7_L(Core &c)
 {
-	SetLo(cpu->hl, Lo(cpu->hl) | (0b1000'0000));
+	c.r.l |= 0b1000'0000;
 }
 
-void SET_7_AHL(CPU *cpu, instruction_t &i)
+void SET_7_AHL(Core &c)
 {
-	cpu->mmu->or8(cpu->hl, 0b1000'0000);
+	c.mmu.or8(c.r.hl, 0b1000'0000);
 }
 
-void SET_7_A(CPU *cpu, instruction_t &i)
+void SET_7_A(Core &c)
 {
-	SetHi(cpu->af, Hi(cpu->af) | (0b1000'0000));
+	c.r.a |= 0b1000'0000;
 }
 
-const instructionFunc_t kInstructions[0x100] =
+const Instruction kInstructions[] =
 {     
 /*      0           1            2            3         4              5         6            7         8             9          A            B        C             D           E           F   */
 /* 0 */ NOP,        LD_BC_IMM16, LD_ABC_A,    INC_BC,   INC_B,         DEC_B,    LD_B_IMM8,   RLCA,     LD_AIMM16_SP, ADD_HL_BC, LD_A_ABC,    DEC_BC,  INC_C,        DEC_C ,     LD_C_IMM8,  RRCA,
@@ -3182,10 +3103,7 @@ const instructionFunc_t kInstructions[0x100] =
 /* D */ RET_NC,     POP_DE,      JP_NC_IMM16, INVALID,  CALL_NC_IMM16, PUSH_DE,  SUB_A_IMM8,  RST_10,   RET_C,        RETI,      JP_C_IMM16,  INVALID, CALL_C_IMM16, INVALID,    SBC_A_IMM8, RST_18,
 /* E */ LDH_IMM8_A, POP_HL,      LDH_C_A,     INVALID,  INVALID,       PUSH_HL,  AND_A_IMM8,  RST_20,   ADD_SP_IMM8,  JP_HL,     LD_AIMM16_A, INVALID, INVALID,      INVALID,    XOR_A_IMM8, RST_28,
 /* F */ LDH_A_IMM8, POP_AF,      LDH_A_C,     DI,       INVALID,       PUSH_AF,  OR_A_IMM8,   RST_30,   LD_HL_SPIMM8, LD_SP_HL,  LD_A_AIMM16, EI,      INVALID,      INVALID,    CP_A_IMM8,  RST_38,
-}; 
-
-const instructionFunc_t kCbInstructions[0x100] =
-{
+/* CB */
 /*      0        1        2        3        4        5        6          7        8        9        A        B        C        D        E          F   */
 /* 0 */ RLC_B,   RLC_C,   RLC_D,   RLC_E,   RLC_H,   RLC_L,   RLC_AHL,   RLC_A,   RRC_B,   RRC_C,   RRC_D,   RRC_E,   RRC_H,   RRC_L,   RRC_AHL,   RRC_A,
 /* 1 */ RL_B,    RL_C,    RL_D,    RL_E,    RL_H,    RL_L,    RL_AHL,    RL_A,    RR_B,    RR_C,    RR_D,    RR_E,    RR_H,    RR_L,    RR_AHL,    RR_A,

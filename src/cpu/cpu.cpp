@@ -1,19 +1,26 @@
 #include <cstdio>
-#include "cpu.h"
-#include "cpu_base.h"
-#include "cpu_instructions.h"
-#include "inst_data.h"
+
+#include "cpu/cpu.h"
+#include "cpu/cpu_base.h"
+#include "cpu/cpu_instructions.h"
+#include "cpu/inst_data.h"
+#include "cpu/decode.h"
+
 #include "gpu.h"
 #include "memory_map.h"
 #include "mmu.h"
 
 //#define DEBUG
 
+CPU::CPU(MMU *mmu)
+	: mmu(mmu), c{.mmu=*mmu}
+{}
+
 void CPU::halt()
 {
-	if (ime)
+	if (c.ime)
 	{
-		mHalt = true;
+		c.halt = true;
 	}
 	else
 	{
@@ -43,7 +50,6 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 		printf("%04X: ", mRegisters.pc);
 		printf("[%04X] ", sp);
 		printf("[%02X] ", opcode);
-		printf("A:%02X ", Hi(af));
 		printf("F:%c%c%c%c  IE=%02X IF=%02X IME=%c  ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-', mmu->mem[kIe], mmu->mem[kIf], ime ? '1' : '0');
 		printf("BC:%04X ", bc);
 		printf("DE:%04X ", de);
@@ -53,14 +59,11 @@ void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
 
 void CPU::printInstruction(const instruction_t &i, bool cb)
 {
-	const instructionFunc_t *instructions = kInstructions;
+	const Instruction *instructions = kInstructions;
 	const int *operandSizes = kInstFmtSizes;
 	auto formatStrings = kInstFmts;
 	if (cb)
 	{
-		instructions = kCbInstructions;
-		operandSizes = kCbInstFmtSizes;
-		formatStrings = kCbInstFmts;
 	}
 	printf(" | ");
 	if (operandSizes[i.code] == 0)
@@ -85,6 +88,93 @@ void CPU::printInstruction(const instruction_t &i, bool cb)
 	}
 }
 
+void CPU::tick(int &cycles)
+{
+	uint16_t op { mmu->read8(c.r.pc) };
+
+	uint8_t mask = 0;
+	if (c.ime)
+	{
+		int c = 0;
+		while (mask = mmu->mem[kIe] & mmu->mem[kIf])
+		{
+			c += interrupts(mask);
+		}
+		if (c)
+		{
+			cycles += c;
+			return;
+		}
+	}
+
+	c.d8 = mmu->read8(c.r.pc+1);
+	c.d16 = mmu->read16(c.r.pc+1);
+
+	if (op == 0xCB)
+		op = c.d8 + 0x100;
+
+	/* Print info */
+	printf("%04X: (%04X)  IME(%c)  AF(%04X)  BC(%04X)  DE(%04X)  HL(%04X)  |%02X|  ", c.r.pc, c.r.sp, c.ime ? '1' : '.', c.r.af, c.r.bc, c.r.de, c.r.hl, op % 0xFF);
+
+	const int fsize { kInstFmtSizes[op] };
+
+	if (fsize == 0)
+	{
+		printf(kInstFmts[op]);
+	}
+	else if (fsize == 8)
+	{
+		printf(kInstFmts[op], c.d8);
+	}
+	else if (fsize == 16)
+	{
+		printf(kInstFmts[op], c.d16);
+	}
+
+	puts("");
+
+	/* Execute */
+	c.r.pc += kInstSizes[op];
+
+	if (op > 0xFF)
+		c.r.pc++;
+
+	kInstructions[op](c);
+
+	if (c.extraCycles)
+	{
+		c.extraCycles = false;
+		cycles += kInstCyclesAlt[op];
+	}
+	else
+		cycles += kInstCycles[op];
+
+	if (mRepeatNextInstruction == 1)
+	{
+		mRepeatNextInstruction++;
+	}
+	else if (mRepeatNextInstruction == 2)
+	{
+		mRepeatNextInstruction = 0;
+		pc--;
+	}
+
+	mInstructionCounter++;
+
+	if (mDelayedImeEnable)
+	{
+		if (mDelayedImeEnable == 1)
+		{
+			mDelayedImeEnable++;
+		}
+		else if (mDelayedImeEnable == 2)
+		{
+			mDelayedImeEnable = 0;
+			c.ime = true;
+		}
+	}
+}
+
 void CPU::executeRegular(instruction_t &i, int &cycles)
 {
 #ifdef DEBUG
@@ -103,7 +193,6 @@ void CPU::executeRegular(instruction_t &i, int &cycles)
 #endif
 
 	pc += kInstSizes[i.code];
-	(*kInstructions[i.code])(this, i);
 	cycles += i.didAction ? kInstCycles[i.code] : kInstCyclesAlt[i.code];
 
 #ifdef DEBUG
@@ -134,10 +223,6 @@ void CPU::executeCB(instruction_t &i, int &cycles)
 	};
 #endif
 
-	pc += kCbInstSizes[i.code];
-	(*kCbInstructions[i.code])(this, i);
-	cycles += kCbInstCycles[i.code];
-
 #ifdef DEBUG
 	printInstruction(i, true);
 #else
@@ -154,7 +239,7 @@ int CPU::executeInstruction()
 	int cycles = 0;
 
 	uint8_t mask = 0;
-	if (ime)
+	if (c.ime)
 	{
 		while (mask = mmu->mem[kIe] & mmu->mem[kIf])
 		{
@@ -165,44 +250,9 @@ int CPU::executeInstruction()
 	if (cycles)
 		return cycles;
 
-	instruction_t i = fetch();
+	
 
-	if (i.code == 0xCB)
-	{
-		pc++;
-		i = fetch();
-		executeCB(i, cycles);
-	}
-	else
-	{
-		executeRegular(i, cycles);
-	}
-
-	if (mRepeatNextInstruction == 1)
-	{
-		mRepeatNextInstruction++;
-	}
-	else if (mRepeatNextInstruction == 2)
-	{
-		mRepeatNextInstruction = 0;
-		pc--;
-	}
-
-	mInstructionCounter++;
-
-	if (mDelayedImeEnable)
-	{
-		if (mDelayedImeEnable == 1)
-		{
-			mDelayedImeEnable++;
-		}
-		else if (mDelayedImeEnable == 2)
-		{
-			puts("ENABLED");
-			mDelayedImeEnable = 0;
-			ime = true;
-		}
-	}
+	
 
 	return cycles;
 }
@@ -244,7 +294,7 @@ int CPU::numInstructionsExecuted() const
 
 int CPU::interrupts(uint8_t mask)
 {
-	ime = false;
+	c.ime = false;
 	sp--;
 	mmu->write8(sp, (pc & 0xFF00) >> 8);
 
@@ -292,7 +342,7 @@ int CPU::interrupts(uint8_t mask)
 	if (mmu->mem[kIf] != If)
 	{
 		cycles += 4;
-		mHalt = false;
+		c.halt = false;
 		mmu->mem[kIf] = If;
 	}
 
@@ -321,6 +371,12 @@ void CPU::reset(bool haveBios)
 	}
 	else
 	{
+		c.r.pc = 0x100;
+		c.r.af = 0x1B0;
+		c.r.bc = 0x13;
+		c.r.de = 0xD8;
+		c.r.hl = 0x14D;
+		c.r.sp = 0xFFFE;
 		pc = 0x0100;
 		af = 0x01B0;
 		bc = 0x0013;
@@ -349,4 +405,9 @@ void CPU::reset(bool haveBios)
 		mmu->write8(0xFF48, 0xFF);
 		mmu->write8(0xFF49, 0xFF);
 	}
+}
+
+bool CPU::paused() const
+{
+	return c.paused;
 }

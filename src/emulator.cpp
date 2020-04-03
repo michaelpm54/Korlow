@@ -20,6 +20,7 @@
 #include "rom_util.h"
 
 #include "cpu/cpu.h"
+#include "cpu/decode.h"
 #include "gui/opengl_widget.h"
 #include "render/font/ft_font.h"
 #include "render/gameboy_renderer.h"
@@ -155,7 +156,7 @@ void Emulator::openFile(const std::string& path)
 void Emulator::initHardware()
 {
 	mMmu = std::make_unique<MMU>();
-	mCpu = std::make_unique<CPU>();
+	mCpu = std::make_unique<CPU>(mMmu.get());
 
 	GpuRegisters gpuRegisters =
 	{
@@ -239,9 +240,9 @@ void Emulator::run()
 		if (mHaveRom)
 		{
 			int cycles = 0;
-			while (cycles < kMaxCyclesPerFrame)
+			while (cycles < kMaxCyclesPerFrame && !mCpu->paused())
 			{
-				cycles += mCpu->executeInstruction();
+				mCpu->tick(cycles);
 				mGpu->tick(cycles);
 
 				dividerCounter += cycles;

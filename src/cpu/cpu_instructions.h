@@ -4,398 +4,397 @@
 #include <cstdint>
 #include "types.h"
 
-extern const instructionFunc_t kInstructions[0x100];
-extern const instructionFunc_t kCbInstructions[0x100];
+extern const Instruction kInstructions[];
 
 // Generic
 
-void UNIMPL(CPU *cpu, instruction_t &i);
-void INVALID(CPU *cpu, instruction_t &i);
+void UNIMPL(Core &c);
+void INVALID(Core &c);
 
 // 0x00
 
-void NOP(CPU *cpu, instruction_t &i);
-void LD_BC_IMM16(CPU *cpu, instruction_t &i);
-void LD_ABC_A(CPU *cpu, instruction_t &i);
-void INC_BC(CPU *cpu, instruction_t &i);
-void INC_B(CPU *cpu, instruction_t &i);
-void DEC_B(CPU *cpu, instruction_t &i);
-void LD_B_IMM8(CPU *cpu, instruction_t &i);
-void RLCA(CPU *cpu, instruction_t &i);
-void LD_AIMM16_SP(CPU *cpu, instruction_t &i);
-void ADD_HL_BC(CPU *cpu, instruction_t &i);
-void LD_A_ABC(CPU *cpu, instruction_t &i);
-void DEC_BC(CPU *cpu, instruction_t &i);
-void INC_C(CPU *cpu, instruction_t &i);
-void DEC_C(CPU *cpu, instruction_t &i);
-void LD_C_IMM8(CPU *cpu, instruction_t &i);
-void RRCA(CPU *cpu, instruction_t &i);
+void NOP(Core &c);
+void LD_BC_IMM16(Core &c);
+void LD_ABC_A(Core &c);
+void INC_BC(Core &c);
+void INC_B(Core &c);
+void DEC_B(Core &c);
+void LD_B_IMM8(Core &c);
+void RLCA(Core &c);
+void LD_AIMM16_SP(Core &c);
+void ADD_HL_BC(Core &c);
+void LD_A_ABC(Core &c);
+void DEC_BC(Core &c);
+void INC_C(Core &c);
+void DEC_C(Core &c);
+void LD_C_IMM8(Core &c);
+void RRCA(Core &c);
 
 // 0x10
 
-void STOP(CPU *cpu, instruction_t &i);
-void LD_DE_IMM16(CPU *cpu, instruction_t &i);
-void LD_ADE_A(CPU *cpu, instruction_t &i);
-void INC_DE(CPU *cpu, instruction_t &i);
-void INC_D(CPU *cpu, instruction_t &i);
-void DEC_D(CPU *cpu, instruction_t &i);
-void LD_D_IMM8(CPU *cpu, instruction_t &i);
-void RLA(CPU *cpu, instruction_t &i);
-void JR_IMM8(CPU *cpu, instruction_t &i);
-void ADD_HL_DE(CPU *cpu, instruction_t &i);
-void LD_A_ADE(CPU *cpu, instruction_t &i);
-void DEC_DE(CPU *cpu, instruction_t &i);
-void INC_E(CPU *cpu, instruction_t &i);
-void DEC_E(CPU *cpu, instruction_t &i);
-void LD_E_IMM8(CPU *cpu, instruction_t &i);
-void RRA(CPU *cpu, instruction_t &i);
+void STOP(Core &c);
+void LD_DE_IMM16(Core &c);
+void LD_ADE_A(Core &c);
+void INC_DE(Core &c);
+void INC_D(Core &c);
+void DEC_D(Core &c);
+void LD_D_IMM8(Core &c);
+void RLA(Core &c);
+void JR_IMM8(Core &c);
+void ADD_HL_DE(Core &c);
+void LD_A_ADE(Core &c);
+void DEC_DE(Core &c);
+void INC_E(Core &c);
+void DEC_E(Core &c);
+void LD_E_IMM8(Core &c);
+void RRA(Core &c);
 
 // 0x20
 
-void JR_NZ_IMM8(CPU *cpu, instruction_t &i);
-void LD_HL_IMM16(CPU *cpu, instruction_t &i);
-void LDI_HL_A(CPU *cpu, instruction_t &i);
-void INC_HL(CPU *cpu, instruction_t &i);
-void INC_H(CPU *cpu, instruction_t &i);
-void DEC_H(CPU *cpu, instruction_t &i);
-void LD_H_IMM8(CPU *cpu, instruction_t &i);
-void DAA(CPU *cpu, instruction_t &i);
-void JR_Z_IMM8(CPU *cpu, instruction_t &i);
-void ADD_HL_HL(CPU *cpu, instruction_t &i);
-void LDI_A_HL(CPU *cpu, instruction_t &i);
-void DEC_HL(CPU *cpu, instruction_t &i);
-void INC_L(CPU *cpu, instruction_t &i);
-void DEC_L(CPU *cpu, instruction_t &i);
-void LD_L_IMM8(CPU *cpu, instruction_t &i);
-void CPL(CPU *cpu, instruction_t &i);
+void JR_NZ_IMM8(Core &c);
+void LD_HL_IMM16(Core &c);
+void LDI_HL_A(Core &c);
+void INC_HL(Core &c);
+void INC_H(Core &c);
+void DEC_H(Core &c);
+void LD_H_IMM8(Core &c);
+void DAA(Core &c);
+void JR_Z_IMM8(Core &c);
+void ADD_HL_HL(Core &c);
+void LDI_A_HL(Core &c);
+void DEC_HL(Core &c);
+void INC_L(Core &c);
+void DEC_L(Core &c);
+void LD_L_IMM8(Core &c);
+void CPL(Core &c);
 
 // 0x30
 
-void JR_NC_IMM8(CPU *cpu, instruction_t &i);
-void LD_SP_IMM16(CPU *cpu, instruction_t &i);
-void LDD_HL_A(CPU *cpu, instruction_t &i);
-void INC_SP(CPU *cpu, instruction_t &i);
-void INC_AHL(CPU *cpu, instruction_t &i);
-void DEC_AHL(CPU *cpu, instruction_t &i); // 0x35
-void LD_AHL_IMM8(CPU *cpu, instruction_t &i);
-void SCF(CPU *cpu, instruction_t &i);
-void JR_C_IMM8(CPU *cpu, instruction_t &i); // 0x38
-void ADD_HL_SP(CPU *cpu, instruction_t &i);
-void LDD_A_HL(CPU *cpu, instruction_t &i);
-void DEC_SP(CPU *cpu, instruction_t &i);
-void INC_A(CPU *cpu, instruction_t &i);
-void DEC_A(CPU *cpu, instruction_t &i);
-void LD_A_IMM8(CPU *cpu, instruction_t &i);
-void CCF(CPU *cpu, instruction_t &i);
+void JR_NC_IMM8(Core &c);
+void LD_SP_IMM16(Core &c);
+void LDD_HL_A(Core &c);
+void INC_SP(Core &c);
+void INC_AHL(Core &c);
+void DEC_AHL(Core &c); // 0x35
+void LD_AHL_IMM8(Core &c);
+void SCF(Core &c);
+void JR_C_IMM8(Core &c); // 0x38
+void ADD_HL_SP(Core &c);
+void LDD_A_HL(Core &c);
+void DEC_SP(Core &c);
+void INC_A(Core &c);
+void DEC_A(Core &c);
+void LD_A_IMM8(Core &c);
+void CCF(Core &c);
 
 // 0x40
 
-void LD_B_B(CPU *cpu, instruction_t &i);
-void LD_B_C(CPU *cpu, instruction_t &i);
-void LD_B_D(CPU *cpu, instruction_t &i);
-void LD_B_E(CPU *cpu, instruction_t &i);
-void LD_B_H(CPU *cpu, instruction_t &i);
-void LD_B_L(CPU *cpu, instruction_t &i);
-void LD_B_AHL(CPU *cpu, instruction_t &i);
-void LD_B_A(CPU *cpu, instruction_t &i);
-void LD_C_B(CPU *cpu, instruction_t &i);
-void LD_C_C(CPU *cpu, instruction_t &i);
-void LD_C_D(CPU *cpu, instruction_t &i);
-void LD_C_E(CPU *cpu, instruction_t &i);
-void LD_C_H(CPU *cpu, instruction_t &i);
-void LD_C_L(CPU *cpu, instruction_t &i);
-void LD_C_AHL(CPU *cpu, instruction_t &i);
-void LD_C_A(CPU *cpu, instruction_t &i);
+void LD_B_B(Core &c);
+void LD_B_C(Core &c);
+void LD_B_D(Core &c);
+void LD_B_E(Core &c);
+void LD_B_H(Core &c);
+void LD_B_L(Core &c);
+void LD_B_AHL(Core &c);
+void LD_B_A(Core &c);
+void LD_C_B(Core &c);
+void LD_C_C(Core &c);
+void LD_C_D(Core &c);
+void LD_C_E(Core &c);
+void LD_C_H(Core &c);
+void LD_C_L(Core &c);
+void LD_C_AHL(Core &c);
+void LD_C_A(Core &c);
 
 // 0x50
 
-void LD_D_B(CPU *cpu, instruction_t &i);
-void LD_D_C(CPU *cpu, instruction_t &i);
-void LD_D_D(CPU *cpu, instruction_t &i);
-void LD_D_E(CPU *cpu, instruction_t &i);
-void LD_D_H(CPU *cpu, instruction_t &i);
-void LD_D_L(CPU *cpu, instruction_t &i);
-void LD_D_AHL(CPU *cpu, instruction_t &i);
-void LD_D_A(CPU *cpu, instruction_t &i);
-void LD_E_B(CPU *cpu, instruction_t &i);
-void LD_E_C(CPU *cpu, instruction_t &i);
-void LD_E_D(CPU *cpu, instruction_t &i);
-void LD_E_E(CPU *cpu, instruction_t &i);
-void LD_E_H(CPU *cpu, instruction_t &i);
-void LD_E_L(CPU *cpu, instruction_t &i);
-void LD_E_AHL(CPU *cpu, instruction_t &i);
-void LD_E_A(CPU *cpu, instruction_t &i);
+void LD_D_B(Core &c);
+void LD_D_C(Core &c);
+void LD_D_D(Core &c);
+void LD_D_E(Core &c);
+void LD_D_H(Core &c);
+void LD_D_L(Core &c);
+void LD_D_AHL(Core &c);
+void LD_D_A(Core &c);
+void LD_E_B(Core &c);
+void LD_E_C(Core &c);
+void LD_E_D(Core &c);
+void LD_E_E(Core &c);
+void LD_E_H(Core &c);
+void LD_E_L(Core &c);
+void LD_E_AHL(Core &c);
+void LD_E_A(Core &c);
 
 // 0x60
 
-void LD_H_B(CPU *cpu, instruction_t &i);
-void LD_H_C(CPU *cpu, instruction_t &i);
-void LD_H_D(CPU *cpu, instruction_t &i);
-void LD_H_E(CPU *cpu, instruction_t &i);
-void LD_H_H(CPU *cpu, instruction_t &i);
-void LD_H_L(CPU *cpu, instruction_t &i);
-void LD_H_AHL(CPU *cpu, instruction_t &i);
-void LD_H_A(CPU *cpu, instruction_t &i);
-void LD_L_B(CPU *cpu, instruction_t &i);
-void LD_L_C(CPU *cpu, instruction_t &i);
-void LD_L_D(CPU *cpu, instruction_t &i);
-void LD_L_E(CPU *cpu, instruction_t &i);
-void LD_L_H(CPU *cpu, instruction_t &i);
-void LD_L_L(CPU *cpu, instruction_t &i);
-void LD_L_AHL(CPU *cpu, instruction_t &i);
-void LD_L_A(CPU *cpu, instruction_t &i);
+void LD_H_B(Core &c);
+void LD_H_C(Core &c);
+void LD_H_D(Core &c);
+void LD_H_E(Core &c);
+void LD_H_H(Core &c);
+void LD_H_L(Core &c);
+void LD_H_AHL(Core &c);
+void LD_H_A(Core &c);
+void LD_L_B(Core &c);
+void LD_L_C(Core &c);
+void LD_L_D(Core &c);
+void LD_L_E(Core &c);
+void LD_L_H(Core &c);
+void LD_L_L(Core &c);
+void LD_L_AHL(Core &c);
+void LD_L_A(Core &c);
 
 // 0x70
 
-void LD_AHL_B(CPU *cpu, instruction_t &i);
-void LD_AHL_C(CPU *cpu, instruction_t &i);
-void LD_AHL_D(CPU *cpu, instruction_t &i);
-void LD_AHL_E(CPU *cpu, instruction_t &i);
-void LD_AHL_H(CPU *cpu, instruction_t &i);
-void LD_AHL_L(CPU *cpu, instruction_t &i);
-void HALT(CPU *cpu, instruction_t &i);
-void LD_AHL_A(CPU *cpu, instruction_t &i);
-void LD_A_B(CPU *cpu, instruction_t &i);
-void LD_A_C(CPU *cpu, instruction_t &i);
-void LD_A_D(CPU *cpu, instruction_t &i);
-void LD_A_E(CPU *cpu, instruction_t &i);
-void LD_A_H(CPU *cpu, instruction_t &i);
-void LD_A_L(CPU *cpu, instruction_t &i);
-void LD_A_AHL(CPU *cpu, instruction_t &i);
-void LD_A_A(CPU *cpu, instruction_t &i);
+void LD_AHL_B(Core &c);
+void LD_AHL_C(Core &c);
+void LD_AHL_D(Core &c);
+void LD_AHL_E(Core &c);
+void LD_AHL_H(Core &c);
+void LD_AHL_L(Core &c);
+void HALT(Core &c);
+void LD_AHL_A(Core &c);
+void LD_A_B(Core &c);
+void LD_A_C(Core &c);
+void LD_A_D(Core &c);
+void LD_A_E(Core &c);
+void LD_A_H(Core &c);
+void LD_A_L(Core &c);
+void LD_A_AHL(Core &c);
+void LD_A_A(Core &c);
 
 // 0x80
 
-void ADD_A_B(CPU *cpu, instruction_t &i);
-void ADD_A_C(CPU *cpu, instruction_t &i);
-void ADD_A_D(CPU *cpu, instruction_t &i);
-void ADD_A_E(CPU *cpu, instruction_t &i);
-void ADD_A_H(CPU *cpu, instruction_t &i);
-void ADD_A_L(CPU *cpu, instruction_t &i);
-void ADD_A_AHL(CPU *cpu, instruction_t &i);
-void ADD_A_A(CPU *cpu, instruction_t &i);
-void ADC_A_B(CPU *cpu, instruction_t &i);
-void ADC_A_C(CPU *cpu, instruction_t &i);
-void ADC_A_D(CPU *cpu, instruction_t &i);
-void ADC_A_E(CPU *cpu, instruction_t &i);
-void ADC_A_H(CPU *cpu, instruction_t &i);
-void ADC_A_L(CPU *cpu, instruction_t &i);
-void ADC_A_AHL(CPU *cpu, instruction_t &i);
-void ADC_A_A(CPU *cpu, instruction_t &i);
+void ADD_A_B(Core &c);
+void ADD_A_C(Core &c);
+void ADD_A_D(Core &c);
+void ADD_A_E(Core &c);
+void ADD_A_H(Core &c);
+void ADD_A_L(Core &c);
+void ADD_A_AHL(Core &c);
+void ADD_A_A(Core &c);
+void ADC_A_B(Core &c);
+void ADC_A_C(Core &c);
+void ADC_A_D(Core &c);
+void ADC_A_E(Core &c);
+void ADC_A_H(Core &c);
+void ADC_A_L(Core &c);
+void ADC_A_AHL(Core &c);
+void ADC_A_A(Core &c);
 
 // 0x90
 
-void SUB_A_B(CPU *cpu, instruction_t &i);
-void SUB_A_C(CPU *cpu, instruction_t &i);
-void SUB_A_D(CPU *cpu, instruction_t &i);
-void SUB_A_E(CPU *cpu, instruction_t &i);
-void SUB_A_H(CPU *cpu, instruction_t &i);
-void SUB_A_L(CPU *cpu, instruction_t &i);
-void SUB_A_AHL(CPU *cpu, instruction_t &i);
-void SUB_A_A(CPU *cpu, instruction_t &i);
-void SBC_A_B(CPU *cpu, instruction_t &i);
-void SBC_A_C(CPU *cpu, instruction_t &i);
-void SBC_A_D(CPU *cpu, instruction_t &i);
-void SBC_A_E(CPU *cpu, instruction_t &i);
-void SBC_A_H(CPU *cpu, instruction_t &i);
-void SBC_A_L(CPU *cpu, instruction_t &i);
-void SBC_A_AHL(CPU *cpu, instruction_t &i);
-void SBC_A_A(CPU *cpu, instruction_t &i);
+void SUB_A_B(Core &c);
+void SUB_A_C(Core &c);
+void SUB_A_D(Core &c);
+void SUB_A_E(Core &c);
+void SUB_A_H(Core &c);
+void SUB_A_L(Core &c);
+void SUB_A_AHL(Core &c);
+void SUB_A_A(Core &c);
+void SBC_A_B(Core &c);
+void SBC_A_C(Core &c);
+void SBC_A_D(Core &c);
+void SBC_A_E(Core &c);
+void SBC_A_H(Core &c);
+void SBC_A_L(Core &c);
+void SBC_A_AHL(Core &c);
+void SBC_A_A(Core &c);
 
 // 0xA0
 
-void AND_A_B(CPU *cpu, instruction_t &i);
-void AND_A_C(CPU *cpu, instruction_t &i);
-void AND_A_D(CPU *cpu, instruction_t &i);
-void AND_A_E(CPU *cpu, instruction_t &i);
-void AND_A_H(CPU *cpu, instruction_t &i);
-void AND_A_L(CPU *cpu, instruction_t &i);
-void AND_A_AHL(CPU *cpu, instruction_t &i);
-void AND_A_A(CPU *cpu, instruction_t &i);
-void XOR_A_B(CPU *cpu, instruction_t &i);
-void XOR_A_C(CPU *cpu, instruction_t &i);
-void XOR_A_D(CPU *cpu, instruction_t &i);
-void XOR_A_E(CPU *cpu, instruction_t &i);
-void XOR_A_H(CPU *cpu, instruction_t &i);
-void XOR_A_L(CPU *cpu, instruction_t &i);
-void XOR_A_AHL(CPU *cpu, instruction_t &i);
-void XOR_A_A(CPU *cpu, instruction_t &i);
+void AND_A_B(Core &c);
+void AND_A_C(Core &c);
+void AND_A_D(Core &c);
+void AND_A_E(Core &c);
+void AND_A_H(Core &c);
+void AND_A_L(Core &c);
+void AND_A_AHL(Core &c);
+void AND_A_A(Core &c);
+void XOR_A_B(Core &c);
+void XOR_A_C(Core &c);
+void XOR_A_D(Core &c);
+void XOR_A_E(Core &c);
+void XOR_A_H(Core &c);
+void XOR_A_L(Core &c);
+void XOR_A_AHL(Core &c);
+void XOR_A_A(Core &c);
 
 // 0xB0
 
-void OR_A_B(CPU *cpu, instruction_t &i);
-void OR_A_C(CPU *cpu, instruction_t &i);
-void OR_A_D(CPU *cpu, instruction_t &i);
-void OR_A_E(CPU *cpu, instruction_t &i);
-void OR_A_H(CPU *cpu, instruction_t &i);
-void OR_A_L(CPU *cpu, instruction_t &i);
-void OR_A_AHL(CPU *cpu, instruction_t &i);
-void OR_A_A(CPU *cpu, instruction_t &i);
-void CP_A_B(CPU *cpu, instruction_t &i);
-void CP_A_C(CPU *cpu, instruction_t &i);
-void CP_A_D(CPU *cpu, instruction_t &i);
-void CP_A_E(CPU *cpu, instruction_t &i);
-void CP_A_H(CPU *cpu, instruction_t &i);
-void CP_A_L(CPU *cpu, instruction_t &i);
-void CP_A_AHL(CPU *cpu, instruction_t &i);
-void CP_A_A(CPU *cpu, instruction_t &i);
+void OR_A_B(Core &c);
+void OR_A_C(Core &c);
+void OR_A_D(Core &c);
+void OR_A_E(Core &c);
+void OR_A_H(Core &c);
+void OR_A_L(Core &c);
+void OR_A_AHL(Core &c);
+void OR_A_A(Core &c);
+void CP_A_B(Core &c);
+void CP_A_C(Core &c);
+void CP_A_D(Core &c);
+void CP_A_E(Core &c);
+void CP_A_H(Core &c);
+void CP_A_L(Core &c);
+void CP_A_AHL(Core &c);
+void CP_A_A(Core &c);
 
 // 0xC0
 
-void RET_NZ(CPU *cpu, instruction_t &i);
-void POP_BC(CPU *cpu, instruction_t &i);
-void JP_NZ_IMM16(CPU *cpu, instruction_t &i);
-void JP_IMM16(CPU *cpu, instruction_t &i);
-void CALL_NZ_IMM16(CPU *cpu, instruction_t &i);
-void PUSH_BC(CPU *cpu, instruction_t &i);
-void ADD_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_00(CPU *cpu, instruction_t &i);
-void RET_Z(CPU *cpu, instruction_t &i);
-void RET(CPU *cpu, instruction_t &i);
-void JP_Z_IMM16(CPU *cpu, instruction_t &i);
-void CB(CPU *cpu, instruction_t &i);
-void CALL_Z_IMM16(CPU *cpu, instruction_t &i);
-void CALL_IMM16(CPU *cpu, instruction_t &i);
-void ADC_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_08(CPU *cpu, instruction_t &i);
+void RET_NZ(Core &c);
+void POP_BC(Core &c);
+void JP_NZ_IMM16(Core &c);
+void JP_IMM16(Core &c);
+void CALL_NZ_IMM16(Core &c);
+void PUSH_BC(Core &c);
+void ADD_A_IMM8(Core &c);
+void RST_00(Core &c);
+void RET_Z(Core &c);
+void RET(Core &c);
+void JP_Z_IMM16(Core &c);
+void CB(Core &c);
+void CALL_Z_IMM16(Core &c);
+void CALL_IMM16(Core &c);
+void ADC_A_IMM8(Core &c);
+void RST_08(Core &c);
 
 // 0xD0
 
-void RET_NC(CPU *cpu, instruction_t &i);
-void POP_DE(CPU *cpu, instruction_t &i);
-void JP_NC_IMM16(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void CALL_NC_IMM16(CPU *cpu, instruction_t &i);
-void PUSH_DE(CPU *cpu, instruction_t &i);
-void SUB_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_10(CPU *cpu, instruction_t &i);
-void RET_C(CPU *cpu, instruction_t &i);
-void RETI(CPU *cpu, instruction_t &i);
-void JP_C_IMM16(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void CALL_C_IMM16(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void SBC_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_18(CPU *cpu, instruction_t &i);
+void RET_NC(Core &c);
+void POP_DE(Core &c);
+void JP_NC_IMM16(Core &c);
+// void INVALID(Core &c);
+void CALL_NC_IMM16(Core &c);
+void PUSH_DE(Core &c);
+void SUB_A_IMM8(Core &c);
+void RST_10(Core &c);
+void RET_C(Core &c);
+void RETI(Core &c);
+void JP_C_IMM16(Core &c);
+// void INVALID(Core &c);
+void CALL_C_IMM16(Core &c);
+// void INVALID(Core &c);
+void SBC_A_IMM8(Core &c);
+void RST_18(Core &c);
 
 // 0xE0
 
-void LDH_IMM8_A(CPU *cpu, instruction_t &i);
-void POP_HL(CPU *cpu, instruction_t &i);
-void LDH_C_A(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void PUSH_HL(CPU *cpu, instruction_t &i);
-void AND_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_20(CPU *cpu, instruction_t &i);
-void ADD_SP_IMM8(CPU *cpu, instruction_t &i);
-void JP_HL(CPU *cpu, instruction_t &i);
-void LD_AIMM16_A(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void XOR_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_28(CPU *cpu, instruction_t &i);
+void LDH_IMM8_A(Core &c);
+void POP_HL(Core &c);
+void LDH_C_A(Core &c);
+// void INVALID(Core &c);
+// void INVALID(Core &c);
+void PUSH_HL(Core &c);
+void AND_A_IMM8(Core &c);
+void RST_20(Core &c);
+void ADD_SP_IMM8(Core &c);
+void JP_HL(Core &c);
+void LD_AIMM16_A(Core &c);
+// void INVALID(Core &c);
+// void INVALID(Core &c);
+// void INVALID(Core &c);
+void XOR_A_IMM8(Core &c);
+void RST_28(Core &c);
 
 // 0xF0
 
-void LDH_A_IMM8(CPU *cpu, instruction_t &i);
-void POP_AF(CPU *cpu, instruction_t &i);
-void LDH_A_C(CPU *cpu, instruction_t &i);
-void DI(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void PUSH_AF(CPU *cpu, instruction_t &i);
-void OR_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_30(CPU *cpu, instruction_t &i);
-void LD_HL_SPIMM8(CPU *cpu, instruction_t &i);
-void LD_SP_HL(CPU *cpu, instruction_t &i);
-void LD_A_AIMM16(CPU *cpu, instruction_t &i);
-void EI(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-// void INVALID(CPU *cpu, instruction_t &i);
-void CP_A_IMM8(CPU *cpu, instruction_t &i);
-void RST_38(CPU *cpu, instruction_t &i);
+void LDH_A_IMM8(Core &c);
+void POP_AF(Core &c);
+void LDH_A_C(Core &c);
+void DI(Core &c);
+// void INVALID(Core &c);
+void PUSH_AF(Core &c);
+void OR_A_IMM8(Core &c);
+void RST_30(Core &c);
+void LD_HL_SPIMM8(Core &c);
+void LD_SP_HL(Core &c);
+void LD_A_AIMM16(Core &c);
+void EI(Core &c);
+// void INVALID(Core &c);
+// void INVALID(Core &c);
+void CP_A_IMM8(Core &c);
+void RST_38(Core &c);
 
 // 0xCB // Extended
 
 // 0x00
 
-void RLC_B(CPU *cpu, instruction_t &i);
-void RLC_C(CPU *cpu, instruction_t &i);
-void RLC_D(CPU *cpu, instruction_t &i);
-void RLC_E(CPU *cpu, instruction_t &i);
-void RLC_H(CPU *cpu, instruction_t &i);
-void RLC_L(CPU *cpu, instruction_t &i);
-void RLC_AHL(CPU *cpu, instruction_t &i);
-void RLC_A(CPU *cpu, instruction_t &i);
-void RRC_B(CPU *cpu, instruction_t &i);
-void RRC_C(CPU *cpu, instruction_t &i);
-void RRC_D(CPU *cpu, instruction_t &i);
-void RRC_E(CPU *cpu, instruction_t &i);
-void RRC_H(CPU *cpu, instruction_t &i);
-void RRC_L(CPU *cpu, instruction_t &i);
-void RRC_AHL(CPU *cpu, instruction_t &i);
-void RRC_A(CPU *cpu, instruction_t &i);
+void RLC_B(Core &c);
+void RLC_C(Core &c);
+void RLC_D(Core &c);
+void RLC_E(Core &c);
+void RLC_H(Core &c);
+void RLC_L(Core &c);
+void RLC_AHL(Core &c);
+void RLC_A(Core &c);
+void RRC_B(Core &c);
+void RRC_C(Core &c);
+void RRC_D(Core &c);
+void RRC_E(Core &c);
+void RRC_H(Core &c);
+void RRC_L(Core &c);
+void RRC_AHL(Core &c);
+void RRC_A(Core &c);
 
 // 0x10
 
-void RL_B(CPU *cpu, instruction_t &i);
-void RL_C(CPU *cpu, instruction_t &i);
-void RL_D(CPU *cpu, instruction_t &i);
-void RL_E(CPU *cpu, instruction_t &i);
-void RL_H(CPU *cpu, instruction_t &i);
-void RL_L(CPU *cpu, instruction_t &i);
-void RL_AHL(CPU *cpu, instruction_t &i);
-void RL_A(CPU *cpu, instruction_t &i);
-void RR_B(CPU *cpu, instruction_t &i);
-void RR_C(CPU *cpu, instruction_t &i);
-void RR_D(CPU *cpu, instruction_t &i);
-void RR_E(CPU *cpu, instruction_t &i);
-void RR_H(CPU *cpu, instruction_t &i);
-void RR_L(CPU *cpu, instruction_t &i);
-void RR_AHL(CPU *cpu, instruction_t &i);
-void RR_A(CPU *cpu, instruction_t &i);
+void RL_B(Core &c);
+void RL_C(Core &c);
+void RL_D(Core &c);
+void RL_E(Core &c);
+void RL_H(Core &c);
+void RL_L(Core &c);
+void RL_AHL(Core &c);
+void RL_A(Core &c);
+void RR_B(Core &c);
+void RR_C(Core &c);
+void RR_D(Core &c);
+void RR_E(Core &c);
+void RR_H(Core &c);
+void RR_L(Core &c);
+void RR_AHL(Core &c);
+void RR_A(Core &c);
 
 // 0x20
 
-void SLA_B(CPU *cpu, instruction_t &i);
-void SLA_C(CPU *cpu, instruction_t &i);
-void SLA_D(CPU *cpu, instruction_t &i);
-void SLA_E(CPU *cpu, instruction_t &i);
-void SLA_H(CPU *cpu, instruction_t &i);
-void SLA_L(CPU *cpu, instruction_t &i);
-void SLA_AHL(CPU *cpu, instruction_t &i);
-void SLA_A(CPU *cpu, instruction_t &i);
-void SRA_B(CPU *cpu, instruction_t &i);
-void SRA_C(CPU *cpu, instruction_t &i);
-void SRA_D(CPU *cpu, instruction_t &i);
-void SRA_E(CPU *cpu, instruction_t &i);
-void SRA_H(CPU *cpu, instruction_t &i);
-void SRA_L(CPU *cpu, instruction_t &i);
-void SRA_AHL(CPU *cpu, instruction_t &i);
-void SRA_A(CPU *cpu, instruction_t &i);
+void SLA_B(Core &c);
+void SLA_C(Core &c);
+void SLA_D(Core &c);
+void SLA_E(Core &c);
+void SLA_H(Core &c);
+void SLA_L(Core &c);
+void SLA_AHL(Core &c);
+void SLA_A(Core &c);
+void SRA_B(Core &c);
+void SRA_C(Core &c);
+void SRA_D(Core &c);
+void SRA_E(Core &c);
+void SRA_H(Core &c);
+void SRA_L(Core &c);
+void SRA_AHL(Core &c);
+void SRA_A(Core &c);
 
 // 0x30
 
-void SWAP_B(CPU *cpu, instruction_t &i);
-void SWAP_C(CPU *cpu, instruction_t &i);
-void SWAP_D(CPU *cpu, instruction_t &i);
-void SWAP_E(CPU *cpu, instruction_t &i);
-void SWAP_H(CPU *cpu, instruction_t &i);
-void SWAP_L(CPU *cpu, instruction_t &i);
-void SWAP_AHL(CPU *cpu, instruction_t &i);
-void SWAP_A(CPU *cpu, instruction_t &i);
-void SRL_B(CPU *cpu, instruction_t &i);
-void SRL_C(CPU *cpu, instruction_t &i);
-void SRL_D(CPU *cpu, instruction_t &i);
-void SRL_E(CPU *cpu, instruction_t &i);
-void SRL_H(CPU *cpu, instruction_t &i);
-void SRL_L(CPU *cpu, instruction_t &i);
-void SRL_AHL(CPU *cpu, instruction_t &i);
-void SRL_A(CPU *cpu, instruction_t &i);
+void SWAP_B(Core &c);
+void SWAP_C(Core &c);
+void SWAP_D(Core &c);
+void SWAP_E(Core &c);
+void SWAP_H(Core &c);
+void SWAP_L(Core &c);
+void SWAP_AHL(Core &c);
+void SWAP_A(Core &c);
+void SRL_B(Core &c);
+void SRL_C(Core &c);
+void SRL_D(Core &c);
+void SRL_E(Core &c);
+void SRL_H(Core &c);
+void SRL_L(Core &c);
+void SRL_AHL(Core &c);
+void SRL_A(Core &c);
 
 // 0x70
 
-void BIT_7H(CPU *cpu, instruction_t &i);
+void BIT_7H(Core &c);
 
 #endif // CPU_INSTRUCTIONS_H

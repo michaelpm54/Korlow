@@ -51,25 +51,27 @@ void RRC(uint8_t val, uint8_t *result, uint8_t *flags)
 	}
 }
 
-void ADD8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags)
+uint8_t ADD8(uint8_t a, uint8_t b, uint8_t &f)
 {
 	// Z0HC
+	f = 0;
 
-	*flags = 0;
-	*result = a + b;
+	uint8_t result = a + b;
 
-	if ((a ^ b ^ *result) & FLAGS_CARRY)
+	if ((a ^ b ^ result) & FLAGS_CARRY)
 	{
-		*flags |= FLAGS_HALFCARRY;
+		f |= FLAGS_HALFCARRY;
 	}
 	if (uint16_t(a) + uint16_t(b) > 0xFF)
 	{
-		*flags |= FLAGS_CARRY;
+		f |= FLAGS_CARRY;
 	}
-	if (*result == 0)
+	if (result == 0)
 	{
-		*flags |= FLAGS_ZERO;
+		f |= FLAGS_ZERO;
 	}
+
+	return result;
 }
 
 void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags)
@@ -90,122 +92,60 @@ void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags)
 	}
 }
 
-void SUB8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags)
+uint8_t SUB8(uint8_t a, uint8_t b, uint8_t &f)
 {
 	// Z1HC
-	*flags = FLAGS_SUBTRACT;
-	*result = a - b;
-	if (!*result)
+	f = FLAGS_SUBTRACT;
+	uint8_t result = a - b;
+	if (!result)
 	{
-		*flags |= FLAGS_ZERO;
+		f |= FLAGS_ZERO;
 	}
 	if (b > a)
 	{
-		*flags |= FLAGS_CARRY;
+		f |= FLAGS_CARRY;
 	}
 	if ((int(a) & 0xF) - (int(b) & 0xF) < 0)
 	{
-		*flags |= FLAGS_HALFCARRY;
+		f |= FLAGS_HALFCARRY;
 	}
+	return result;
 }
 
-void INC8(uint8_t val, uint8_t *result, uint8_t *flags)
+void INC8(uint8_t &r, uint8_t &f)
 {
-	uint8_t carry = *flags & 0x10;
-	ADD8(val, 1, result, flags);
-	*flags = (*flags & 0b1110'0000) | carry;
+	uint8_t carry = f & FLAGS_CARRY;
+	r = ADD8(r, 1, f);
+	f = (f & 0b1110'0000) | carry;
 }
 
-void DEC8(uint8_t val, uint8_t *result, uint8_t *flags)
+void DEC8(uint8_t &r, uint8_t &f)
 {
-	uint8_t carry = *flags & 0x10;
-	SUB8(val, 1, result, flags);
-	*flags = (*flags & 0b1110'0000) | carry;
+	uint8_t carry = f & FLAGS_CARRY;
+	r = SUB8(r, 1, f);
+	f = (f & 0b1110'0000) | carry;
 }
 
-uint8_t Hi(uint16_t n)
+void CP(uint8_t a, uint8_t r, uint8_t &f)
 {
-	return (n & 0xFF00) >> 8;
-}
-
-uint8_t Lo(uint16_t n)
-{
-	return (n & 0xFF);
-}
-
-void SetHi(uint16_t &r, uint8_t n)
-{
-	r = (uint16_t(n) << 8) + Lo(r);
-}
-
-void SetLo(uint16_t &r, uint8_t n)
-{
-	r = (r & 0xFF00) + n;
-}
-
-void INC8_HI(CPU *cpu, uint16_t &r)
-{
-	// Z0H-
-	uint8_t flags = Lo(cpu->af);
-	uint8_t result = 0;
-	INC8(Hi(r), &result, &flags);
-	SetHi(r, result);
-	SetLo(cpu->af, flags);
-}
-
-void INC8_LO(CPU *cpu, uint16_t &r)
-{
-	// Z0H-
-	uint8_t flags = Lo(cpu->af);
-	uint8_t result = 0;
-	INC8(Lo(r), &result, &flags);
-	SetLo(r, result);
-	SetLo(cpu->af, flags);
-}
-
-void DEC8_HI(CPU *cpu, uint16_t &r)
-{
-	// Z1H-
-	uint8_t flags = Lo(cpu->af);
-	uint8_t result = 0;
-	DEC8(Hi(r), &result, &flags);
-	SetHi(r, result);
-	SetLo(cpu->af, flags);
-}
-
-void DEC8_LO(CPU *cpu, uint16_t &r)
-{
-	// Z1H-
-	uint8_t flags = Lo(cpu->af);
-	uint8_t result = 0;
-	DEC8(Lo(r), &result, &flags);
-	SetLo(r, result);
-	SetLo(cpu->af, flags);
-}
-
-void CP(CPU *cpu, uint8_t r)
-{
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	SUB8(Hi(cpu->af), r, &result, &flags);
-	SetLo(cpu->af, flags);
+	(void)SUB8(a, r, f);
 }
 
 void SUB(CPU *cpu, uint8_t r)
 {
-	uint8_t flags = 0;
-	uint8_t result = 0;
-	SUB8(Hi(cpu->af), r, &result, &flags);
-	SetLo(cpu->af, flags);
-	SetHi(cpu->af, result);
+	//uint8_t flags = 0;
+	//uint8_t result = 0;
+	//SUB8(Hi(cpu->af), r, &result, &flags);
+	//SetLo(cpu->af, flags);
+	//SetHi(cpu->af, result);
 }
 
-void TestBit(CPU *cpu, uint8_t bit)
+void TestBit(uint8_t bit, uint8_t &f)
 {
 	uint8_t flags = FLAGS_HALFCARRY;
 	if (!bit)
 	{
 		flags |= FLAGS_ZERO;
 	}
-	SetLo(cpu->af, (Lo(cpu->af) & FLAGS_CARRY) | flags);
+	f = (f & FLAGS_CARRY) | flags;
 }

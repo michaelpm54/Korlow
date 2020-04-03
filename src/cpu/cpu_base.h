@@ -31,30 +31,22 @@ void RR(uint8_t val, uint8_t *result, uint8_t *flags);
 void RRC(uint8_t val, uint8_t *result, uint8_t *flags);
 
 // Z0HC
-void ADD8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags);
+uint8_t ADD8(uint8_t a, uint8_t b, uint8_t &flags);
 void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags);
 
 // Z1HC
-void SUB8(uint8_t a, uint8_t b, uint8_t *result, uint8_t *flags);
+uint8_t SUB8(uint8_t a, uint8_t b, uint8_t &flags);
 
 // Z0H-
-void INC8(uint8_t val, uint8_t *result, uint8_t *flags);
+void INC8(uint8_t &r, uint8_t &f);
 
 // Z1H-
-void DEC8(uint8_t val, uint8_t *result, uint8_t *flags);
+void DEC8(uint8_t &r, uint8_t &f);
 
 // Generalisations
 class CPU;
-uint8_t Hi(uint16_t n);
-uint8_t Lo(uint16_t n);
-void SetHi(uint16_t &r, uint8_t n);
-void SetLo(uint16_t &r, uint8_t n);
-void INC8_HI(CPU *cpu, uint16_t &reg);
-void INC8_LO(CPU *cpu, uint16_t &reg);
-void DEC8_HI(CPU *cpu, uint16_t &reg);
-void DEC8_LO(CPU *cpu, uint16_t &reg);
-void CP(CPU *cpu, uint8_t r);
+void CP(uint8_t a, uint8_t r, uint8_t &f);
 void SUB(CPU *cpu, uint8_t r);
-void TestBit(CPU *cpu, uint8_t bit);
+void TestBit(uint8_t bit, uint8_t &f);
 
 #endif // CPU_BASE_H

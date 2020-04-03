@@ -10,8 +10,9 @@
 
 class GPU;
 
-struct MMU
+class MMU
 {
+public:
 	MMU();
 
 	void reset();

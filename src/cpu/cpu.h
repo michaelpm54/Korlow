@@ -8,21 +8,16 @@ constexpr int kCpuFreq = 4194304;
 constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
 
 class GPU;
-struct MMU;
-
-struct registers_t
-{
-	uint16_t pc;
-	uint16_t sp;
-	uint16_t af;
-	uint16_t bc;
-	uint16_t de;
-	uint16_t hl;
-};
+class MMU;
 
 class CPU
 {
 public:
+	CPU(MMU *mmu);
+
+	bool paused() const;
+	void tick(int &cycles);
+
 	instruction_t fetch();
 	void executeRegular(instruction_t &i, int &cycles);
 	void executeCB(instruction_t &i, int &cycles);
@@ -56,13 +51,14 @@ private:
 	int interrupts(uint8_t mask);
 
 private:
-	registers_t mRegisters;
+	Registers mRegisters;
 	bool mBreak { false };
 	int mInstructionCounter { 0 };
 	int mDelayedImeEnable { 0 };
 	bool mHalt { false };
 	int mRepeatNextInstruction { 0 };
 	bool mInBios { false };
+	Core c;
 };
 
 #endif // CPU_H
