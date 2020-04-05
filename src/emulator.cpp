@@ -14,14 +14,16 @@
 
 #include "emulator.h"
 #include "fs.h"
-#include "gpu.h"
+#include "ppu.h"
 #include "message_manager.h"
 #include "mmu.h"
 #include "rom_util.h"
 
 #include "cpu/cpu.h"
-#include "cpu/decode.h"
+#include "cpu/cpu_instructions.h"
+
 #include "gui/opengl_widget.h"
+
 #include "render/font/ft_font.h"
 #include "render/gameboy_renderer.h"
 #include "render/message_renderer.h"
@@ -130,7 +132,7 @@ void Emulator::initGL()
 
 void Emulator::printTotalInstructions()
 {
-	std::string numWithCommas = std::to_string(mCpu->numInstructionsExecuted());
+	std::string numWithCommas = std::to_string(0); // FIXME
 	int insertPosition { static_cast<int>(numWithCommas.length() - 3) };
 	while (insertPosition > 0) {
 		numWithCommas.insert(insertPosition, ",");
@@ -144,7 +146,7 @@ void Emulator::openFile(const std::string& path)
 	if (path.empty()) { return; }
 
 	try {
-		setRom(FS::readBytes(path));
+		gameboy->set_rom(FS::readBytes(path));
 		mHaveRom = true;
 		mGameboyRenderer->setEnabled(true);
 	}
@@ -155,77 +157,43 @@ void Emulator::openFile(const std::string& path)
 
 void Emulator::initHardware()
 {
-	mMmu = std::make_unique<MMU>();
-	mCpu = std::make_unique<CPU>(mMmu.get());
-
-	GpuRegisters gpuRegisters =
 	{
-		.if_ = mMmu->mem[kIf],
-		.lcdc = mMmu->mem[kLcdc],
-		.stat = mMmu->mem[kStat],
-		.scy = mMmu->mem[kScy],
-		.scx = mMmu->mem[kScx],
-		.ly = mMmu->mem[kLy],
-		.lyc = mMmu->mem[kLyc],
-		.dmaStartAddr = mMmu->mem[kDmaStartAddr],
-		.bgPalette = mMmu->mem[kBgPalette],
-		.obj0Palette = mMmu->mem[kObj0Palette],
-		.obj1Palette = mMmu->mem[kObj1Palette],
-		.windowY = mMmu->mem[kWy],
-		.windowX = mMmu->mem[kWx]
-	};
+		gameboy = std::make_unique<Gameboy>();
 
-	GpuMem gpuMem =
-	{
-		.oam = &mMmu->mem[kOam],
-		.map0 = &mMmu->mem[kMap0],
-		.map1 = &mMmu->mem[kMap1],
-		.tilesSigned = &mMmu->mem[kTileRamSigned],
-		.tilesUnsigned = &mMmu->mem[kTileRamUnsigned],
-	};
+		uint8_t *mem { gameboy->get_memory() };
 
-	mGpu = std::make_unique<GPU>(gpuRegisters, gpuMem, mOpenGLWidget.get());
+		cpu = std::make_unique<Cpu>(
+			CpuRegisters {
+				.io  = mem[kIo],
+				.if_ = mem[kIf],
+				.ie  = mem[kIe],
+			}
+		);
+		ppu = std::make_unique<Ppu>(
+			PpuRegisters {
+				.if_  = mem[kIf],
+				.lcdc = mem[kLcdc],
+				.stat = mem[kStat],
+				.scx  = mem[kScx],
+				.scy  = mem[kScy],
+				.ly   = mem[kLy],
+				.lyc  = mem[kLyc],
+				.wy   = mem[kWy],
+				.wx   = mem[kWx],
+			}
+		);
+		ppuMapProxy = std::make_unique<PpuMapProxy>(*ppu);
+		mmu = std::make_unique<Mmu>(*cpu, *ppuMapProxy, gameboy->get_memory());
 
-	mMmu->init(mGpu.get());
-	mCpu->mmu = mMmu.get();
-	mCpu->gpu = mGpu.get();
-}
-
-void Emulator::setBios(const std::string& path)
-{
-	mMmu->setBios(FS::readBytes(path));
-	mHaveBios = true;
-}
-
-void Emulator::setRom(const std::vector<uint8_t> &bytes)
-{
-	mGpu->reset();
-
-	/*
-		Special case in case I want to run the boot ROM. :)
-		This places some bytes that would usually be there when the user
-		has a ROM inserted. The boot ROM expects these bytes.
-	*/
-	if (bytes.size() == 0x100)
-	{
-		auto gr { ghostRom() };
-		std::memcpy(&mMmu->mem[0x100], gr.data(), gr.size());
+		gameboy->set_components(*cpu, *ppu, *mmu);
+		gameboy->reset();
+		return;
 	}
-	else
-	{
-		mCpu->reset(mHaveBios);
-		printRomInfo(bytes);
-	}
-
-	mMmu->setRom(bytes);
 }
 
 void Emulator::run()
 {
-	int dividerCounter = 0;
-	int timerCounter = 0;
-
-	while (shouldRun())
+	if (gameboy->is_running())
 	{
 		mMessageManager->update();
 
@@ -234,109 +202,27 @@ void Emulator::run()
 			mOpenGLWidget->update();
 			QApplication::processEvents();
 			QApplication::instance()->thread()->msleep(16);
-			continue;
+			return;
 		}
 
 		if (mHaveRom)
 		{
-			int cycles = 0;
-			while (cycles < kMaxCyclesPerFrame && !mCpu->paused())
-			{
-				mCpu->tick(cycles);
-				mGpu->tick(cycles);
+			gameboy->tick();
 
-				dividerCounter += cycles;
-				if (dividerCounter >= 256)
-				{
-					dividerCounter = 0;
-					mMmu->mem[0xFF04]++;
-				}
-
-				if (mMmu->mem[0xFF07] & 0b0000'0100)
-				{
-					timerCounter += cycles;
-					switch (mMmu->mem[0xFF07] & 0b0000'0011)
-					{
-					case 0:
-						if (timerCounter >= 1024)
-						{
-							timerCounter = 0;
-							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
-							mMmu->write8(kIf, 0b0000'0100);
-						}
-						break;
-					case 1:
-						if (timerCounter >= 16)
-						{
-							timerCounter = 0;
-							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
-							//mMmu->write8(kIf, 0b0000'0100);
-						}
-						break;
-					case 2:
-						if (timerCounter >= 64)
-						{
-							timerCounter = 0;
-							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
-							mMmu->write8(kIf, 0b0000'0100);
-						}
-						break;
-					case 3:
-						if (timerCounter >= 256)
-						{
-							timerCounter = 0;
-							mMmu->mem[0xFF05] = mMmu->mem[0xFF06];
-							mMmu->write8(kIf, 0b0000'0100);
-						}
-						break;
-					default:
-						break;
-					}
-				}
-			}
-
-			mGpu->updateMap();
-
-			mGameboyRenderer->updatePixels(mGpu->getPixels());
-			mGameboyRenderer->updateMap(mGpu->getMap());
+			mGameboyRenderer->updatePixels(ppu->get_pixels());
+			mGameboyRenderer->updateMap(ppuMapProxy->get_pixels());
 		}
 
 		mOpenGLWidget->update();
-
 		QApplication::processEvents();
-
 		QApplication::instance()->thread()->msleep(16);
 	}
-
-	printTotalInstructions();
 }
 
 bool Emulator::shouldRun() const
 {
 	return mContinue && isVisible();
 }
-
-/*
-void Emulator::sendKey(int key, int scancode, int action, int mods)
-{
-	if (action == GLFW_PRESS)
-	{
-		if (key == GLFW_KEY_D)
-		{
-			dumpRam();
-		}
-		else if (key == GLFW_KEY_M)
-		{
-			mGpu->updateMap();
-		}
-		else if (key == GLFW_KEY_SPACE)
-		{
-			mPaused = !mPaused;
-			mMessages.push_back({mPaused ? "Paused" : "Unpaused", 8, 52, std::chrono::system_clock::now(), std::chrono::milliseconds(2000)});
-		}
-	}
-}
-*/
 
 void Emulator::dumpRam()
 {
@@ -355,7 +241,7 @@ void Emulator::dumpRam()
 		std::cerr << "Failed to open ramdump.bin" << std::endl;
 		return;
 	}
-	fwrite(mMmu->mem.data(), 0x10000, 1, f);
+	fwrite(gameboy->get_memory(), 0x10000, 1, f);
 	fclose(f);
 	std::cout << "Dumped RAM" << std::endl;
 
@@ -370,6 +256,15 @@ void Emulator::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_Space:
 			mPaused = !mPaused;
 			mMessageManager->addMessage(mPaused ? "Paused" : "Unpaused", 8, 40, 2000);
+			break;
+		case Qt::Key_D:
+			if (event->modifiers() & Qt::ShiftModifier)
+			{
+				cpu->debug = !cpu->debug;
+				mMessageManager->addMessage(cpu->debug ? "Debug enabled" : "Debug disabled", 8, 40, 2000);
+			}
+			else
+				dumpRam();
 			break;
 		default:
 			break;

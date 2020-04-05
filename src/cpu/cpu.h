@@ -4,61 +4,71 @@
 #include <cstdint>
 #include "types.h"
 
+#include "component.h"
+
 constexpr int kCpuFreq = 4194304;
 constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
 
-class GPU;
-class MMU;
-
-class CPU
+enum class HaltBug
 {
-public:
-	CPU(MMU *mmu);
+	None,
+	Triggered,
+	RepeatNext,
+};
 
-	bool paused() const;
-	void tick(int &cycles);
+enum class EIBug
+{
+	None,
+	Triggered,
+	Enable,
+};
 
-	instruction_t fetch();
-	void executeRegular(instruction_t &i, int &cycles);
-	void executeCB(instruction_t &i, int &cycles);
-	int executeInstruction();
-	void doBreak();
-	bool didBreak() const;
-	void printRegisters(uint8_t opcode, bool newline, bool saved);
-	void printInstruction(const instruction_t &i, bool cb);
+struct CpuRegisters
+{
+	uint8_t &io;
+	uint8_t &if_;
+	uint8_t &ie;
+};
 
-	int numInstructionsExecuted() const;
-	void enableInterrupts();
+struct Cpu : Component
+{
+	Cpu(CpuRegisters);
 
+	void reset() override;
+	void write8(uint16_t address, uint8_t value) {}
+	int tick(Component &mmu); // Returns # of cycles taken
+	int interrupts(uint8_t mask, Component &mmu);
+	void enable_interrupts();
+	void disable_interrupts();
 	void halt();
+	void set_enabled(bool value);
+	bool is_enabled() const;
+	void print_instruction(uint16_t op, uint8_t d8, uint16_t d16);
+	int interrupt_handler(Component& mmu);
+	void halt_bug();
+	void ei_bug();
 
-	void reset(bool haveBios);
+	HaltBug halt_bug_state { HaltBug::None };
+	EIBug ei_bug_state { EIBug::None };
 
-public:
-	GPU *gpu { nullptr };
-	MMU *mmu { nullptr };
+	bool debug { true };
 
-	uint16_t pc { 0 };
-	uint16_t sp { 0 };
-	uint16_t af { 0 };
-	uint16_t bc { 0 };
-	uint16_t de { 0 };
-	uint16_t hl { 0 };
+	CpuRegisters registers;
 
-	bool ime { false };
+	uint16_t pc;
+	uint16_t sp;
+
+	union { uint16_t af; struct { uint8_t f; uint8_t a; }; };
+	union { uint16_t bc; struct { uint8_t c; uint8_t b; }; };
+	union { uint16_t de; struct { uint8_t e; uint8_t d; }; };
+	union { uint16_t hl; struct { uint8_t l; uint8_t h; }; };
 
 private:
-	int interrupts(uint8_t mask);
+	bool halted { false };
+	bool enabled { true };
 
-private:
-	Registers mRegisters;
-	bool mBreak { false };
-	int mInstructionCounter { 0 };
-	int mDelayedImeEnable { 0 };
-	bool mHalt { false };
-	int mRepeatNextInstruction { 0 };
-	bool mInBios { false };
-	Core c;
+	bool ime;
+
 };
 
 #endif // CPU_H

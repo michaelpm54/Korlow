@@ -5,16 +5,16 @@
 
 // Generic
 
-void INVALID(Core &c)
+void INVALID(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.paused = true;
+	cpu.set_enabled(false);
 }
 
-void RST(Core &c, uint16_t addr)
+void RST(Cpu &cpu, Component &mmu, uint16_t addr)
 {
-	c.r.sp -= 2;
-	c.mmu.write16(c.r.sp, c.r.pc);
-	c.r.pc = addr;
+	cpu.sp -= 2;
+	mmu.write16(cpu.sp, cpu.pc);
+	cpu.pc = addr;
 }
 
 void SWAP(uint8_t &n, uint8_t &f)
@@ -149,236 +149,233 @@ void SetFlags(uint8_t &f, uint8_t flags, uint8_t mask)
 
 // 0x00
 
-void NOP(Core &c)
+void NOP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 }
 
-void LD_BC_IMM16(Core &c)
+void LD_BC_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.bc = c.d16;
+	cpu.bc = d16;
 }
 
-void LD_ABC_A(Core &c)
+void LD_ABC_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.bc, c.r.a);
+	mmu.write8(cpu.bc, cpu.a);
 }
 
-void INC_BC(Core &c)
+void INC_BC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.bc++;
+	cpu.bc++;
 }
 
-void INC_B(Core &c)
+void INC_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.b, c.r.f);
+	INC8(cpu.b, cpu.f);
 }
 
-void DEC_B(Core &c)
+void DEC_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.b, c.r.f);
+	DEC8(cpu.b, cpu.f);
 }
 
-void LD_B_IMM8(Core &c)
+void LD_B_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.d8;
+	cpu.b = d8;
 }
 
 // x = cpu.a.bit[7]
 // carry = x
 // cpu.a << 1
 // cpu.a |= x
-void RLCA(Core &c)
+void RLCA(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t bit7 = !!(c.r.af & 0b1000'0000'0000'0000);
-	c.r.f = bit7 << 4;
-	c.r.a = (c.r.a << 1) | bit7;
+	uint8_t bit7 = !!(cpu.af & 0b1000'0000'0000'0000);
+	cpu.f = bit7 << 4;
+	cpu.a = (cpu.a << 1) | bit7;
 }
 
-void LD_AIMM16_SP(Core &c)
+void LD_AIMM16_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write16(c.d16, c.r.sp);
+	mmu.write16(d16, cpu.sp);
 }
 
-void ADD_HL_BC(Core &c)
+void ADD_HL_BC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(c.r.hl, c.r.bc, &result, &flags);
-	c.r.hl = result;
+	ADD16(cpu.hl, cpu.bc, &result, &flags);
+	cpu.hl = result;
 	flags &= 0b0111'0000;
-	c.r.f = (c.r.af & FLAGS_ZERO) | flags;
+	cpu.f = (cpu.af & FLAGS_ZERO) | flags;
 }
 
-void LD_A_ABC(Core &c)
+void LD_A_ABC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(c.r.bc);
+	cpu.a = mmu.read8(cpu.bc);
 }
 
-void DEC_BC(Core &c)
+void DEC_BC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.bc--;
+	cpu.bc--;
 }
 
-void INC_C(Core &c)
+void INC_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.c, c.r.f);
+	INC8(cpu.c, cpu.f);
 }
 
-void DEC_C(Core &c)
+void DEC_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.c, c.r.f);
+	DEC8(cpu.c, cpu.f);
 }
 
-void LD_C_IMM8(Core &c)
+void LD_C_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.bc = (c.r.bc & 0xFF00) + c.d8;
+	cpu.bc = (cpu.bc & 0xFF00) + d8;
 }
 
-void RRCA(Core &c)
+void RRCA(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t bit0 = !!(c.r.af & 0b0000'0001'0000'0000);
-	c.r.f = bit0 << 4;
-	c.r.a = ((c.r.a >> 1) & 0b0111'1111) | (bit0 << 7);
+	uint8_t bit0 = !!(cpu.af & 0b0000'0001'0000'0000);
+	cpu.f = bit0 << 4;
+	cpu.a = ((cpu.a >> 1) & 0b0111'1111) | (bit0 << 7);
 }
 
 // 0x10
 
-void STOP(Core &c)
+void STOP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 }
 
-void LD_DE_IMM16(Core &c)
+void LD_DE_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.de = c.d16;
+	cpu.de = d16;
 }
 
-void LD_ADE_A(Core &c)
+void LD_ADE_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.de, c.r.a);
+	mmu.write8(cpu.de, cpu.a);
 }
 
-void INC_DE(Core &c)
+void INC_DE(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.de++;
+	cpu.de++;
 }
 
-void INC_D(Core &c)
+void INC_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.d, c.r.f);
+	INC8(cpu.d, cpu.f);
 }
 
-void DEC_D(Core &c)
+void DEC_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.d, c.r.f);
+	DEC8(cpu.d, cpu.f);
 }
 
-void LD_D_IMM8(Core &c)
+void LD_D_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.d8;
+	cpu.d = d8;
 }
 
-void RLA(Core &c)
+void RLA(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.f;
+	uint8_t flags = cpu.f;
 	uint8_t result = 0;
-	RL(c.r.a, &result, &flags);
-	c.r.a = result;
-	c.r.f = flags & 0b0111'0000;
+	RL(cpu.a, &result, &flags);
+	cpu.a = result;
+	cpu.f = flags & 0b0111'0000;
 }
 
-void JR_IMM8(Core &c)
+void JR_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.pc += int8_t(c.d8);
+	cpu.pc += int8_t(d8);
 }
 
-void ADD_HL_DE(Core &c)
+void ADD_HL_DE(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(c.r.hl, c.r.de, &result, &flags);
-	c.r.hl = result;
-	c.r.f = (flags & 0x70) | (c.r.f & 0x80);
+	ADD16(cpu.hl, cpu.de, &result, &flags);
+	cpu.hl = result;
+	cpu.f = (flags & 0x70) | (cpu.f & 0x80);
 }
 
-void LD_A_ADE(Core &c)
+void LD_A_ADE(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(c.r.de);
+	cpu.a = mmu.read8(cpu.de);
 }
 
-void DEC_DE(Core &c)
+void DEC_DE(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.de--;
+	cpu.de--;
 }
 
-void INC_E(Core &c)
+void INC_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.e, c.r.f);
+	INC8(cpu.e, cpu.f);
 }
 
-void DEC_E(Core &c)
+void DEC_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.e, c.r.f);
+	DEC8(cpu.e, cpu.f);
 }
 
-void LD_E_IMM8(Core &c)
+void LD_E_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.d8;
+	cpu.e = d8;
 }
 
-void RRA(Core &c)
+void RRA(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.f;
+	uint8_t flags = cpu.f;
 	uint8_t result = 0;
-	RR(c.r.a, &result, &flags);
-	c.r.f = flags & FLAGS_CARRY;
-	c.r.a = result;
+	RR(cpu.a, &result, &flags);
+	cpu.f = flags & FLAGS_CARRY;
+	cpu.a = result;
 }
 
 // 0x20
 
-void JR_NZ_IMM8(Core &c)
+void JR_NZ_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_ZERO))
+	if (!(cpu.af & FLAGS_ZERO))
 	{
-		c.r.pc += int8_t(c.d8);
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc += int8_t(d8);
+		extraCycles = true;
 	}
 }
 
-void LD_HL_IMM16(Core &c)
+void LD_HL_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.hl = c.d16;
+	cpu.hl = d16;
 }
 
-void LDI_HL_A(Core &c)
+void LDI_HL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl++, c.r.a);
+	mmu.write8(cpu.hl++, cpu.a);
 }
 
-void INC_H(Core &c)
+void INC_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.h, c.r.f);
+	INC8(cpu.h, cpu.f);
 }
 
-void DEC_H(Core &c)
+void DEC_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.h, c.r.f);
+	DEC8(cpu.h, cpu.f);
 }
 
-void LD_H_IMM8(Core &c)
+void LD_H_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.d8;
+	cpu.h = d8;
 }
 
-void DAA(Core &c)
+void DAA(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t a = c.r.a;
-	uint8_t f = c.r.f;
+	uint8_t a = cpu.a;
+	uint8_t f = cpu.f;
 
 	if (!(f & FLAGS_SUBTRACT)) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
 		if ((f & FLAGS_CARRY) || a > 0x99) {
@@ -398,2690 +395,2661 @@ void DAA(Core &c)
 	f &= 0b1101'0000;
 	f = a ? f & 0b0111'0000 : f | 0b1000'0000;
 
-	c.r.a = a;
-	c.r.f = f;
+	cpu.a = a;
+	cpu.f = f;
 }
 
-void JR_Z_IMM8(Core &c)
+void JR_Z_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_ZERO)
+	if (cpu.af & FLAGS_ZERO)
 	{
-		c.r.pc += int8_t(c.d8);
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc += int8_t(d8);
+		extraCycles = true;
 	}
 }
 
-void INC_HL(Core &c)
+void INC_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.hl++;
+	cpu.hl++;
 }
 
-void ADD_HL_HL(Core &c)
+void ADD_HL_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(c.r.hl, c.r.hl, &result, &flags);
-	c.r.hl = result;
-	c.r.f = (flags & 0x70) | (c.r.f & 0x80);
+	ADD16(cpu.hl, cpu.hl, &result, &flags);
+	cpu.hl = result;
+	cpu.f = (flags & 0x70) | (cpu.f & 0x80);
 }
 
-void LDI_A_HL(Core &c)
+void LDI_A_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(c.r.hl);
-	c.r.hl++;
+	cpu.a = mmu.read8(cpu.hl);
+	cpu.hl++;
 }
 
-void DEC_HL(Core &c)
+void DEC_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.hl--;
+	cpu.hl--;
 }
 
-void INC_L(Core &c)
+void INC_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.l, c.r.f);
+	INC8(cpu.l, cpu.f);
 }
 
-void DEC_L(Core &c)
+void DEC_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.l, c.r.f);
+	DEC8(cpu.l, cpu.f);
 }
 
-void LD_L_IMM8(Core &c)
+void LD_L_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.d8;
+	cpu.l = d8;
 }
 
-void CPL(Core &c)
+void CPL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ~c.r.a;
-	uint8_t old_flags = c.r.f;
+	cpu.a = ~cpu.a;
+	uint8_t old_flags = cpu.f;
 	uint8_t new_flags = (old_flags & (FLAGS_ZERO | FLAGS_CARRY)) | (FLAGS_SUBTRACT | FLAGS_HALFCARRY);
-	c.r.f = new_flags;
+	cpu.f = new_flags;
 }
 
 // 0x30
 
-void JR_NC_IMM8(Core &c)
+void JR_NC_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_CARRY))
+	if (!(cpu.af & FLAGS_CARRY))
 	{
-		c.r.pc += int8_t(c.d8);
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc += int8_t(d8);
+		extraCycles = true;
 	}
 }
 
-void LD_SP_IMM16(Core &c)
+void LD_SP_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp = c.d16;
+	cpu.sp = d16;
 }
 
-void LDD_HL_A(Core &c)
+void LDD_HL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.a);
-	c.r.hl--;
+	mmu.write8(cpu.hl, cpu.a);
+	cpu.hl--;
 }
 
-void INC_SP(Core &c)
+void INC_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp++;
+	cpu.sp++;
 }
 
-void INC_AHL(Core &c)
+void INC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t result = c.mmu.read8(c.r.hl);
-	INC8(result, c.r.f);
-	c.mmu.write8(c.r.hl, result);
+	uint8_t result = mmu.read8(cpu.hl);
+	INC8(result, cpu.f);
+	mmu.write8(cpu.hl, result);
 }
 
-void DEC_AHL(Core &c)
+void DEC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t f = 0;
-	uint8_t result = c.mmu.read8(c.r.hl);
+	uint8_t result = mmu.read8(cpu.hl);
 	DEC8(result, f);
-	c.mmu.write8(c.r.hl, result);
-	c.r.f = (f & 0b1110'0000) | (c.r.af & FLAGS_CARRY);
+	mmu.write8(cpu.hl, result);
+	cpu.f = (f & 0b1110'0000) | (cpu.af & FLAGS_CARRY);
 }
 
-void LD_AHL_IMM8(Core &c)
+void LD_AHL_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.d8);
+	mmu.write8(cpu.hl, d8);
 }
 
-void SCF(Core &c)
+void SCF(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.f = (c.r.f & 0b1000'0000) | 0x10;
+	cpu.f = (cpu.f & 0b1000'0000) | 0x10;
 }
 
-void JR_C_IMM8(Core &c)
+void JR_C_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_CARRY)
+	if (cpu.af & FLAGS_CARRY)
 	{
-		c.r.pc += int8_t(c.d8);
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc += int8_t(d8);
+		extraCycles = true;
 	}
 }
 
-void ADD_HL_SP(Core &c)
+void ADD_HL_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	// -0HC
 	uint8_t flags = 0;
 	uint16_t result = 0;
-	ADD16(c.r.hl, c.r.sp, &result, &flags);
-	c.r.hl = result;
+	ADD16(cpu.hl, cpu.sp, &result, &flags);
+	cpu.hl = result;
 	flags &= 0b0011'0000;
-	c.r.f = (c.r.f & 0b1000'0000) | flags;
+	cpu.f = (cpu.f & 0b1000'0000) | flags;
 }
 
-void LDD_A_HL(Core &c)
+void LDD_A_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(c.r.hl--);
+	cpu.a = mmu.read8(cpu.hl--);
 }
 
-void DEC_SP(Core &c)
+void DEC_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp--;
+	cpu.sp--;
 }
 
-void INC_A(Core &c)
+void INC_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	INC8(c.r.a, c.r.f);
+	INC8(cpu.a, cpu.f);
 }
 
-void DEC_A(Core &c)
+void DEC_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	DEC8(c.r.a, c.r.f);
+	DEC8(cpu.a, cpu.f);
 }
 
-void LD_A_IMM8(Core &c)
+void LD_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.d8;
+	cpu.a = d8;
 }
 
-void CCF(Core &c)
+void CCF(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t old_flags = c.r.f;
+	uint8_t old_flags = cpu.f;
 	uint8_t new_flags = (old_flags & FLAGS_ZERO) | ((~(old_flags & FLAGS_CARRY)) & FLAGS_CARRY);
-	c.r.f = new_flags;
+	cpu.f = new_flags;
 }
 
 // 0x40
 
-void LD_B_B(Core &c)
+void LD_B_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	// c.r.b = c.r.b;
+	// cpu.b = cpu.b;
 }
 
-void LD_B_C(Core &c)
+void LD_B_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.c;
+	cpu.b = cpu.c;
 }
 
-void LD_B_D(Core &c)
+void LD_B_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.d;
+	cpu.b = cpu.d;
 }
 
-void LD_B_E(Core &c)
+void LD_B_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.e;
+	cpu.b = cpu.e;
 }
 
-void LD_B_H(Core &c)
+void LD_B_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.h;
+	cpu.b = cpu.h;
 }
 
-void LD_B_L(Core &c)
+void LD_B_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.l;
+	cpu.b = cpu.l;
 }
 
-void LD_B_AHL(Core &c)
+void LD_B_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.mmu.read8(c.r.hl);
+	cpu.b = mmu.read8(cpu.hl);
 }
 
-void LD_B_A(Core &c)
+void LD_B_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.a;
+	cpu.b = cpu.a;
 }
 
-void LD_C_B(Core &c)
+void LD_C_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.b;
+	cpu.c = cpu.b;
 }
 
-void LD_C_C(Core &c)
+void LD_C_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	//
 }
 
-void LD_C_D(Core &c)
+void LD_C_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.d;
+	cpu.c = cpu.d;
 }
 
-void LD_C_E(Core &c)
+void LD_C_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.e;
+	cpu.c = cpu.e;
 }
 
-void LD_C_H(Core &c)
+void LD_C_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.h;
+	cpu.c = cpu.h;
 }
 
-void LD_C_L(Core &c)
+void LD_C_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.l;
+	cpu.c = cpu.l;
 }
 
-void LD_C_AHL(Core &c)
+void LD_C_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.mmu.read8(c.r.hl);
+	cpu.c = mmu.read8(cpu.hl);
 }
 
-void LD_C_A(Core &c)
+void LD_C_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.a;
+	cpu.c = cpu.a;
 }
 
 // 0x50
 
-void LD_D_B(Core &c)
+void LD_D_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.b;
+	cpu.d = cpu.b;
 }
 
-void LD_D_C(Core &c)
+void LD_D_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.c;
+	cpu.d = cpu.c;
 }
 
-void LD_D_D(Core &c)
+void LD_D_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	//
 }
 
-void LD_D_E(Core &c)
+void LD_D_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.e;
+	cpu.d = cpu.e;
 }
 
-void LD_D_H(Core &c)
+void LD_D_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.h;
+	cpu.d = cpu.h;
 }
 
-void LD_D_L(Core &c)
+void LD_D_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.l;
+	cpu.d = cpu.l;
 }
 
-void LD_D_AHL(Core &c)
+void LD_D_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.mmu.read8(c.r.hl);
+	cpu.d = mmu.read8(cpu.hl);
 }
 
-void LD_D_A(Core &c)
+void LD_D_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.a;
+	cpu.d = cpu.a;
 }
 
-void LD_E_B(Core &c)
+void LD_E_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.b;
+	cpu.e = cpu.b;
 }
 
-void LD_E_C(Core &c)
+void LD_E_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.c;
+	cpu.e = cpu.c;
 }
 
-void LD_E_D(Core &c)
+void LD_E_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.d;
+	cpu.e = cpu.d;
 }
 
-void LD_E_E(Core &c)
+void LD_E_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	//
 }
 
-void LD_E_H(Core &c)
+void LD_E_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.h;
+	cpu.e = cpu.h;
 }
 
-void LD_E_L(Core &c)
+void LD_E_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.l;
+	cpu.e = cpu.l;
 }
 
-void LD_E_AHL(Core &c)
+void LD_E_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.mmu.read8(c.r.hl);
+	cpu.e = mmu.read8(cpu.hl);
 }
 
-void LD_E_A(Core &c)
+void LD_E_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.a;
+	cpu.e = cpu.a;
 }
 
 // 0x60
 
-void LD_H_B(Core &c)
+void LD_H_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.b;
+	cpu.h = cpu.b;
 }
 
-void LD_H_C(Core &c)
+void LD_H_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.c;
+	cpu.h = cpu.c;
 }
 
-void LD_H_D(Core &c)
+void LD_H_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.d;
+	cpu.h = cpu.d;
 }
 
-void LD_H_E(Core &c)
+void LD_H_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.e;
+	cpu.h = cpu.e;
 }
 
-void LD_H_H(Core &c)
+void LD_H_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	//
 }
 
-void LD_H_L(Core &c)
+void LD_H_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.l;
+	cpu.h = cpu.l;
 }
 
-void LD_H_AHL(Core &c)
+void LD_H_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.mmu.read8(c.r.hl);
+	cpu.h = mmu.read8(cpu.hl);
 }
 
-void LD_H_A(Core &c)
+void LD_H_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.a;
+	cpu.h = cpu.a;
 }
 
-void LD_L_B(Core &c)
+void LD_L_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.b;
+	cpu.l = cpu.b;
 }
 
-void LD_L_C(Core &c)
+void LD_L_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.c;
+	cpu.l = cpu.c;
 }
 
-void LD_L_D(Core &c)
+void LD_L_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.d;
+	cpu.l = cpu.d;
 }
 
-void LD_L_E(Core &c)
+void LD_L_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.e;
+	cpu.l = cpu.e;
 }
 
-void LD_L_H(Core &c)
+void LD_L_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.h;
+	cpu.l = cpu.h;
 }
 
-void LD_L_L(Core &c)
+void LD_L_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	//
 }
 
-void LD_L_AHL(Core &c)
+void LD_L_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.mmu.read8(c.r.hl);
+	cpu.l = mmu.read8(cpu.hl);
 }
 
-void LD_L_A(Core &c)
+void LD_L_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.a;
+	cpu.l = cpu.a;
 }
 
 // 0x70
 
-void LD_AHL_B(Core &c)
+void LD_AHL_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.b);
+	mmu.write8(cpu.hl, cpu.b);
 }
 
-void LD_AHL_C(Core &c)
+void LD_AHL_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.c);
+	mmu.write8(cpu.hl, cpu.c);
 }
 
-void LD_AHL_D(Core &c)
+void LD_AHL_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.d);
+	mmu.write8(cpu.hl, cpu.d);
 }
 
-void LD_AHL_E(Core &c)
+void LD_AHL_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.e);
+	mmu.write8(cpu.hl, cpu.e);
 }
 
-void LD_AHL_H(Core &c)
+void LD_AHL_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.h);
+	mmu.write8(cpu.hl, cpu.h);
 }
 
-void LD_AHL_L(Core &c)
+void LD_AHL_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.l);
+	mmu.write8(cpu.hl, cpu.l);
 }
 
-void HALT(Core &c)
+void HALT(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.halt = true;
+	cpu.halt();
 }
 
-void LD_AHL_A(Core &c)
+void LD_AHL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.r.hl, c.r.a);
+	mmu.write8(cpu.hl, cpu.a);
 }
 
-void LD_A_B(Core &c)
+void LD_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.b;
+	cpu.a = cpu.b;
 }
 
-void LD_A_C(Core &c)
+void LD_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.c;
+	cpu.a = cpu.c;
 }
 
-void LD_A_D(Core &c)
+void LD_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.d;
+	cpu.a = cpu.d;
 }
 
-void LD_A_E(Core &c)
+void LD_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.e;
+	cpu.a = cpu.e;
 }
 
-void LD_A_H(Core &c)
+void LD_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.h;
+	cpu.a = cpu.h;
 }
 
-void LD_A_L(Core &c)
+void LD_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.l;
+	cpu.a = cpu.l;
 }
 
-void LD_A_AHL(Core &c)
+void LD_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(c.r.hl);
+	cpu.a = mmu.read8(cpu.hl);
 }
 
-void LD_A_A(Core &c)
+void LD_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	// c.r.a = c.r.a;
+	// cpu.a = cpu.a;
 }
 
 // 0x80
 
-void ADD_A_B(Core &c)
+void ADD_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.b, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.b, cpu.f);
 }
 
-void ADD_A_C(Core &c)
+void ADD_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.c, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.c, cpu.f);
 }
 
-void ADD_A_D(Core &c)
+void ADD_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.d, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.d, cpu.f);
 }
 
-void ADD_A_E(Core &c)
+void ADD_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.e, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.e, cpu.f);
 }
 
-void ADD_A_H(Core &c)
+void ADD_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.h, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.h, cpu.f);
 }
 
-void ADD_A_L(Core &c)
+void ADD_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.l, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.l, cpu.f);
 }
 
-void ADD_A_AHL(Core &c)
+void ADD_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	cpu.a = ADD8(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void ADD_A_A(Core &c)
+void ADD_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.r.a, c.r.f);
+	cpu.a = ADD8(cpu.a, cpu.a, cpu.f);
 }
 
-void ADC_A_B(Core &c)
+void ADC_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.b, c.r.f);
+	ADC(cpu.a, cpu.b, cpu.f);
 }
 
-void ADC_A_C(Core &c)
+void ADC_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.c, c.r.f);
+	ADC(cpu.a, cpu.c, cpu.f);
 }
 
-void ADC_A_D(Core &c)
+void ADC_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.d, c.r.f);
+	ADC(cpu.a, cpu.d, cpu.f);
 }
 
-void ADC_A_E(Core &c)
+void ADC_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.e, c.r.f);
+	ADC(cpu.a, cpu.e, cpu.f);
 }
 
-void ADC_A_H(Core &c)
+void ADC_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.h, c.r.f);
+	ADC(cpu.a, cpu.h, cpu.f);
 }
 
-void ADC_A_L(Core &c)
+void ADC_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.l, c.r.f);
+	ADC(cpu.a, cpu.l, cpu.f);
 }
 
-void ADC_A_AHL(Core &c)
+void ADC_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	ADC(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void ADC_A_A(Core &c)
+void ADC_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.r.a, c.r.f);
+	ADC(cpu.a, cpu.a, cpu.f);
 }
 
 // 0x90
 
-void SUB_A_B(Core &c)
+void SUB_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.b, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.b, cpu.f);
 }
 
-void SUB_A_C(Core &c)
+void SUB_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.c, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.c, cpu.f);
 }
 
-void SUB_A_D(Core &c)
+void SUB_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.d, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.d, cpu.f);
 }
 
-void SUB_A_E(Core &c)
+void SUB_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.e, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.e, cpu.f);
 }
 
-void SUB_A_H(Core &c)
+void SUB_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.h, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.h, cpu.f);
 }
 
-void SUB_A_L(Core &c)
+void SUB_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.l, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.l, cpu.f);
 }
 
-void SUB_A_AHL(Core &c)
+void SUB_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	cpu.a = SUB8(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void SUB_A_A(Core &c)
+void SUB_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.r.a, c.r.f);
+	cpu.a = SUB8(cpu.a, cpu.a, cpu.f);
 }
 
-void SBC_A_B(Core &c)
+void SBC_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.b, c.r.f);
+	SBC(cpu.a, cpu.b, cpu.f);
 }
 
-void SBC_A_C(Core &c)
+void SBC_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.c, c.r.f);
+	SBC(cpu.a, cpu.c, cpu.f);
 }
 
-void SBC_A_D(Core &c)
+void SBC_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.d, c.r.f);
+	SBC(cpu.a, cpu.d, cpu.f);
 }
 
-void SBC_A_E(Core &c)
+void SBC_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.e, c.r.f);
+	SBC(cpu.a, cpu.e, cpu.f);
 }
 
-void SBC_A_H(Core &c)
+void SBC_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.h, c.r.f);
+	SBC(cpu.a, cpu.h, cpu.f);
 }
 
-void SBC_A_L(Core &c)
+void SBC_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.l, c.r.f);
+	SBC(cpu.a, cpu.l, cpu.f);
 }
 
-void SBC_A_AHL(Core &c)
+void SBC_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	SBC(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void SBC_A_A(Core &c)
+void SBC_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.r.a, c.r.f);
+	SBC(cpu.a, cpu.a, cpu.f);
 }
 
 // 0xA0
 
-void AND_A_B(Core &c)
+void AND_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.b, c.r.f);
+	AND(cpu.a, cpu.b, cpu.f);
 }
 
-void AND_A_C(Core &c)
+void AND_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.c, c.r.f);
+	AND(cpu.a, cpu.c, cpu.f);
 }
 
-void AND_A_D(Core &c)
+void AND_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.d, c.r.f);
+	AND(cpu.a, cpu.d, cpu.f);
 }
 
-void AND_A_E(Core &c)
+void AND_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.e, c.r.f);
+	AND(cpu.a, cpu.e, cpu.f);
 }
 
-void AND_A_H(Core &c)
+void AND_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.h, c.r.f);
+	AND(cpu.a, cpu.h, cpu.f);
 }
 
-void AND_A_L(Core &c)
+void AND_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.l, c.r.f);
+	AND(cpu.a, cpu.l, cpu.f);
 }
 
-void AND_A_AHL(Core &c)
+void AND_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	AND(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void AND_A_A(Core &c)
+void AND_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.r.a, c.r.f);
+	AND(cpu.a, cpu.a, cpu.f);
 }
 
-void XOR_A_B(Core &c)
+void XOR_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.b, c.r.f);
+	XOR(cpu.a, cpu.b, cpu.f);
 }
 
-void XOR_A_C(Core &c)
+void XOR_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.c, c.r.f);
+	XOR(cpu.a, cpu.c, cpu.f);
 }
 
-void XOR_A_D(Core &c)
+void XOR_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.d, c.r.f);
+	XOR(cpu.a, cpu.d, cpu.f);
 }
 
-void XOR_A_E(Core &c)
+void XOR_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.e, c.r.f);
+	XOR(cpu.a, cpu.e, cpu.f);
 }
 
-void XOR_A_H(Core &c)
+void XOR_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.h, c.r.f);
+	XOR(cpu.a, cpu.h, cpu.f);
 }
 
-void XOR_A_L(Core &c)
+void XOR_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.l, c.r.f);
+	XOR(cpu.a, cpu.l, cpu.f);
 }
 
-void XOR_A_AHL(Core &c)
+void XOR_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	XOR(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void XOR_A_A(Core &c)
+void XOR_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.r.a, c.r.f);
+	XOR(cpu.a, cpu.a, cpu.f);
 }
 
 // 0xB0
 
-void OR_A_B(Core &c)
+void OR_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.b, c.r.f);
+	OR(cpu.a, cpu.b, cpu.f);
 }
 
-void OR_A_C(Core &c)
+void OR_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.c, c.r.f);
+	OR(cpu.a, cpu.c, cpu.f);
 }
 
-void OR_A_D(Core &c)
+void OR_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.d, c.r.f);
+	OR(cpu.a, cpu.d, cpu.f);
 }
 
-void OR_A_E(Core &c)
+void OR_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.e, c.r.f);
+	OR(cpu.a, cpu.e, cpu.f);
 }
 
-void OR_A_H(Core &c)
+void OR_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.h, c.r.f);
+	OR(cpu.a, cpu.h, cpu.f);
 }
 
-void OR_A_L(Core &c)
+void OR_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.l, c.r.f);
+	OR(cpu.a, cpu.l, cpu.f);
 }
 
-void OR_A_AHL(Core &c)
+void OR_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	OR(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void OR_A_A(Core &c)
+void OR_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.r.a, c.r.f);
+	OR(cpu.a, cpu.a, cpu.f);
 }
 
-void CP_A_B(Core &c)
+void CP_A_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.b, c.r.f);
+	CP(cpu.a, cpu.b, cpu.f);
 }
 
-void CP_A_C(Core &c)
+void CP_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.c, c.r.f);
+	CP(cpu.a, cpu.c, cpu.f);
 }
 
-void CP_A_D(Core &c)
+void CP_A_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.d, c.r.f);
+	CP(cpu.a, cpu.d, cpu.f);
 }
 
-void CP_A_E(Core &c)
+void CP_A_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.e, c.r.f);
+	CP(cpu.a, cpu.e, cpu.f);
 }
 
-void CP_A_H(Core &c)
+void CP_A_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.h, c.r.f);
+	CP(cpu.a, cpu.h, cpu.f);
 }
 
-void CP_A_L(Core &c)
+void CP_A_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.l, c.r.f);
+	CP(cpu.a, cpu.l, cpu.f);
 }
 
-void CP_A_AHL(Core &c)
+void CP_A_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.mmu.read8(c.r.hl), c.r.f);
+	CP(cpu.a, mmu.read8(cpu.hl), cpu.f);
 }
 
-void CP_A_A(Core &c)
+void CP_A_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.r.a, c.r.f);
+	CP(cpu.a, cpu.a, cpu.f);
 }
 
 // 0xC0
 
-void RET_NZ(Core &c)
+void RET_NZ(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_ZERO))
+	if (!(cpu.af & FLAGS_ZERO))
 	{
-		c.r.pc = c.mmu.read16(c.r.sp);
-		c.r.sp += 2;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = mmu.read16(cpu.sp);
+		cpu.sp += 2;
+		extraCycles = true;
 	}
 }
 
-void POP_BC(Core &c)
+void POP_BC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.bc = c.mmu.read16(c.r.sp);
-	c.r.sp += 2;
+	cpu.bc = mmu.read16(cpu.sp);
+	cpu.sp += 2;
 }
 
-void JP_NZ_IMM16(Core &c)
+void JP_NZ_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_ZERO))
+	if (!(cpu.af & FLAGS_ZERO))
 	{
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void JP_IMM16(Core &c)
+void JP_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.pc = c.d16;
+	cpu.pc = d16;
 }
 
-void CALL_NZ_IMM16(Core &c)
+void CALL_NZ_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_ZERO))
+	if (!(cpu.af & FLAGS_ZERO))
 	{
-		c.r.sp -= 2;
-		c.mmu.write16(c.r.sp, c.r.pc);
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.sp -= 2;
+		mmu.write16(cpu.sp, cpu.pc);
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void PUSH_BC(Core &c)
+void PUSH_BC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp -= 2;
-	c.mmu.write16(c.r.sp, c.r.bc);
+	cpu.sp -= 2;
+	mmu.write16(cpu.sp, cpu.bc);
 }
 
-void ADD_A_IMM8(Core &c)
+void ADD_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = ADD8(c.r.a, c.d8, c.r.f);
+	cpu.a = ADD8(cpu.a, d8, cpu.f);
 }
 
-void RST_00(Core &c)
+void RST_00(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x00);
+	RST(cpu, mmu, 0x00);
 }
 
-void RET_Z(Core &c)
+void RET_Z(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_ZERO)
+	if (cpu.af & FLAGS_ZERO)
 	{
-		c.r.pc = c.mmu.read16(c.r.sp);
-		c.r.sp += 2;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = mmu.read16(cpu.sp);
+		cpu.sp += 2;
+		extraCycles = true;
 	}
 }
 
-void RET(Core &c)
+void RET(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.pc = c.mmu.read16(c.r.sp);
-	c.r.sp += 2;
+	cpu.pc = mmu.read16(cpu.sp);
+	cpu.sp += 2;
 }
 
-void JP_Z_IMM16(Core &c)
+void JP_Z_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_ZERO)
+	if (cpu.af & FLAGS_ZERO)
 	{
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void CB(Core &c)
+void CB(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 }
 
-void CALL_Z_IMM16(Core &c)
+void CALL_Z_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_ZERO)
+	if (cpu.af & FLAGS_ZERO)
 	{
-		c.r.sp -= 2;
-		c.mmu.write16(c.r.sp, c.r.pc);
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.sp -= 2;
+		mmu.write16(cpu.sp, cpu.pc);
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void CALL_IMM16(Core &c)
+void CALL_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp -= 2;
-	c.mmu.write16(c.r.sp, c.r.pc);
-	c.r.pc = c.d16;
+	cpu.sp -= 2;
+	mmu.write16(cpu.sp, cpu.pc);
+	cpu.pc = d16;
 }
 
-void ADC_A_IMM8(Core &c)
+void ADC_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	ADC(c.r.a, c.d8, c.r.f);
+	ADC(cpu.a, d8, cpu.f);
 }
 
-void RST_08(Core &c)
+void RST_08(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x08);
+	RST(cpu, mmu, 0x08);
 }
 
 // 0xD0
 
-void RET_NC(Core &c)
+void RET_NC(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_CARRY))
+	if (!(cpu.af & FLAGS_CARRY))
 	{
-		c.r.pc = c.mmu.read16(c.r.sp);
-		c.r.sp += 2;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = mmu.read16(cpu.sp);
+		cpu.sp += 2;
+		extraCycles = true;
 	}
 }
 
-void POP_DE(Core &c)
+void POP_DE(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.de = c.mmu.read16(c.r.sp);
-	c.r.sp += 2;
+	cpu.de = mmu.read16(cpu.sp);
+	cpu.sp += 2;
 }
 
-void JP_NC_IMM16(Core &c)
+void JP_NC_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_CARRY))
+	if (!(cpu.af & FLAGS_CARRY))
 	{
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void CALL_NC_IMM16(Core &c)
+void CALL_NC_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (!(c.r.af & FLAGS_CARRY))
+	if (!(cpu.af & FLAGS_CARRY))
 	{
-		c.r.sp -= 2;
-		c.mmu.write16(c.r.sp, c.r.pc);
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.sp -= 2;
+		mmu.write16(cpu.sp, cpu.pc);
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void PUSH_DE(Core &c)
+void PUSH_DE(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp -= 2;
-	c.mmu.write16(c.r.sp, c.r.de);
+	cpu.sp -= 2;
+	mmu.write16(cpu.sp, cpu.de);
 }
 
-void RET_C(Core &c)
+void RET_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_CARRY)
+	if (cpu.af & FLAGS_CARRY)
 	{
-		c.r.pc = c.mmu.read16(c.r.sp);
-		c.r.sp += 2;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = mmu.read16(cpu.sp);
+		cpu.sp += 2;
+		extraCycles = true;
 	}
 }
 
-void RETI(Core &c)
+void RETI(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.ime = true;
-	c.r.pc = c.mmu.read16(c.r.sp);
-	c.r.sp += 2;
+	cpu.enable_interrupts();
+	cpu.pc = mmu.read16(cpu.sp);
+	cpu.sp += 2;
 }
 
-void JP_C_IMM16(Core &c)
+void JP_C_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_CARRY)
+	if (cpu.af & FLAGS_CARRY)
 	{
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void SUB_A_IMM8(Core &c)
+void SUB_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = SUB8(c.r.a, c.d8, c.r.f);
+	cpu.a = SUB8(cpu.a, d8, cpu.f);
 }
 
-void RST_10(Core &c)
+void RST_10(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x10);
+	RST(cpu, mmu, 0x10);
 }
 
-void CALL_C_IMM16(Core &c)
+void CALL_C_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	if (c.r.af & FLAGS_CARRY)
+	if (cpu.af & FLAGS_CARRY)
 	{
-		c.r.sp -= 2;
-		c.mmu.write16(c.r.sp, c.r.pc);
-		c.r.pc = c.d16;
-	}
-	else
-	{
-		c.extraCycles = false;
+		cpu.sp -= 2;
+		mmu.write16(cpu.sp, cpu.pc);
+		cpu.pc = d16;
+		extraCycles = true;
 	}
 }
 
-void SBC_A_IMM8(Core &c)
+void SBC_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SBC(c.r.a, c.d8, c.r.f);
+	SBC(cpu.a, d8, cpu.f);
 }
 
-void RST_18(Core &c)
+void RST_18(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x18);
+	RST(cpu, mmu, 0x18);
 }
 
 // 0xE0
 
-void LDH_IMM8_A(Core &c)
+void LDH_IMM8_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(0xFF00 + c.d8, c.r.a);
+	mmu.write8(0xFF00 + d8, cpu.a);
 }
 
-void POP_HL(Core &c)
+void POP_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.hl = c.mmu.read16(c.r.sp);
-	c.r.sp += 2;
+	cpu.hl = mmu.read16(cpu.sp);
+	cpu.sp += 2;
 }
 
-void LDH_C_A(Core &c)
+void LDH_C_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(0xFF00 + c.r.c, c.r.a);
+	mmu.write8(0xFF00 + cpu.c, cpu.a);
 }
 
-void PUSH_HL(Core &c)
+void PUSH_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp -= 2;
-	c.mmu.write16(c.r.sp, c.r.hl);
+	cpu.sp -= 2;
+	mmu.write16(cpu.sp, cpu.hl);
 }
 
-void AND_A_IMM8(Core &c)
+void AND_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	AND(c.r.a, c.d8, c.r.f);
+	AND(cpu.a, d8, cpu.f);
 }
 
-void RST_20(Core &c)
+void RST_20(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x20);
+	RST(cpu, mmu, 0x20);
 }
 
-void ADD_SP_IMM8(Core &c)
+void ADD_SP_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	// 00HC
 	uint8_t flags = 0;
 	
-	if (((c.r.sp & 0xF) + (c.d8 & 0xF)) & 0x10)
+	if (((cpu.sp & 0xF) + (d8 & 0xF)) & 0x10)
 		flags |= FLAGS_HALFCARRY;
 
-	if (((c.r.sp & 0xFF) + c.d8) > 0xFF)
+	if (((cpu.sp & 0xFF) + d8) > 0xFF)
 		flags |= FLAGS_CARRY;
 
-	c.r.sp = c.r.sp + int8_t(c.d8);
-	c.r.f = flags;
+	cpu.sp = cpu.sp + int8_t(d8);
+	cpu.f = flags;
 }
 
-void JP_HL(Core &c)
+void JP_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.pc = c.r.hl;
+	cpu.pc = cpu.hl;
 }
 
-void LD_AIMM16_A(Core &c)
+void LD_AIMM16_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.write8(c.d16, c.r.a);
+	mmu.write8(d16, cpu.a);
 }
 
-void XOR_A_IMM8(Core &c)
+void XOR_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	XOR(c.r.a, c.d8, c.r.f);
+	XOR(cpu.a, d8, cpu.f);
 }
 
-void RST_28(Core &c)
+void RST_28(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x28);
+	RST(cpu, mmu, 0x28);
 }
 
 // 0xF0
 
-void LDH_A_IMM8(Core &c)
+void LDH_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(0xFF00 + c.d8);
+	cpu.a = mmu.read8(0xFF00 + d8);
 }
 
-void POP_AF(Core &c)
+void POP_AF(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.af = c.mmu.read16(c.r.sp) & 0xFFF0;
-	c.r.sp += 2;
+	cpu.af = mmu.read16(cpu.sp) & 0xFFF0;
+	cpu.sp += 2;
 }
 
-void LDH_A_C(Core &c)
+void LDH_A_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(0xFF00 + c.r.c);
+	cpu.a = mmu.read8(0xFF00 + cpu.c);
 }
 
-void DI(Core &c)
+void DI(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.ime = false;
+	cpu.disable_interrupts();
 }
 
-void PUSH_AF(Core &c)
+void PUSH_AF(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp -= 2;
-	c.mmu.write16(c.r.sp, c.r.af);	
+	cpu.sp -= 2;
+	mmu.write16(cpu.sp, cpu.af);	
 }
 
-void OR_A_IMM8(Core &c)
+void OR_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	OR(c.r.a, c.d8, c.r.f);
+	OR(cpu.a, d8, cpu.f);
 }
 
-void RST_30(Core &c)
+void RST_30(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x30);
+	RST(cpu, mmu, 0x30);
 }
 
-void LD_HL_SPIMM8(Core &c)
+void LD_HL_SPIMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 
-	int8_t s8 = c.d8;
-	uint16_t sp = c.r.sp + s8;
+	int8_t s8 = d8;
+	uint16_t sp = cpu.sp + s8;
 	if (s8 > 0)
 	{
-		if (((c.r.sp & 0xFF) + s8) > 0xFF)
+		if (((cpu.sp & 0xFF) + s8) > 0xFF)
 		{
 			flags |= FLAGS_CARRY;
 		}
-		if (((c.r.sp & 0xF) + (s8 & 0xF)) > 0xF)
+		if (((cpu.sp & 0xF) + (s8 & 0xF)) > 0xF)
 		{
 			flags |= FLAGS_HALFCARRY;
 		}
 	}
 	else
 	{
-		if ((sp & 0xFF) < (c.r.sp & 0xFF))
+		if ((sp & 0xFF) < (cpu.sp & 0xFF))
 		{
 			flags |= FLAGS_CARRY;
 		}
-		if ((sp & 0xF) < (c.r.sp & 0xF))
+		if ((sp & 0xF) < (cpu.sp & 0xF))
 		{
 			flags |= FLAGS_HALFCARRY;
 		}
 	}
 
-	c.r.f = flags;
+	cpu.f = flags;
 
-	c.r.hl = sp;
+	cpu.hl = sp;
 }
 
-void LD_SP_HL(Core &c)
+void LD_SP_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.sp = c.r.hl;
+	cpu.sp = cpu.hl;
 }
 
-void LD_A_AIMM16(Core &c)
+void LD_A_AIMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.mmu.read8(c.d16);
+	cpu.a = mmu.read8(d16);
 }
 
-void EI(Core &c)
+void EI(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.ime = true;
+	cpu.enable_interrupts();
 }
 
-void CP_A_IMM8(Core &c)
+void CP_A_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	CP(c.r.a, c.d8, c.r.f);
+	CP(cpu.a, d8, cpu.f);
 }
 
-void RST_38(Core &c)
+void RST_38(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	RST(c, 0x38);
+	RST(cpu, mmu, 0x38);
 }
 
 // 0xCB // Extended
 
 // 0xCB 0x00
 
-void RLC_B(Core &c)
+void RLC_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.b, &result, &flags);
-	c.r.b = result;
-	c.r.f = flags;
+	RLC(cpu.b, &result, &flags);
+	cpu.b = result;
+	cpu.f = flags;
 }
 
-void RLC_C(Core &c)
+void RLC_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.c, &result, &flags);
-	c.r.c = result;
-	c.r.f = flags;
+	RLC(cpu.c, &result, &flags);
+	cpu.c = result;
+	cpu.f = flags;
 }
 
-void RLC_D(Core &c)
+void RLC_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.d, &result, &flags);
-	c.r.d = result;
-	c.r.f = flags;
+	RLC(cpu.d, &result, &flags);
+	cpu.d = result;
+	cpu.f = flags;
 }
 
-void RLC_E(Core &c)
+void RLC_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.e, &result, &flags);
-	c.r.e = result;
-	c.r.f = flags;
+	RLC(cpu.e, &result, &flags);
+	cpu.e = result;
+	cpu.f = flags;
 }
 
-void RLC_H(Core &c)
+void RLC_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.h, &result, &flags);
-	c.r.h = result;
-	c.r.f = flags;
+	RLC(cpu.h, &result, &flags);
+	cpu.h = result;
+	cpu.f = flags;
 }
 
-void RLC_L(Core &c)
+void RLC_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.l, &result, &flags);
-	c.r.l = result;
-	c.r.f = flags;
+	RLC(cpu.l, &result, &flags);
+	cpu.l = result;
+	cpu.f = flags;
 }
 
-void RLC_AHL(Core &c)
+void RLC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.mmu.read8(c.r.hl), &result, &flags);
-	c.mmu.write8(c.r.hl, result);
-	c.r.f = flags;
+	RLC(mmu.read8(cpu.hl), &result, &flags);
+	mmu.write8(cpu.hl, result);
+	cpu.f = flags;
 }
 
-void RLC_A(Core &c)
+void RLC_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RLC(c.r.a, &result, &flags);
-	c.r.a = result;
-	c.r.f = flags;
+	RLC(cpu.a, &result, &flags);
+	cpu.a = result;
+	cpu.f = flags;
 }
 
-void RRC_B(Core &c)
+void RRC_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.b, &result, &flags);
-	c.r.b = result;
-	c.r.f = flags;
+	RRC(cpu.b, &result, &flags);
+	cpu.b = result;
+	cpu.f = flags;
 }
 
-void RRC_C(Core &c)
+void RRC_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.c, &result, &flags);
-	c.r.c = result;
-	c.r.f = flags;
+	RRC(cpu.c, &result, &flags);
+	cpu.c = result;
+	cpu.f = flags;
 }
 
-void RRC_D(Core &c)
+void RRC_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.d, &result, &flags);
-	c.r.d = result;
-	c.r.f = flags;
+	RRC(cpu.d, &result, &flags);
+	cpu.d = result;
+	cpu.f = flags;
 }
 
-void RRC_E(Core &c)
+void RRC_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.e, &result, &flags);
-	c.r.e = result;
-	c.r.f = flags;
+	RRC(cpu.e, &result, &flags);
+	cpu.e = result;
+	cpu.f = flags;
 }
 
-void RRC_H(Core &c)
+void RRC_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.h, &result, &flags);
-	c.r.h = result;
-	c.r.f = flags;
+	RRC(cpu.h, &result, &flags);
+	cpu.h = result;
+	cpu.f = flags;
 }
 
-void RRC_L(Core &c)
+void RRC_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.l, &result, &flags);
-	c.r.l = result;
-	c.r.f = flags;
+	RRC(cpu.l, &result, &flags);
+	cpu.l = result;
+	cpu.f = flags;
 }
 
-void RRC_AHL(Core &c)
+void RRC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.mmu.read8(c.r.hl), &result, &flags);
-	c.mmu.write8(c.r.hl, result);
-	c.r.f = flags;
+	RRC(mmu.read8(cpu.hl), &result, &flags);
+	mmu.write8(cpu.hl, result);
+	cpu.f = flags;
 }
 
-void RRC_A(Core &c)
+void RRC_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
 	uint8_t flags = 0;
 	uint8_t result = 0;
-	RRC(c.r.a, &result, &flags);
-	c.r.a = result;
-	c.r.f = flags;
+	RRC(cpu.a, &result, &flags);
+	cpu.a = result;
+	cpu.f = flags;
 }
 
 // 0xCB 0x10
 
-void RL_B(Core &c)
+void RL_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.b, &result, &flags);
-	c.r.b = result;
-	c.r.f = flags;
+	RL(cpu.b, &result, &flags);
+	cpu.b = result;
+	cpu.f = flags;
 }
 
-void RL_C(Core &c)
+void RL_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.c, &result, &flags);
-	c.r.c = result;
-	c.r.f = flags;
+	RL(cpu.c, &result, &flags);
+	cpu.c = result;
+	cpu.f = flags;
 }
 
-void RL_D(Core &c)
+void RL_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.d, &result, &flags);
-	c.r.d = result;
-	c.r.f = flags;
+	RL(cpu.d, &result, &flags);
+	cpu.d = result;
+	cpu.f = flags;
 }
 
-void RL_E(Core &c)
+void RL_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.e, &result, &flags);
-	c.r.e = result;
-	c.r.f = flags;
+	RL(cpu.e, &result, &flags);
+	cpu.e = result;
+	cpu.f = flags;
 }
 
-void RL_H(Core &c)
+void RL_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.h, &result, &flags);
-	c.r.h = result;
-	c.r.f = flags;
+	RL(cpu.h, &result, &flags);
+	cpu.h = result;
+	cpu.f = flags;
 }
 
-void RL_L(Core &c)
+void RL_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.l, &result, &flags);
-	c.r.l = result;
-	c.r.f = flags;
+	RL(cpu.l, &result, &flags);
+	cpu.l = result;
+	cpu.f = flags;
 }
 
-void RL_AHL(Core &c)
+void RL_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.mmu.read8(c.r.hl), &result, &flags);
-	c.mmu.write8(c.r.hl, result);
-	c.r.f = flags;
+	RL(mmu.read8(cpu.hl), &result, &flags);
+	mmu.write8(cpu.hl, result);
+	cpu.f = flags;
 }
 
-void RL_A(Core &c)
+void RL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RL(c.r.a, &result, &flags);
-	c.r.a = result;
-	c.r.f = flags;
+	RL(cpu.a, &result, &flags);
+	cpu.a = result;
+	cpu.f = flags;
 }
 
-void RR_B(Core &c)
+void RR_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.b, &result, &flags);
-	c.r.b = result;
-	c.r.f = flags;
+	RR(cpu.b, &result, &flags);
+	cpu.b = result;
+	cpu.f = flags;
 }
 
-void RR_C(Core &c)
+void RR_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.c, &result, &flags);
-	c.r.c = result;
-	c.r.f = flags;
+	RR(cpu.c, &result, &flags);
+	cpu.c = result;
+	cpu.f = flags;
 }
 
-void RR_D(Core &c)
+void RR_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.d, &result, &flags);
-	c.r.d = result;
-	c.r.f = flags;
+	RR(cpu.d, &result, &flags);
+	cpu.d = result;
+	cpu.f = flags;
 }
 
-void RR_E(Core &c)
+void RR_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.e, &result, &flags);
-	c.r.e = result;
-	c.r.f = flags;
+	RR(cpu.e, &result, &flags);
+	cpu.e = result;
+	cpu.f = flags;
 }
 
-void RR_H(Core &c)
+void RR_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.h, &result, &flags);
-	c.r.h = result;
-	c.r.f = flags;
+	RR(cpu.h, &result, &flags);
+	cpu.h = result;
+	cpu.f = flags;
 }
 
-void RR_L(Core &c)
+void RR_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.l, &result, &flags);
-	c.r.l = result;
-	c.r.f = flags;
+	RR(cpu.l, &result, &flags);
+	cpu.l = result;
+	cpu.f = flags;
 }
 
-void RR_AHL(Core &c)
+void RR_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.mmu.read8(c.r.hl), &result, &flags);
-	c.mmu.write8(c.r.hl, result);
-	c.r.f = flags;
+	RR(mmu.read8(cpu.hl), &result, &flags);
+	mmu.write8(cpu.hl, result);
+	cpu.f = flags;
 }
 
-void RR_A(Core &c)
+void RR_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t flags = c.r.af & 0x10;
+	uint8_t flags = cpu.af & 0x10;
 	uint8_t result = 0;
-	RR(c.r.a, &result, &flags);
-	c.r.a = result;
-	c.r.f = flags;
+	RR(cpu.a, &result, &flags);
+	cpu.a = result;
+	cpu.f = flags;
 }
 
 // 0xCB 0x20
 
-void SLA_B(Core &c)
+void SLA_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.b, c.r.f);
+	SLA(cpu.b, cpu.f);
 }
 
-void SLA_C(Core &c)
+void SLA_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.c, c.r.f);
+	SLA(cpu.c, cpu.f);
 }
 
-void SLA_D(Core &c)
+void SLA_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.d, c.r.f);
+	SLA(cpu.d, cpu.f);
 }
 
-void SLA_E(Core &c)
+void SLA_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.e, c.r.f);
+	SLA(cpu.e, cpu.f);
 }
 
-void SLA_H(Core &c)
+void SLA_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.h, c.r.f);
+	SLA(cpu.h, cpu.f);
 }
 
-void SLA_L(Core &c)
+void SLA_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.l, c.r.f);
+	SLA(cpu.l, cpu.f);
 }
 
-void SLA_AHL(Core &c)
+void SLA_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t r { c.mmu.read8(c.r.hl) };
-	SLA(r, c.r.f);
-	c.mmu.write8(c.r.hl, r);
+	uint8_t r { mmu.read8(cpu.hl) };
+	SLA(r, cpu.f);
+	mmu.write8(cpu.hl, r);
 }
 
-void SLA_A(Core &c)
+void SLA_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SLA(c.r.a, c.r.f);
+	SLA(cpu.a, cpu.f);
 }
 
-void SRA_B(Core &c)
+void SRA_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.b, c.r.f);
+	SRA(cpu.b, cpu.f);
 }
 
-void SRA_C(Core &c)
+void SRA_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.c, c.r.f);
+	SRA(cpu.c, cpu.f);
 }
 
-void SRA_D(Core &c)
+void SRA_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.d, c.r.f);
+	SRA(cpu.d, cpu.f);
 }
 
-void SRA_E(Core &c)
+void SRA_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.e, c.r.f);
+	SRA(cpu.e, cpu.f);
 }
 
-void SRA_H(Core &c)
+void SRA_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.h, c.r.f);
+	SRA(cpu.h, cpu.f);
 }
 
-void SRA_L(Core &c)
+void SRA_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.l, c.r.f);
+	SRA(cpu.l, cpu.f);
 }
 
-void SRA_AHL(Core &c)
+void SRA_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t r { c.mmu.read8(c.r.hl) };
-	SRA(r, c.r.f);
-	c.mmu.write8(c.r.hl, r);
+	uint8_t r { mmu.read8(cpu.hl) };
+	SRA(r, cpu.f);
+	mmu.write8(cpu.hl, r);
 }
 
-void SRA_A(Core &c)
+void SRA_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRA(c.r.a, c.r.f);
+	SRA(cpu.a, cpu.f);
 }
 
 // 0xCB 0x30
 
-void SWAP_B(Core &c)
+void SWAP_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.b, c.r.f);
+	SWAP(cpu.b, cpu.f);
 }
 
-void SWAP_C(Core &c)
+void SWAP_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.c, c.r.f);
+	SWAP(cpu.c, cpu.f);
 }
 
-void SWAP_D(Core &c)
+void SWAP_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.d, c.r.f);
+	SWAP(cpu.d, cpu.f);
 }
 
-void SWAP_E(Core &c)
+void SWAP_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.e, c.r.f);
+	SWAP(cpu.e, cpu.f);
 }
 
-void SWAP_H(Core &c)
+void SWAP_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.h, c.r.f);
+	SWAP(cpu.h, cpu.f);
 }
 
-void SWAP_L(Core &c)
+void SWAP_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.l, c.r.f);
+	SWAP(cpu.l, cpu.f);
 }
 
-void SWAP_AHL(Core &c)
+void SWAP_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t r = c.mmu.read8(c.r.hl);
-	SWAP(r, c.r.f);
-	c.mmu.write8(c.r.hl, r);
+	uint8_t r = mmu.read8(cpu.hl);
+	SWAP(r, cpu.f);
+	mmu.write8(cpu.hl, r);
 }
 
-void SWAP_A(Core &c)
+void SWAP_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SWAP(c.r.a, c.r.f);
+	SWAP(cpu.a, cpu.f);
 }
 
-void SRL_B(Core &c)
+void SRL_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.b, c.r.f);
+	SRL(cpu.b, cpu.f);
 }
 
-void SRL_C(Core &c)
+void SRL_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.c, c.r.f);
+	SRL(cpu.c, cpu.f);
 }
 
-void SRL_D(Core &c)
+void SRL_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.d, c.r.f);
+	SRL(cpu.d, cpu.f);
 }
 
-void SRL_E(Core &c)
+void SRL_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.e, c.r.f);
+	SRL(cpu.e, cpu.f);
 }
 
-void SRL_H(Core &c)
+void SRL_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.h, c.r.f);
+	SRL(cpu.h, cpu.f);
 }
 
-void SRL_L(Core &c)
+void SRL_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.l, c.r.f);
+	SRL(cpu.l, cpu.f);
 }
 
-void SRL_AHL(Core &c)
+void SRL_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	uint8_t r = c.mmu.read8(c.r.hl);
+	uint8_t r = mmu.read8(cpu.hl);
 	uint8_t carryBit = r & 0b0000'0001;
 	uint8_t f = 0;
 	r >>= 1;
-	c.mmu.write8(c.r.hl, r);
+	mmu.write8(cpu.hl, r);
 	if (!r)
 		f |= FLAGS_ZERO;
 	f |= (carryBit << 4);
-	c.r.f = f;
+	cpu.f = f;
 }
 
-void SRL_A(Core &c)
+void SRL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	SRL(c.r.a, c.r.f);
+	SRL(cpu.a, cpu.f);
 }
 
 // 0xCB 0x40
 
-void BIT_0_B(Core &c)
+void BIT_0_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0000'0001, c.r.f);
+	TestBit(cpu.b & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_C(Core &c)
+void BIT_0_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0000'0001, c.r.f);
+	TestBit(cpu.c & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_D(Core &c)
+void BIT_0_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0000'0001, c.r.f);
+	TestBit(cpu.d & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_E(Core &c)
+void BIT_0_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0000'0001, c.r.f);
+	TestBit(cpu.e & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_H(Core &c)
+void BIT_0_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0000'0001, c.r.f);
+	TestBit(cpu.h & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_L(Core &c)
+void BIT_0_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0000'0001, c.r.f);
+	TestBit(cpu.l & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_AHL(Core &c)
+void BIT_0_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0000'0001, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0000'0001, cpu.f);
 }
 
-void BIT_0_A(Core &c)
+void BIT_0_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0000'0001, c.r.f);
+	TestBit(cpu.a & 0b0000'0001, cpu.f);
 }
 
-void BIT_1_B(Core &c)
+void BIT_1_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0000'0010, c.r.f);
+	TestBit(cpu.b & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_C(Core &c)
+void BIT_1_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0000'0010, c.r.f);
+	TestBit(cpu.c & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_D(Core &c)
+void BIT_1_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0000'0010, c.r.f);
+	TestBit(cpu.d & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_E(Core &c)
+void BIT_1_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0000'0010, c.r.f);
+	TestBit(cpu.e & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_H(Core &c)
+void BIT_1_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0000'0010, c.r.f);
+	TestBit(cpu.h & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_L(Core &c)
+void BIT_1_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0000'0010, c.r.f);
+	TestBit(cpu.l & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_AHL(Core &c)
+void BIT_1_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0000'0010, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0000'0010, cpu.f);
 }
 
-void BIT_1_A(Core &c)
+void BIT_1_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0000'0010, c.r.f);
+	TestBit(cpu.a & 0b0000'0010, cpu.f);
 }
 
-void BIT_2_B(Core &c)
+void BIT_2_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0000'0100, c.r.f);
+	TestBit(cpu.b & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_C(Core &c)
+void BIT_2_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0000'0100, c.r.f);
+	TestBit(cpu.c & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_D(Core &c)
+void BIT_2_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0000'0100, c.r.f);
+	TestBit(cpu.d & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_E(Core &c)
+void BIT_2_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0000'0100, c.r.f);
+	TestBit(cpu.e & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_H(Core &c)
+void BIT_2_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0000'0100, c.r.f);
+	TestBit(cpu.h & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_L(Core &c)
+void BIT_2_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0000'0100, c.r.f);
+	TestBit(cpu.l & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_AHL(Core &c)
+void BIT_2_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0000'0100, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0000'0100, cpu.f);
 }
 
-void BIT_2_A(Core &c)
+void BIT_2_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0000'0100, c.r.f);
+	TestBit(cpu.a & 0b0000'0100, cpu.f);
 }
 
-void BIT_3_B(Core &c)
+void BIT_3_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0000'1000, c.r.f);
+	TestBit(cpu.b & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_C(Core &c)
+void BIT_3_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0000'1000, c.r.f);
+	TestBit(cpu.c & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_D(Core &c)
+void BIT_3_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0000'1000, c.r.f);
+	TestBit(cpu.d & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_E(Core &c)
+void BIT_3_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0000'1000, c.r.f);
+	TestBit(cpu.e & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_H(Core &c)
+void BIT_3_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0000'1000, c.r.f);
+	TestBit(cpu.h & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_L(Core &c)
+void BIT_3_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0000'1000, c.r.f);
+	TestBit(cpu.l & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_AHL(Core &c)
+void BIT_3_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0000'1000, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0000'1000, cpu.f);
 }
 
-void BIT_3_A(Core &c)
+void BIT_3_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0000'1000, c.r.f);
+	TestBit(cpu.a & 0b0000'1000, cpu.f);
 }
 
-void BIT_4_B(Core &c)
+void BIT_4_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0001'0000, c.r.f);
+	TestBit(cpu.b & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_C(Core &c)
+void BIT_4_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0001'0000, c.r.f);
+	TestBit(cpu.c & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_D(Core &c)
+void BIT_4_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0001'0000, c.r.f);
+	TestBit(cpu.d & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_E(Core &c)
+void BIT_4_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0001'0000, c.r.f);
+	TestBit(cpu.e & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_H(Core &c)
+void BIT_4_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0001'0000, c.r.f);
+	TestBit(cpu.h & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_L(Core &c)
+void BIT_4_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0001'0000, c.r.f);
+	TestBit(cpu.l & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_AHL(Core &c)
+void BIT_4_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0001'0000, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0001'0000, cpu.f);
 }
 
-void BIT_4_A(Core &c)
+void BIT_4_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0001'0000, c.r.f);
+	TestBit(cpu.a & 0b0001'0000, cpu.f);
 }
 
-void BIT_5_B(Core &c)
+void BIT_5_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0010'0000, c.r.f);
+	TestBit(cpu.b & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_C(Core &c)
+void BIT_5_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0010'0000, c.r.f);
+	TestBit(cpu.c & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_D(Core &c)
+void BIT_5_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0010'0000, c.r.f);
+	TestBit(cpu.d & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_E(Core &c)
+void BIT_5_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0010'0000, c.r.f);
+	TestBit(cpu.e & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_H(Core &c)
+void BIT_5_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0010'0000, c.r.f);
+	TestBit(cpu.h & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_L(Core &c)
+void BIT_5_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0010'0000, c.r.f);
+	TestBit(cpu.l & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_AHL(Core &c)
+void BIT_5_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0010'0000, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0010'0000, cpu.f);
 }
 
-void BIT_5_A(Core &c)
+void BIT_5_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0010'0000, c.r.f);
+	TestBit(cpu.a & 0b0010'0000, cpu.f);
 }
 
-void BIT_6_B(Core &c)
+void BIT_6_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b0100'0000, c.r.f);
+	TestBit(cpu.b & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_C(Core &c)
+void BIT_6_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b0100'0000, c.r.f);
+	TestBit(cpu.c & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_D(Core &c)
+void BIT_6_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b0100'0000, c.r.f);
+	TestBit(cpu.d & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_E(Core &c)
+void BIT_6_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b0100'0000, c.r.f);
+	TestBit(cpu.e & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_H(Core &c)
+void BIT_6_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b0100'0000, c.r.f);
+	TestBit(cpu.h & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_L(Core &c)
+void BIT_6_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b0100'0000, c.r.f);
+	TestBit(cpu.l & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_AHL(Core &c)
+void BIT_6_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b0100'0000, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b0100'0000, cpu.f);
 }
 
-void BIT_6_A(Core &c)
+void BIT_6_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b0100'0000, c.r.f);
+	TestBit(cpu.a & 0b0100'0000, cpu.f);
 }
 
-void BIT_7_B(Core &c)
+void BIT_7_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.b & 0b1000'0000, c.r.f);
+	TestBit(cpu.b & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_C(Core &c)
+void BIT_7_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.c & 0b1000'0000, c.r.f);
+	TestBit(cpu.c & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_D(Core &c)
+void BIT_7_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.d & 0b1000'0000, c.r.f);
+	TestBit(cpu.d & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_E(Core &c)
+void BIT_7_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.e & 0b1000'0000, c.r.f);
+	TestBit(cpu.e & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_H(Core &c)
+void BIT_7_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.h & 0b1000'0000, c.r.f);
+	TestBit(cpu.h & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_L(Core &c)
+void BIT_7_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.l & 0b1000'0000, c.r.f);
+	TestBit(cpu.l & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_AHL(Core &c)
+void BIT_7_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.mmu.read8(c.r.hl) & 0b1000'0000, c.r.f);
+	TestBit(mmu.read8(cpu.hl) & 0b1000'0000, cpu.f);
 }
 
-void BIT_7_A(Core &c)
+void BIT_7_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	TestBit(c.r.a & 0b1000'0000, c.r.f);
+	TestBit(cpu.a & 0b1000'0000, cpu.f);
 }
 
-void RES_0_B(Core &c)
+void RES_0_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0000'0001);
+	cpu.b = cpu.b & ~(0b0000'0001);
 }
 
-void RES_0_C(Core &c)
+void RES_0_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0000'0001);
+	cpu.c = cpu.c & ~(0b0000'0001);
 }
 
-void RES_0_D(Core &c)
+void RES_0_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0000'0001);
+	cpu.d = cpu.d & ~(0b0000'0001);
 }
 
-void RES_0_E(Core &c)
+void RES_0_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0000'0001);
+	cpu.e = cpu.e & ~(0b0000'0001);
 }
 
-void RES_0_H(Core &c)
+void RES_0_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0000'0001);
+	cpu.h = cpu.h & ~(0b0000'0001);
 }
 
-void RES_0_L(Core &c)
+void RES_0_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0000'0001);
+	cpu.l = cpu.l & ~(0b0000'0001);
 }
 
-void RES_0_AHL(Core &c)
+void RES_0_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0000'0001));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0000'0001));
 }
 
-void RES_0_A(Core &c)
+void RES_0_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0000'0001);
+	cpu.a = cpu.a & ~(0b0000'0001);
 }
 
-void RES_1_B(Core &c)
+void RES_1_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0000'0010);
+	cpu.b = cpu.b & ~(0b0000'0010);
 }
 
-void RES_1_C(Core &c)
+void RES_1_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0000'0010);
+	cpu.c = cpu.c & ~(0b0000'0010);
 }
 
-void RES_1_D(Core &c)
+void RES_1_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0000'0010);
+	cpu.d = cpu.d & ~(0b0000'0010);
 }
 
-void RES_1_E(Core &c)
+void RES_1_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0000'0010);
+	cpu.e = cpu.e & ~(0b0000'0010);
 }
 
-void RES_1_H(Core &c)
+void RES_1_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0000'0010);
+	cpu.h = cpu.h & ~(0b0000'0010);
 }
 
-void RES_1_L(Core &c)
+void RES_1_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0000'0010);
+	cpu.l = cpu.l & ~(0b0000'0010);
 }
 
-void RES_1_AHL(Core &c)
+void RES_1_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0000'0010));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0000'0010));
 }
 
-void RES_1_A(Core &c)
+void RES_1_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0000'0010);
+	cpu.a = cpu.a & ~(0b0000'0010);
 }
 
-void RES_2_B(Core &c)
+void RES_2_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0000'0100);
+	cpu.b = cpu.b & ~(0b0000'0100);
 }
 
-void RES_2_C(Core &c)
+void RES_2_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0000'0100);
+	cpu.c = cpu.c & ~(0b0000'0100);
 }
 
-void RES_2_D(Core &c)
+void RES_2_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0000'0100);
+	cpu.d = cpu.d & ~(0b0000'0100);
 }
 
-void RES_2_E(Core &c)
+void RES_2_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0000'0100);
+	cpu.e = cpu.e & ~(0b0000'0100);
 }
 
-void RES_2_H(Core &c)
+void RES_2_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0000'0100);
+	cpu.h = cpu.h & ~(0b0000'0100);
 }
 
-void RES_2_L(Core &c)
+void RES_2_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0000'0100);
+	cpu.l = cpu.l & ~(0b0000'0100);
 }
 
-void RES_2_AHL(Core &c)
+void RES_2_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0000'0100));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0000'0100));
 }
 
-void RES_2_A(Core &c)
+void RES_2_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0000'0100);
+	cpu.a = cpu.a & ~(0b0000'0100);
 }
 
-void RES_3_B(Core &c)
+void RES_3_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0000'1000);
+	cpu.b = cpu.b & ~(0b0000'1000);
 }
 
-void RES_3_C(Core &c)
+void RES_3_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0000'1000);
+	cpu.c = cpu.c & ~(0b0000'1000);
 }
 
-void RES_3_D(Core &c)
+void RES_3_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0000'1000);
+	cpu.d = cpu.d & ~(0b0000'1000);
 }
 
-void RES_3_E(Core &c)
+void RES_3_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0000'1000);
+	cpu.e = cpu.e & ~(0b0000'1000);
 }
 
-void RES_3_H(Core &c)
+void RES_3_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0000'1000);
+	cpu.h = cpu.h & ~(0b0000'1000);
 }
 
-void RES_3_L(Core &c)
+void RES_3_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0000'1000);
+	cpu.l = cpu.l & ~(0b0000'1000);
 }
 
-void RES_3_AHL(Core &c)
+void RES_3_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0000'1000));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0000'1000));
 }
 
-void RES_3_A(Core &c)
+void RES_3_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0000'1000);
+	cpu.a = cpu.a & ~(0b0000'1000);
 }
 
-void RES_4_B(Core &c)
+void RES_4_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0001'0000);
+	cpu.b = cpu.b & ~(0b0001'0000);
 }
 
-void RES_4_C(Core &c)
+void RES_4_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0001'0000);
+	cpu.c = cpu.c & ~(0b0001'0000);
 }
 
-void RES_4_D(Core &c)
+void RES_4_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0001'0000);
+	cpu.d = cpu.d & ~(0b0001'0000);
 }
 
-void RES_4_E(Core &c)
+void RES_4_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0001'0000);
+	cpu.e = cpu.e & ~(0b0001'0000);
 }
 
-void RES_4_H(Core &c)
+void RES_4_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0001'0000);
+	cpu.h = cpu.h & ~(0b0001'0000);
 }
 
-void RES_4_L(Core &c)
+void RES_4_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0001'0000);
+	cpu.l = cpu.l & ~(0b0001'0000);
 }
 
-void RES_4_AHL(Core &c)
+void RES_4_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0001'0000));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0001'0000));
 }
 
-void RES_4_A(Core &c)
+void RES_4_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0001'0000);
+	cpu.a = cpu.a & ~(0b0001'0000);
 }
 
-void RES_5_B(Core &c)
+void RES_5_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0010'0000);
+	cpu.b = cpu.b & ~(0b0010'0000);
 }
 
-void RES_5_C(Core &c)
+void RES_5_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0010'0000);
+	cpu.c = cpu.c & ~(0b0010'0000);
 }
 
-void RES_5_D(Core &c)
+void RES_5_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0010'0000);
+	cpu.d = cpu.d & ~(0b0010'0000);
 }
 
-void RES_5_E(Core &c)
+void RES_5_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0010'0000);
+	cpu.e = cpu.e & ~(0b0010'0000);
 }
 
-void RES_5_H(Core &c)
+void RES_5_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0010'0000);
+	cpu.h = cpu.h & ~(0b0010'0000);
 }
 
-void RES_5_L(Core &c)
+void RES_5_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0010'0000);
+	cpu.l = cpu.l & ~(0b0010'0000);
 }
 
-void RES_5_AHL(Core &c)
+void RES_5_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0010'0000));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0010'0000));
 }
 
-void RES_5_A(Core &c)
+void RES_5_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0010'0000);
+	cpu.a = cpu.a & ~(0b0010'0000);
 }
 
-void RES_6_B(Core &c)
+void RES_6_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b0100'0000);
+	cpu.b = cpu.b & ~(0b0100'0000);
 }
 
-void RES_6_C(Core &c)
+void RES_6_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b0100'0000);
+	cpu.c = cpu.c & ~(0b0100'0000);
 }
 
-void RES_6_D(Core &c)
+void RES_6_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b0100'0000);
+	cpu.d = cpu.d & ~(0b0100'0000);
 }
 
-void RES_6_E(Core &c)
+void RES_6_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b0100'0000);
+	cpu.e = cpu.e & ~(0b0100'0000);
 }
 
-void RES_6_H(Core &c)
+void RES_6_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b0100'0000);
+	cpu.h = cpu.h & ~(0b0100'0000);
 }
 
-void RES_6_L(Core &c)
+void RES_6_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b0100'0000);
+	cpu.l = cpu.l & ~(0b0100'0000);
 }
 
-void RES_6_AHL(Core &c)
+void RES_6_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, ~(0b0100'0000));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & ~(0b0100'0000));
 }
 
-void RES_6_A(Core &c)
+void RES_6_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b0100'0000);
+	cpu.a = cpu.a & ~(0b0100'0000);
 }
 
-void RES_7_B(Core &c)
+void RES_7_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b = c.r.b & ~(0b1000'0000);
+	cpu.b = cpu.b & ~(0b1000'0000);
 }
 
-void RES_7_C(Core &c)
+void RES_7_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c = c.r.c & ~(0b1000'0000);
+	cpu.c = cpu.c & ~(0b1000'0000);
 }
 
-void RES_7_D(Core &c)
+void RES_7_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d = c.r.d & ~(0b1000'0000);
+	cpu.d = cpu.d & ~(0b1000'0000);
 }
 
-void RES_7_E(Core &c)
+void RES_7_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e = c.r.e & ~(0b1000'0000);
+	cpu.e = cpu.e & ~(0b1000'0000);
 }
 
-void RES_7_H(Core &c)
+void RES_7_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h = c.r.h & ~(0b1000'0000);
+	cpu.h = cpu.h & ~(0b1000'0000);
 }
 
-void RES_7_L(Core &c)
+void RES_7_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l = c.r.l & ~(0b1000'0000);
+	cpu.l = cpu.l & ~(0b1000'0000);
 }
 
-void RES_7_AHL(Core &c)
+void RES_7_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.and8(c.r.hl, static_cast<uint8_t>(~0x80));
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val & static_cast<uint8_t>(~0x80));
 }
 
-void RES_7_A(Core &c)
+void RES_7_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a = c.r.a & ~(0b1000'0000);
+	cpu.a = cpu.a & ~(0b1000'0000);
 }
 
-void SET_0_B(Core &c)
+void SET_0_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0000'0001;
+	cpu.b |= 0b0000'0001;
 }
 
-void SET_0_C(Core &c)
+void SET_0_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0000'0001;
+	cpu.c |= 0b0000'0001;
 }
 
-void SET_0_D(Core &c)
+void SET_0_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0000'0001;
+	cpu.d |= 0b0000'0001;
 }
 
-void SET_0_E(Core &c)
+void SET_0_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0000'0001;
+	cpu.e |= 0b0000'0001;
 }
 
-void SET_0_H(Core &c)
+void SET_0_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0000'0001;
+	cpu.h |= 0b0000'0001;
 }
 
-void SET_0_L(Core &c)
+void SET_0_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0000'0001;
+	cpu.l |= 0b0000'0001;
 }
 
-void SET_0_AHL(Core &c)
+void SET_0_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0000'0001);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0000'0001);
 }
 
-void SET_0_A(Core &c)
+void SET_0_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0000'0001;
+	cpu.a |= 0b0000'0001;
 }
 
-void SET_1_B(Core &c)
+void SET_1_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0000'0010;
+	cpu.b |= 0b0000'0010;
 }
 
-void SET_1_C(Core &c)
+void SET_1_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0000'0010;
+	cpu.c |= 0b0000'0010;
 }
 
-void SET_1_D(Core &c)
+void SET_1_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0000'0010;
+	cpu.d |= 0b0000'0010;
 }
 
-void SET_1_E(Core &c)
+void SET_1_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0000'0010;
+	cpu.e |= 0b0000'0010;
 }
 
-void SET_1_H(Core &c)
+void SET_1_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0000'0010;
+	cpu.h |= 0b0000'0010;
 }
 
-void SET_1_L(Core &c)
+void SET_1_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0000'0010;
+	cpu.l |= 0b0000'0010;
 }
 
-void SET_1_AHL(Core &c)
+void SET_1_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0000'0010);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0000'0010);
 }
 
-void SET_1_A(Core &c)
+void SET_1_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0000'0010;
+	cpu.a |= 0b0000'0010;
 }
 
-void SET_2_B(Core &c)
+void SET_2_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0000'0100;
+	cpu.b |= 0b0000'0100;
 }
 
-void SET_2_C(Core &c)
+void SET_2_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0000'0100;
+	cpu.c |= 0b0000'0100;
 }
 
-void SET_2_D(Core &c)
+void SET_2_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0000'0100;
+	cpu.d |= 0b0000'0100;
 }
 
-void SET_2_E(Core &c)
+void SET_2_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0000'0100;
+	cpu.e |= 0b0000'0100;
 }
 
-void SET_2_H(Core &c)
+void SET_2_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0000'0100;
+	cpu.h |= 0b0000'0100;
 }
 
-void SET_2_L(Core &c)
+void SET_2_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0000'0100;
+	cpu.l |= 0b0000'0100;
 }
 
-void SET_2_AHL(Core &c)
+void SET_2_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0000'0100);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0000'0100);
 }
 
-void SET_2_A(Core &c)
+void SET_2_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0000'0100;
+	cpu.a |= 0b0000'0100;
 }
 
-void SET_3_B(Core &c)
+void SET_3_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0000'1000;
+	cpu.b |= 0b0000'1000;
 }
 
-void SET_3_C(Core &c)
+void SET_3_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0000'1000;
+	cpu.c |= 0b0000'1000;
 }
 
-void SET_3_D(Core &c)
+void SET_3_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0000'1000;
+	cpu.d |= 0b0000'1000;
 }
 
-void SET_3_E(Core &c)
+void SET_3_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0000'1000;
+	cpu.e |= 0b0000'1000;
 }
 
-void SET_3_H(Core &c)
+void SET_3_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0000'1000;
+	cpu.h |= 0b0000'1000;
 }
 
-void SET_3_L(Core &c)
+void SET_3_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0000'1000;
+	cpu.l |= 0b0000'1000;
 }
 
-void SET_3_AHL(Core &c)
+void SET_3_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0000'1000);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0000'1000);
 }
 
-void SET_3_A(Core &c)
+void SET_3_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0000'1000;
+	cpu.a |= 0b0000'1000;
 }
 
-void SET_4_B(Core &c)
+void SET_4_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0001'0000;
+	cpu.b |= 0b0001'0000;
 }
 
-void SET_4_C(Core &c)
+void SET_4_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0001'0000;
+	cpu.c |= 0b0001'0000;
 }
 
-void SET_4_D(Core &c)
+void SET_4_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0001'0000;
+	cpu.d |= 0b0001'0000;
 }
 
-void SET_4_E(Core &c)
+void SET_4_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0001'0000;
+	cpu.e |= 0b0001'0000;
 }
 
-void SET_4_H(Core &c)
+void SET_4_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0001'0000;
+	cpu.h |= 0b0001'0000;
 }
 
-void SET_4_L(Core &c)
+void SET_4_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0001'0000;
+	cpu.l |= 0b0001'0000;
 }
 
-void SET_4_AHL(Core &c)
+void SET_4_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0001'0000);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0001'0000);
 }
 
-void SET_4_A(Core &c)
+void SET_4_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0001'0000;
+	cpu.a |= 0b0001'0000;
 }
 
-void SET_5_B(Core &c)
+void SET_5_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0010'0000;
+	cpu.b |= 0b0010'0000;
 }
 
-void SET_5_C(Core &c)
+void SET_5_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0010'0000;
+	cpu.c |= 0b0010'0000;
 }
 
-void SET_5_D(Core &c)
+void SET_5_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0010'0000;
+	cpu.d |= 0b0010'0000;
 }
 
-void SET_5_E(Core &c)
+void SET_5_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0010'0000;
+	cpu.e |= 0b0010'0000;
 }
 
-void SET_5_H(Core &c)
+void SET_5_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0010'0000;
+	cpu.h |= 0b0010'0000;
 }
 
-void SET_5_L(Core &c)
+void SET_5_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0010'0000;
+	cpu.l |= 0b0010'0000;
 }
 
-void SET_5_AHL(Core &c)
+void SET_5_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0010'0000);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0010'0000);
 }
 
-void SET_5_A(Core &c)
+void SET_5_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0010'0000;
+	cpu.a |= 0b0010'0000;
 }
 
-void SET_6_B(Core &c)
+void SET_6_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b0100'0000;
+	cpu.b |= 0b0100'0000;
 }
 
-void SET_6_C(Core &c)
+void SET_6_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b0100'0000;
+	cpu.c |= 0b0100'0000;
 }
 
-void SET_6_D(Core &c)
+void SET_6_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b0100'0000;
+	cpu.d |= 0b0100'0000;
 }
 
-void SET_6_E(Core &c)
+void SET_6_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b0100'0000;
+	cpu.e |= 0b0100'0000;
 }
 
-void SET_6_H(Core &c)
+void SET_6_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b0100'0000;
+	cpu.h |= 0b0100'0000;
 }
 
-void SET_6_L(Core &c)
+void SET_6_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b0100'0000;
+	cpu.l |= 0b0100'0000;
 }
 
-void SET_6_AHL(Core &c)
+void SET_6_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b0100'0000);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b0100'0000);
 }
 
-void SET_6_A(Core &c)
+void SET_6_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b0100'0000;
+	cpu.a |= 0b0100'0000;
 }
 
-void SET_7_B(Core &c)
+void SET_7_B(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.b |= 0b1000'0000;
+	cpu.b |= 0b1000'0000;
 }
 
-void SET_7_C(Core &c)
+void SET_7_C(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.c |= 0b1000'0000;
+	cpu.c |= 0b1000'0000;
 }
 
-void SET_7_D(Core &c)
+void SET_7_D(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.d |= 0b1000'0000;
+	cpu.d |= 0b1000'0000;
 }
 
-void SET_7_E(Core &c)
+void SET_7_E(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.e |= 0b1000'0000;
+	cpu.e |= 0b1000'0000;
 }
 
-void SET_7_H(Core &c)
+void SET_7_H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.h |= 0b1000'0000;
+	cpu.h |= 0b1000'0000;
 }
 
-void SET_7_L(Core &c)
+void SET_7_L(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.l |= 0b1000'0000;
+	cpu.l |= 0b1000'0000;
 }
 
-void SET_7_AHL(Core &c)
+void SET_7_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.mmu.or8(c.r.hl, 0b1000'0000);
+	auto val { mmu.read8(cpu.hl) };
+	mmu.write8(cpu.hl, val | 0b1000'0000);
 }
 
-void SET_7_A(Core &c)
+void SET_7_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles)
 {
-	c.r.a |= 0b1000'0000;
+	cpu.a |= 0b1000'0000;
 }
 
 const Instruction kInstructions[] =

@@ -8,42 +8,22 @@
 
 #include "types.h"
 
-class GPU;
+#include "component.h"
 
-class MMU
+struct Mmu : Component
 {
-public:
-	MMU();
+	Mmu(Component& cpu, Component& ppu, uint8_t *memory);
 
-	void reset();
-	void init(GPU *gpu);
-
-    // data
-	GPU *mGpu { nullptr };
-	std::vector<std::uint8_t> mem;
-	bool inBios { true };
-	std::string serialData;
-
-	// functions
-	void setRom(const std::vector<std::uint8_t> &bytes);
-	void setBios(const std::vector<std::uint8_t> &bytes);
-	void setInBios(bool val);
-
-	uint8_t read8(uint16_t addr);
-	uint16_t read16(uint16_t addr);
-	void write8(uint16_t addr, uint8_t val);
-	void write16(uint16_t addr, uint16_t val);
-	void or8(uint16_t addr, uint8_t val);
-	void or16(uint16_t addr, uint16_t val);
-	void and8(uint16_t addr, uint8_t val);
-	void and16(uint16_t addr, uint16_t val);
+	void reset() override {};
+	uint8_t read8(uint16_t address) override;
+	uint16_t read16(uint16_t address) override;
+	void write8(uint16_t address, uint8_t value) override;
+	void write16(uint16_t address, uint16_t value) override;
 
 private:
-	void oam_write8(uint16_t addr, uint8_t val);
-	void io_write8(uint16_t addr, uint8_t val);
-
-	bool mInBios { false };
-	std::vector<std::uint8_t> bios;
+	Component &cpu;
+	Component &ppu;
+	uint8_t *memory;
 };
 
 #endif // MMU_H

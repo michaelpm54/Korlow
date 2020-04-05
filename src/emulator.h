@@ -13,10 +13,12 @@
 #include "gui/opengl_widget.h"
 
 #include "cpu/cpu.h"
-#include "gpu.h"
+#include "ppu.h"
 #include "mmu.h"
 
+#include "gameboy.h"
 #include "memory_map.h"
+#include "types.h"
 
 class Window;
 class FTFont;
@@ -54,8 +56,6 @@ public slots:
 
 public:
 	void initHardware();
-	void setBios(const std::string &path);
-	void setRom(const std::vector<std::uint8_t> &bytes);
 
 private:
 	std::unique_ptr<FTFont> mFont;
@@ -63,9 +63,6 @@ private:
 	std::unique_ptr<MessageManager> mMessageManager;
 	std::unique_ptr<MessageRenderer> mMessageRenderer;
 	std::unique_ptr<OpenGLWidget> mOpenGLWidget;
-	std::unique_ptr<CPU> mCpu;
-	std::unique_ptr<GPU> mGpu;
-	std::unique_ptr<MMU> mMmu;
 
 	bool mContinue { true };
 	bool mPaused { false };
@@ -73,6 +70,14 @@ private:
 	bool mHaveRom { false };
 	QTimer mFrameTimer;
 	std::chrono::time_point<std::chrono::system_clock> mLastDumpTime;
+
+	std::unique_ptr<PpuMapProxy> ppuMapProxy;
+
+	std::unique_ptr<Cpu> cpu;
+	std::unique_ptr<Ppu> ppu;
+	std::unique_ptr<Mmu> mmu;
+
+	std::unique_ptr<Gameboy> gameboy;
 };
 
 #endif // EMULATOR_H

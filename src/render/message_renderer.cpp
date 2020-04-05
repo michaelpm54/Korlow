@@ -27,7 +27,6 @@ void MessageRenderer::render()
 
 	for (const auto& msg : mMessageManager->getMessages())
 	{
-		printf("Rendering %s\n", msg.text.c_str());
 		if (mRenderedMessages.count(msg.begin))
 			mFont->drawString(mRenderedMessages[msg.begin]);
 		else

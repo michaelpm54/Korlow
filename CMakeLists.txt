@@ -68,10 +68,12 @@ set(KORLOW_SOURCES
 	src/main.cpp
 	src/emulator.cpp
 	src/mmu.cpp
-	src/gpu.cpp
+	src/ppu.cpp
 	src/fs.cpp
 	src/rom_util.cpp
 	src/message_manager.cpp
+
+	src/gameboy.cpp
 )
 
 set(KORLOW_HEADERS
@@ -81,12 +83,15 @@ set(KORLOW_HEADERS
 	src/args.hxx
 	src/emulator.h
 	src/mmu.h
-	src/gpu.h
+	src/ppu.h
 	src/types.h
 	src/fs.h
 	src/rom_util.h
 	src/memory_map.h
 	src/message_manager.h
+
+	src/component.h
+	src/gameboy.h
 )
 
 add_executable(app
@@ -138,7 +143,7 @@ if (DO_TESTS)
 	set(KORLOW_TEST_SOURCES
 	    ${KORLOW_CPU_SOURCES}
 		src/mmu.cpp
-		src/gpu.cpp
+		src/ppu.cpp
 		tests/main.cpp
 		tests/rotation.cpp
 		tests/addition.cpp

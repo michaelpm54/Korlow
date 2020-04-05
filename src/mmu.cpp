@@ -1,320 +1,74 @@
-#include <algorithm>
-
-#include "gpu.h"
 #include "mmu.h"
 #include "memory_map.h"
 
-MMU::MMU()
+bool is_ppu_address(uint16_t address)
 {
-	try {
-		mem.resize(0x10000);
-	}
-	catch (...) {
-		throw std::runtime_error("Failed to allocate MMU memory");
-	}
-
-	mem[kIf] = 0xE0;
+	return
+		(address >= kOam && address < kIo)
+		|| (address >= kTileRamUnsigned && address < kCartRam)
+		|| (address >= kLcdc && address < kZeroPage);
 }
 
-void MMU::reset()
+bool is_cpu_address(uint16_t address)
 {
-	std::memset(mem.data(), 0x0, mem.size());
+	return
+		(address == kIo)
+		|| (address == kIe);
 }
 
-void MMU::init(GPU* gpu)
+Mmu::Mmu(Component &cpu, Component &ppu, uint8_t *memory)
+	: cpu(cpu)
+	, ppu(ppu)
+	, memory(memory)
+{}
+
+uint8_t Mmu::read8(uint16_t address)
 {
-	mGpu = gpu;
+	return memory[address];
 }
 
-void MMU::setBios(const std::vector<std::uint8_t>& bytes)
+uint16_t Mmu::read16(uint16_t address)
 {
-	mInBios = true;
-	bios = bytes;
+	return uint16_t(read8(address + 1) << 8) + read8(address);
 }
 
-void MMU::setRom(const std::vector<std::uint8_t> &bytes)
+void Mmu::write8(uint16_t addr, uint8_t value)
 {
-	std::copy_n(bytes.data(), std::min(0xFFFF, static_cast<int>(bytes.size())), &mem[0]);
+	if (addr == kIf)
+	{
+		value |= 0b1110'0000;
+		cpu.write8(kIf, value);
+		ppu.write8(kIf, value);
+	}
+	else if (addr == kIo) // P1/JOYP
+	{
+		value |= 0xCF;
+	}
+	else if (addr == 0xFF02) // Serial transfer control
+	{
+		value |= 0b0111'1100;
+	}
+	else if (is_ppu_address(addr))
+	{
+		if (addr == kDmaStartAddr)
+		{
+			for (int i = 0; i < 0xA0; i++)
+				write8(kOam + i, read8((uint16_t(value) << 8) + i));
+		}
+		else
+			ppu.write8(addr, value);
+	}
+	else if (is_cpu_address(addr))
+	{
+		cpu.write8(addr, value);
+	}
+
+	// Let the other components do their thing, then write regardless.
+	memory[addr] = value;
 }
 
-uint8_t MMU::read8(uint16_t addr)
+void Mmu::write16(uint16_t address, uint16_t value)
 {
-	if (mInBios && addr < 0x100)
-		return bios[addr];
-	return mem[addr];
-}
-
-uint16_t MMU::read16(uint16_t addr)
-{
-	return uint16_t(read8(addr+1) << 8) + read8(addr);
-}
-
-void MMU::io_write8(uint16_t addr, uint8_t val)
-{
-	if (addr == kIo) // P1/JOYP
-	{
-		mem[addr] = val | 0xCF;
-		return;
-	}
-	else if (addr == 0xFF01)
-	{
-		serialData.push_back(val);
-		printf("Serial data: %02X\n", val);
-		printf("Serial data total:\n{\n%s\n}\n\n", serialData.c_str());
-		//or8(kIf, 0x4);
-	}
-	else if (addr == 0xFF02)
-	{
-		// Serial transfer control
-		mem[0xFF02] = val | 0b0111'1100;
-		return;
-	}
-	else if (addr == 0xFF04) // DIV
-	{
-		mem[0xFF04] = 0;
-		return;
-	}
-	else if (addr == 0xFF05) // TIMA
-	{
-
-	}
-	else if (addr == 0xFF06) // TMA
-	{
-
-	}
-	else if (addr == 0xFF07) // TAC
-	{
-		mem[0xFF07] = val | 0b1111'1000;
-		return;
-	}
-	else if (addr == kIf)
-	{
-		if (!val)
-		{
-			printf("Fired no interrupts\n");
-		}
-		printf("Fired interrupt ");
-		if (val & 0b0000'0001)
-		{
-			printf("VBLANK ");
-		}
-		if (val & 0b0000'0010)
-		{
-			printf("LCD STAT ");
-		}
-		if (val & 0b0000'0100)
-		{
-			printf("TIMER ");
-		}
-		if (val & 0b0000'1000)
-		{
-			printf("SERIAL ");
-		}
-		if (val & 0b0001'0000)
-		{
-			printf("JOYPAD ");
-		}
-		printf("\n");
-		mem[kIf] = val | 0b1110'0000;
-		return;
-	}
-	else if (addr > 0xFF0F && addr < kLcdc)
-	{
-		switch (addr & 0xFF)
-		{
-			case 0x10:
-				// NR10 - Channel 1 (Tone & Sweep) Sweep register (R/W) [-TTTDNNN] T=Time,D=direction,N=Numberof shifts 
-				break;
-			case 0x11:
-				// NR11 - Channel 1 (Tone & Sweep) Sound length/Wave pattern duty (R/W) [DDLLLLLL] L=Length D=Wave pattern Duty
-				// printf("SND: Channel 1 write: Length: %02X, Wave pattern duty: %02X\n", val & 0xC0, val & ~0xC0);
-				break;
-			case 0x12:
-				// NR12 - Channel 1 (Tone & Sweep) Volume Envelope (R/W) [VVVVDNNN] C1 Volume / Direction 0=down / envelope Number (fade speed)
-				// printf("SND: Channel 1 write: Vol: %02X, Down: %02X, Fade speed: %02X\n", val & 0xF0, val & 0x8, val & 0x7);
-				break;
-			case 0x13:
-				break;
-			// case 0x15: // There is no FF15
-				// break;
-			case 0x14:
-				break;
-			case 0x16:
-				break;
-			case 0x17:
-				break;
-			case 0x18:
-				break;
-			case 0x19:
-				break;
-			case 0x1A:
-				break;
-			case 0x1B:
-				break;
-			case 0x1C:
-				break;
-			case 0x1D:
-				break;
-			case 0x1E:
-				break;
-			case 0x20:
-				break;
-			case 0x21:
-				break;
-			case 0x22:
-				break;
-			case 0x23:
-				break;
-			case 0x24:
-				break;
-			case 0x25:
-				break;
-			case 0x26:
-				// NR52 - Sound on/off [A---4321] read Channel 1-4 status or write All channels on/off (1=on)
-				// printf("SND: All sound: %s, Channels: %02X\n", ((val & 0x80) ? "on" : "off"), val & 0xF);
-				break;
-			default:
-				break;
-		}
-	}
-	else if (addr == kLcdc)
-	{
-		// printf("LCD control write: %02X\n", val);
-	}
-	else if (addr == kScy)
-	{
-		// printf("SCY: 0x%02X | %d\n", val, val);
-	}
-	else if (addr == kScx)
-	{
-		// printf("SCX: 0x%02X | %d\n", val, val);
-	}
-	else if (addr == kLy)
-	{
-		val = 0;
-	}
-	else if (addr == kDmaStartAddr)
-	{
-		uint16_t addr = uint16_t(val) << 8;
-		for (int i = 0; i < 0xA0; i++)
-			write8(kOam + i, read8(addr + i));
-		
-	}
-	else if (addr == kBgPalette)
-	{
-		mGpu->setBgPalette(val);
-	}
-	else
-	{
-		//printf("io write %02x to %04X\n", val, addr);
-	}
-	mem[addr] = val;
-}
-
-void MMU::oam_write8(uint16_t addr, uint8_t val)
-{
-	mem[addr] = val;
-	// printf("OAM write { %04X = %02X }\n", addr, val);
-}
-
-void MMU::write8(uint16_t addr, uint8_t val)
-{
-	if (addr >= kOam && addr < kIo)
-	{
-		oam_write8(addr, val);
-		return;
-	}
-	if (addr >= kIo && addr < kZeroPage)
-	{
-		io_write8(addr, val);
-		return;
-	}
-	if (val)
-	{
-		if (addr >= kTileRamUnsigned && addr < kTileRamSigned)
-		{
-			// printf("BG Data 1 write { %04X, %02X }\n", addr, val);
-		}
-		else if (addr >= kTileRamSigned && addr < kMap0)
-		{
-			// printf("BG Data 2 write { %04X, %02X }\n", addr, val);
-		}
-		else if (addr >= kMap0 && addr < kMap1)
-		{
-			// printf("BG tile map write 1 { %04X, %02X }\n", addr, val);
-		}
-		else if (addr >= kMap1 && addr < kCartRam)
-		{
-			// printf("BG tile map write 2 { %04X, %02X }\n", addr, val);
-		}
-	}
-	if (addr == kIe)
-	{
-		if (!val)
-		{
-			printf("Disabled all interrupts\n");
-		}
-		printf("Enabled interrupt ");
-		if (val & 0b0000'0001)
-		{
-			printf("VBLANK ");
-		}
-		if (val & 0b0000'0010)
-		{
-			printf("LCD STAT ");
-		}
-		if (val & 0b0000'0100)
-		{
-			printf("TIMER ");
-		}
-		if (val & 0b0000'1000)
-		{
-			printf("SERIAL ");
-		}
-		if (val & 0b0001'0000)
-		{
-			printf("JOYPAD ");
-		}
-		printf("\n");
-	}
-	else if (addr == kObj0Palette)
-	{
-		mGpu->setSpritePalette(0, val);
-	}
-	else if (addr == kObj1Palette)
-	{
-		mGpu->setSpritePalette(1, val);
-	}
-	mem[addr] = val;
-}
-
-void MMU::write16(uint16_t addr, uint16_t val)
-{
-	write8(addr, val);
-	write8(addr+1, (val & 0xFF00) >> 8);
-}
-
-void MMU::or8(uint16_t addr, uint8_t val)
-{
-	write8(addr, read8(addr) | val);
-}
-
-void MMU::or16(uint16_t addr, uint16_t val)
-{
-	write16(addr, read16(addr) | val);
-}
-
-void MMU::and8(uint16_t addr, uint8_t val)
-{
-	write8(addr, read8(addr) & val);
-}
-
-void MMU::and16(uint16_t addr, uint16_t val)
-{
-	write16(addr, read16(addr) & val);
-}
-
-void MMU::setInBios(bool val)
-{
-	mInBios = val;
+	write8(address, static_cast<uint8_t>(value));
+	write8(address + 1, (value & 0xFF00) >> 8);
 }

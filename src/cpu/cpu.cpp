@@ -4,117 +4,35 @@
 #include "cpu/cpu_base.h"
 #include "cpu/cpu_instructions.h"
 #include "cpu/inst_data.h"
-#include "cpu/decode.h"
 
-#include "gpu.h"
+#include "ppu.h"
 #include "memory_map.h"
 #include "mmu.h"
 
-//#define DEBUG
-
-CPU::CPU(MMU *mmu)
-	: mmu(mmu), c{.mmu=*mmu}
+Cpu::Cpu(CpuRegisters registers)
+	: registers(registers)
 {}
 
-void CPU::halt()
+void Cpu::reset()
 {
-	if (c.ime)
-	{
-		c.halt = true;
-	}
-	else
-	{
-		mRepeatNextInstruction = 1;
-	}
+	pc = 0x0100;
+	sp = 0xFFFE;
+	af = 0x01B0;
+	bc = 0x0013;
+	de = 0x00D8;
+	hl = 0x014D;
+	ime = false;
 }
 
-void CPU::printRegisters(uint8_t opcode, bool newline, bool saved)
+bool Cpu::is_enabled() const
 {
-	char n = ' ';
-	if (newline)
-	{
-		n = '\n';
-	}
-	if (saved)
-	{
-		printf("%04X: ", mRegisters.pc);
-		printf("[%04X] ", mRegisters.sp);
-		printf("[%02X] ", opcode);
-		printf("AF:%04X %d%d%d%d IME=%c", mRegisters.af, mRegisters.af & 0x80, mRegisters.af & 0x40, mRegisters.af & 0x20, mRegisters.af & 0x10, ime ? '1' : '0');
-		printf("BC:%04X ", mRegisters.bc);
-		printf("DE:%04X ", mRegisters.de);
-		printf("HL:%04X%c", mRegisters.hl, n);
-	}
-	else
-	{
-		printf("%04X: ", mRegisters.pc);
-		printf("[%04X] ", sp);
-		printf("[%02X] ", opcode);
-		printf("F:%c%c%c%c  IE=%02X IF=%02X IME=%c  ", af & 0x80 ? 'Z':'-', af & 0x40 ? 'N':'-', af & 0x20 ? 'H':'-', af & 0x10 ? 'C':'-', mmu->mem[kIe], mmu->mem[kIf], ime ? '1' : '0');
-		printf("BC:%04X ", bc);
-		printf("DE:%04X ", de);
-		printf("HL:%04X%c", hl, n);
-	}
+	return enabled;
 }
 
-void CPU::printInstruction(const instruction_t &i, bool cb)
+void Cpu::print_instruction(uint16_t op, uint8_t d8, uint16_t d16)
 {
-	const Instruction *instructions = kInstructions;
-	const int *operandSizes = kInstFmtSizes;
-	auto formatStrings = kInstFmts;
-	if (cb)
-	{
-	}
-	printf(" | ");
-	if (operandSizes[i.code] == 0)
-	{
-		printf(formatStrings[i.code]);
-	}
-	else if (operandSizes[i.code] == 8)
-	{
-		printf(formatStrings[i.code], i.op8);
-	}
-	else
-	{
-		printf(formatStrings[i.code], i.op16);
-	}
-	if (cb)
-	{
-		puts(" | CB");
-	}
-	else
-	{
-		puts("");
-	}
-}
-
-void CPU::tick(int &cycles)
-{
-	uint16_t op { mmu->read8(c.r.pc) };
-
-	uint8_t mask = 0;
-	if (c.ime)
-	{
-		int c = 0;
-		while (mask = mmu->mem[kIe] & mmu->mem[kIf])
-		{
-			c += interrupts(mask);
-		}
-		if (c)
-		{
-			cycles += c;
-			return;
-		}
-	}
-
-	c.d8 = mmu->read8(c.r.pc+1);
-	c.d16 = mmu->read16(c.r.pc+1);
-
-	if (op == 0xCB)
-		op = c.d8 + 0x100;
-
 	/* Print info */
-	printf("%04X: (%04X)  IME(%c)  AF(%04X)  BC(%04X)  DE(%04X)  HL(%04X)  |%02X|  ", c.r.pc, c.r.sp, c.ime ? '1' : '.', c.r.af, c.r.bc, c.r.de, c.r.hl, op % 0xFF);
+	printf("%04X: (%04X)  IME:%c  AF:%04X  BC:%04X  DE:%04X  HL:%04X  |%02X|  ", pc, sp, ime ? '1' : '.', af, bc, de, hl, op % 0x100);
 
 	const int fsize { kInstFmtSizes[op] };
 
@@ -124,290 +42,167 @@ void CPU::tick(int &cycles)
 	}
 	else if (fsize == 8)
 	{
-		printf(kInstFmts[op], c.d8);
+		printf(kInstFmts[op], d8);
 	}
 	else if (fsize == 16)
 	{
-		printf(kInstFmts[op], c.d16);
+		printf(kInstFmts[op], d16);
 	}
 
 	puts("");
+}
 
-	/* Execute */
-	c.r.pc += kInstSizes[op];
+int Cpu::interrupt_handler(Component& mmu)
+{
+	int int_cycles = 0;
 
-	if (op > 0xFF)
-		c.r.pc++;
+	while (auto mask = registers.ie & registers.if_)
+		int_cycles += interrupts(mask, mmu);
 
-	kInstructions[op](c);
+	return int_cycles;
+}
 
-	if (c.extraCycles)
+void Cpu::halt_bug()
+{
+	switch (halt_bug_state)
 	{
-		c.extraCycles = false;
-		cycles += kInstCyclesAlt[op];
-	}
-	else
-		cycles += kInstCycles[op];
-
-	if (mRepeatNextInstruction == 1)
-	{
-		mRepeatNextInstruction++;
-	}
-	else if (mRepeatNextInstruction == 2)
-	{
-		mRepeatNextInstruction = 0;
+	case HaltBug::Triggered:
+		halt_bug_state = HaltBug::RepeatNext;
+		break;
+	case HaltBug::RepeatNext:
 		pc--;
-	}
-
-	mInstructionCounter++;
-
-	if (mDelayedImeEnable)
-	{
-		if (mDelayedImeEnable == 1)
-		{
-			mDelayedImeEnable++;
-		}
-		else if (mDelayedImeEnable == 2)
-		{
-			mDelayedImeEnable = 0;
-			c.ime = true;
-		}
+		halt_bug_state = HaltBug::None;
+		break;
+	default:
+		break;
 	}
 }
 
-void CPU::executeRegular(instruction_t &i, int &cycles)
+void Cpu::ei_bug()
 {
-#ifdef DEBUG
-	mRegisters.pc = pc;
-	printRegisters(i.code, false, false);
-#else
-	mRegisters =
+	switch (ei_bug_state)
 	{
-		pc,
-		sp,
-		af,
-		bc,
-		de,
-		hl
-	};
-#endif
-
-	pc += kInstSizes[i.code];
-	cycles += i.didAction ? kInstCycles[i.code] : kInstCyclesAlt[i.code];
-
-#ifdef DEBUG
-	printInstruction(i, false);
-#else
-	if (mBreak)
-	{
-		printRegisters(i.code, false, true);
-		printInstruction(i, false);
+	case EIBug::Triggered:
+		ei_bug_state = EIBug::Enable;
+		break;
+	case EIBug::Enable:
+		ime = true;
+		ei_bug_state = EIBug::None;
+		break;
+	default:
+		break;
 	}
-#endif
 }
 
-void CPU::executeCB(instruction_t &i, int &cycles)
-{
-#ifdef DEBUG
-	mRegisters.pc = pc;
-	printRegisters(i.code, false, false);
-#else
-	mRegisters =
-	{
-		static_cast<uint16_t>(pc-static_cast<uint16_t>(1)), // -1 to get the original CB pc
-		sp,
-		af,
-		bc,
-		de,
-		hl
-	};
-#endif
-
-#ifdef DEBUG
-	printInstruction(i, true);
-#else
-	if (mBreak)
-	{
-		printRegisters(i.code, false, true);
-		printInstruction(i, true);
-	}
-#endif
-}
-
-int CPU::executeInstruction()
+int Cpu::tick(Component &mmu)
 {
 	int cycles = 0;
 
-	uint8_t mask = 0;
-	if (c.ime)
+	uint16_t op { mmu.read8(pc) };
+	uint16_t d16 { mmu.read16(pc + 1) };
+	uint8_t d8 { d16 & 0xFFu };
+
+	if (ime)
 	{
-		while (mask = mmu->mem[kIe] & mmu->mem[kIf])
-		{
-			cycles += interrupts(mask);
-		}
+		int int_cycles = interrupt_handler(mmu);
+		if (int_cycles)
+			return int_cycles + cycles;
 	}
 
-	if (cycles)
-		return cycles;
+	if (op == 0xCB)
+		op = d8 + 0x100;
 
-	
+	if (debug)
+		print_instruction(op, d8, d16);
 
-	
+	pc += kInstSizes[op];
+
+	if (op > 0xFF) // CB
+		pc++;
+
+	/* Execute */
+	bool extraCycles { false };
+	kInstructions[op](*this, mmu, d8, d16, extraCycles);
+
+	cycles += extraCycles ? kInstCyclesAlt[op] : kInstCycles[op];
+
+	halt_bug();
+	ei_bug();
 
 	return cycles;
 }
 
-instruction_t CPU::fetch()
+void Cpu::enable_interrupts()
 {
-	if (mInBios && pc == 0x100)
-	{
-		puts("Leaving bios");
-		mInBios = false;
-		mmu->setInBios(false);
-	}
-
-	instruction_t instruction =
-	{
-		.code = mmu->read8(pc),
-		.op8  = mmu->read8(pc+1),
-		.op16 = mmu->read16(pc+1),
-		.didAction = true,
-	};
-
-	return instruction;
+	ei_bug_state = EIBug::Triggered;
 }
 
-void CPU::doBreak()
+void Cpu::halt()
 {
-	mBreak = true;
+	if (ime)
+		halted = true;
+	else
+		halt_bug_state = HaltBug::Triggered;
 }
 
-bool CPU::didBreak() const
+int Cpu::interrupts(uint8_t mask, Component &mmu)
 {
-	return mBreak;
-}
-
-int CPU::numInstructionsExecuted() const
-{
-	return mInstructionCounter;
-}
-
-int CPU::interrupts(uint8_t mask)
-{
-	c.ime = false;
+	ime = false;
 	sp--;
-	mmu->write8(sp, (pc & 0xFF00) >> 8);
+	mmu.write8(sp, (pc & 0xFF00) >> 8);
 
-	uint8_t If = mmu->mem[kIe] & mmu->mem[kIf];
+	uint8_t if_ = registers.if_ & registers.ie;
 
-	if (!If)
+	if (!if_)
 		pc = 0;
 
 	sp--;
-	mmu->write8(sp, pc & 0xFF);
+	mmu.write8(sp, pc & 0xFF);
 
 	int cycles = 0;
 
-	if (If & 0b0000'0001)
+	if (if_ & 0b0000'0001)
 	{
-		puts("INT VBLANK");
 		pc = 0x40;
-		If &= ~0b0000'0001;
+		if_ &= ~0b0000'0001;
 	}
-	if (If & 0b0000'0010)
+	if (if_ & 0b0000'0010)
 	{
-		puts("INT STAT");
 		pc = 0x48;
-		If &= ~0b0000'0010;
+		if_ &= ~0b0000'0010;
 	}
-	if (If & 0b0000'0100)
+	if (if_ & 0b0000'0100)
 	{
-		puts("INT TIMER");
 		pc = 0x50;
-		If &= ~0b0000'0100;
+		if_ &= ~0b0000'0100;
 	}
-	if (If & 0b0000'1000)
+	if (if_ & 0b0000'1000)
 	{
-		puts("INT SERIAL");
 		pc = 0x58;
-		If &= ~0b0000'1000;
+		if_ &= ~0b0000'1000;
 	}
-	if (If & 0b0001'0000)
+	if (if_ & 0b0001'0000)
 	{
-		puts("INT JOYPAD");
 		pc = 0x60;
-		If &= ~0b0001'0000;
+		if_ &= ~0b0001'0000;
 	}
 
-	if (mmu->mem[kIf] != If)
+	if (registers.if_ != if_)
 	{
 		cycles += 4;
-		c.halt = false;
-		mmu->mem[kIf] = If;
+		halted = false;
+		mmu.write8(kIf, if_);
 	}
 
 	return cycles;
 }
 
-void CPU::enableInterrupts()
+void Cpu::set_enabled(bool value)
 {
-	mDelayedImeEnable = 1;
+	enabled = value;
 }
 
-void CPU::reset(bool haveBios)
+void Cpu::disable_interrupts()
 {
-	mInBios = haveBios;
-
-	mmu->reset();
-
-	if (haveBios)
-	{
-		pc = 0x0;
-		af = 0x0;
-		bc = 0x0;
-		de = 0x0;
-		hl = 0x0;
-		sp = 0x0;
-	}
-	else
-	{
-		c.r.pc = 0x100;
-		c.r.af = 0x1B0;
-		c.r.bc = 0x13;
-		c.r.de = 0xD8;
-		c.r.hl = 0x14D;
-		c.r.sp = 0xFFFE;
-		pc = 0x0100;
-		af = 0x01B0;
-		bc = 0x0013;
-		de = 0x00D8;
-		hl = 0x014D;
-		sp = 0xFFFE;
-		mmu->write8(0xFF00, 0xCF);
-		mmu->mem[0xFF0F] = 0xE1;
-		mmu->write8(0xFF10, 0x80);
-		mmu->write8(0xFF11, 0xBF);
-		mmu->write8(0xFF12, 0xF3);
-		mmu->write8(0xFF14, 0xBF);
-		mmu->write8(0xFF16, 0x3F);
-		mmu->write8(0xFF19, 0xBF);
-		mmu->write8(0xFF1A, 0x7F);
-		mmu->write8(0xFF1B, 0xFF);
-		mmu->write8(0xFF1C, 0x9F);
-		mmu->write8(0xFF1E, 0xBF);
-		mmu->write8(0xFF20, 0xFF);
-		mmu->write8(0xFF23, 0xBF);
-		mmu->write8(0xFF24, 0x77);
-		mmu->write8(0xFF25, 0xF3);
-		mmu->write8(0xFF26, 0xF1);
-		mmu->write8(0xFF40, 0x91);
-		mmu->write8(0xFF47, 0xFC);
-		mmu->write8(0xFF48, 0xFF);
-		mmu->write8(0xFF49, 0xFF);
-	}
-}
-
-bool CPU::paused() const
-{
-	return c.paused;
+	ime = false;
 }

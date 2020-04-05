@@ -67,11 +67,9 @@ struct instruction_t
 	bool didAction;
 };
 class CPU;
-using Instruction = void (*)(Core &c);
-struct Instruction_t
-{
-	Instruction func;
-	int cycles;
-};
+
+struct Cpu;
+struct Component;
+using Instruction = void (*)(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 
 #endif // TYPES_H
