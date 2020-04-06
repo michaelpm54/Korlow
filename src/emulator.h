@@ -25,6 +25,9 @@ class FTFont;
 class GameboyRenderer;
 class MessageManager;
 class MessageRenderer;
+class MapRenderer;
+class QSplitter;
+class PpuMapProxy;
 
 class Emulator : public QMainWindow
 {
@@ -49,6 +52,7 @@ private:
 	void printTotalInstructions();
 	bool shouldRun() const;
 	void openFile(const std::string &path);
+	void set_map_visible(bool value);
 
 	// Machine
 public slots:
@@ -58,11 +62,18 @@ public:
 	void initHardware();
 
 private:
+	std::string rom_path;
+
 	std::unique_ptr<FTFont> mFont;
+
 	std::unique_ptr<GameboyRenderer> mGameboyRenderer;
 	std::unique_ptr<MessageManager> mMessageManager;
 	std::unique_ptr<MessageRenderer> mMessageRenderer;
-	std::unique_ptr<OpenGLWidget> mOpenGLWidget;
+	std::unique_ptr<MapRenderer> map_renderer;
+
+	QSplitter *splitter;
+	OpenGLWidget *main_opengl_widget;
+	OpenGLWidget *side_opengl_widget;
 
 	bool mContinue { true };
 	bool mPaused { false };

@@ -72,16 +72,4 @@ struct Ppu : Component
 	std::vector<uint8_t> pixels;
 };
 
-struct PpuMapProxy : Component
-{
-	PpuMapProxy(Ppu &ppu);
-
-	void reset() override;
-	void write8(uint16_t address, uint8_t value) override;
-	const uint8_t *get_pixels() const;
-
-	Ppu &ppu;
-	std::vector<uint8_t> map_pixels;
-};
-
 #endif // GPU_H

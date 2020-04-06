@@ -36,6 +36,7 @@ set(KORLOW_RENDER_SOURCES
 	src/render/gl_util.cpp
 	src/render/gameboy_renderer.cpp
 	src/render/message_renderer.cpp
+	src/render/map_renderer.cpp
 )
 
 set(KORLOW_RENDER_HEADERS
@@ -45,6 +46,7 @@ set(KORLOW_RENDER_HEADERS
 	src/render/renderer.h
 	src/render/gameboy_renderer.h
 	src/render/message_renderer.h
+	src/render/map_renderer.h
 )
 
 set(KORLOW_CPU_SOURCES
@@ -69,6 +71,7 @@ set(KORLOW_SOURCES
 	src/emulator.cpp
 	src/mmu.cpp
 	src/ppu.cpp
+	src/ppu_map_proxy.cpp
 	src/fs.cpp
 	src/rom_util.cpp
 	src/message_manager.cpp
@@ -84,6 +87,7 @@ set(KORLOW_HEADERS
 	src/emulator.h
 	src/mmu.h
 	src/ppu.h
+	src/ppu_map_proxy.h
 	src/types.h
 	src/fs.h
 	src/rom_util.h

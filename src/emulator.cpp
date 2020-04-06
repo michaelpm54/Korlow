@@ -1,20 +1,25 @@
-#include <cstring>  // strerror
 #include <algorithm>
 #include <iomanip>
+#include <fstream>
 #include <locale>
 #include <iostream>
 #include <memory>
 #include <thread>
 
 #include <QApplication>
+#include <QMessageBox>
 #include <QFileDialog>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QMenuBar>
+#include <QSplitter>
 #include <QThread>
 
 #include "emulator.h"
 #include "fs.h"
 #include "ppu.h"
+#include "ppu_map_proxy.h"
 #include "message_manager.h"
 #include "mmu.h"
 #include "rom_util.h"
@@ -26,28 +31,41 @@
 
 #include "render/font/ft_font.h"
 #include "render/gameboy_renderer.h"
+#include "render/map_renderer.h"
 #include "render/message_renderer.h"
 
 Emulator::Emulator(QWidget *parent)
 	: QMainWindow(parent)
 	, mFont(new FTFont())
 	, mLastDumpTime(std::chrono::system_clock::now() - std::chrono::seconds(2))
-	, mOpenGLWidget(new OpenGLWidget())
+	, splitter(new QSplitter(Qt::Horizontal))
+	, main_opengl_widget(new OpenGLWidget())
+	, side_opengl_widget(new OpenGLWidget())
 	, mGameboyRenderer(new GameboyRenderer())
 	, mMessageManager(new MessageManager())
 	, mMessageRenderer(new MessageRenderer(mMessageManager.get(), mFont.get()))
+	, map_renderer(new MapRenderer())
 {
 	setupWindow();
 	createMenuBar();
 	show();
 
 	// Important: The renderers are called in order added.
-	mOpenGLWidget->addRenderer(mGameboyRenderer.get());
-	mOpenGLWidget->addRenderer(mMessageRenderer.get());
+	main_opengl_widget->addRenderer(mGameboyRenderer.get());
+	main_opengl_widget->addRenderer(mMessageRenderer.get());
+	main_opengl_widget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	main_opengl_widget->setFixedSize({160 * 4, 144 * 4});
+
+	side_opengl_widget->addRenderer(map_renderer.get());
 
 	mGameboyRenderer->setEnabled(false);
 
-	setCentralWidget(mOpenGLWidget.get());
+	splitter->addWidget(main_opengl_widget);
+	splitter->addWidget(side_opengl_widget);
+	splitter->setChildrenCollapsible(false);
+	splitter->setHandleWidth(0);
+
+	setCentralWidget(splitter);
 
 	QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this](){ mContinue = false; });
 
@@ -55,7 +73,13 @@ Emulator::Emulator(QWidget *parent)
 
 	//setBios("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
 
-	initGL();
+	try {
+		initGL();
+	} catch (const std::runtime_error& e) {
+		QMessageBox::warning(this, "Failed to init resources", QString::fromStdString(e.what()));
+	}
+
+	set_map_visible(false);
 
 	QObject::connect(&mFrameTimer, &QTimer::timeout, this, &Emulator::run);
 	mFrameTimer.setInterval((1.0f / 60.0f) * 1000.0f);
@@ -71,7 +95,7 @@ void Emulator::setupWindow()
 {
 	setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 	setAttribute(Qt::WA_QuitOnClose);
-	resize(860, 660);
+	resize(160 * 4, 144 * 4);
 	setWindowTitle("Korlow");
 }
 
@@ -119,7 +143,7 @@ void Emulator::initGL()
 {
 	QApplication::processEvents();
 
-	mOpenGLWidget->makeCurrent();
+	main_opengl_widget->makeCurrent();
 
 	mFont->load("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf", 12);
 
@@ -127,7 +151,11 @@ void Emulator::initGL()
 	mGameboyRenderer->initGL();
 	mMessageRenderer->initGL();
 
-	mOpenGLWidget->doneCurrent();
+	main_opengl_widget->doneCurrent();
+
+	side_opengl_widget->makeCurrent();
+	map_renderer->initGL();
+	main_opengl_widget->doneCurrent();
 }
 
 void Emulator::printTotalInstructions()
@@ -148,10 +176,11 @@ void Emulator::openFile(const std::string& path)
 	try {
 		gameboy->set_rom(FS::readBytes(path));
 		mHaveRom = true;
+		rom_path = path;
 		mGameboyRenderer->setEnabled(true);
 	}
 	catch (const std::runtime_error& e) {
-		std::cerr << e.what() << std::endl;
+		QMessageBox::warning(this, "Failed to open ROM", QString::fromStdString(e.what()));
 	}
 }
 
@@ -199,7 +228,7 @@ void Emulator::run()
 
 		if (mPaused)
 		{
-			mOpenGLWidget->update();
+			main_opengl_widget->update();
 			QApplication::processEvents();
 			QApplication::instance()->thread()->msleep(16);
 			return;
@@ -209,11 +238,12 @@ void Emulator::run()
 		{
 			gameboy->tick();
 
-			mGameboyRenderer->updatePixels(ppu->get_pixels());
-			mGameboyRenderer->updateMap(ppuMapProxy->get_pixels());
+			mGameboyRenderer->update(ppu->get_pixels());
+			map_renderer->update(ppuMapProxy->get_pixels());
 		}
 
-		mOpenGLWidget->update();
+		main_opengl_widget->update();
+		side_opengl_widget->update();
 		QApplication::processEvents();
 		QApplication::instance()->thread()->msleep(16);
 	}
@@ -226,26 +256,26 @@ bool Emulator::shouldRun() const
 
 void Emulator::dumpRam()
 {
+	if (!mHaveRom)
+		return;
+
 	auto now = std::chrono::system_clock::now();
 	if (now - mLastDumpTime < std::chrono::seconds(2))
 	{
-		std::cout << "Tried to dump RAM too soon after last time" << std::endl;
 		return;
 	}
-	std::cout << "Dumping RAM... ";
 	mLastDumpTime = now;
 
-	FILE *f = fopen("ramdump.bin", "wb+");
-	if (!f)
-	{
-		std::cerr << "Failed to open ramdump.bin" << std::endl;
-		return;
-	}
-	fwrite(gameboy->get_memory(), 0x10000, 1, f);
-	fclose(f);
-	std::cout << "Dumped RAM" << std::endl;
+	auto filename { rom_path + ".dump" };
 
-	std::string text = "Dumped RAM to file: 'ramdump.bin'";
+	try {
+		FS::writeBytes(filename, gameboy->get_memory(), 0x10000);
+	}
+	catch (const std::runtime_error& e) {
+		QMessageBox::warning(this, "Failed to dump memory", QString::fromStdString(e.what()));
+	}
+
+	std::string text = "Dumped RAM to file: " + filename;
 	mMessageManager->addMessage(text, 8, 40, 2000);
 }
 
@@ -266,8 +296,37 @@ void Emulator::keyPressEvent(QKeyEvent* event)
 			else
 				dumpRam();
 			break;
+		case Qt::Key_M:
+			set_map_visible(!side_opengl_widget->isVisible());
+			break;
+		case Qt::Key_Right:
+			mmu->write8(kScx, mmu->read8(kScx) + 1);
+			break;
+		case Qt::Key_Left:
+			mmu->write8(kScx, mmu->read8(kScx) - 1);
+			break;
+		case Qt::Key_Up:
+			mmu->write8(kScy, mmu->read8(kScy) - 1);
+			break;
+		case Qt::Key_Down:
+			mmu->write8(kScy, mmu->read8(kScy) + 1);
+			break;
 		default:
 			break;
 	}
-	mOpenGLWidget->update();
+	main_opengl_widget->update();
+}
+
+void Emulator::set_map_visible(bool value)
+{
+	if (value)
+	{
+		resize(192 * 4, 144 * 4);
+		side_opengl_widget->show();
+	}
+	else
+	{
+		resize(160 * 4, 144 * 4);
+		side_opengl_widget->hide();
+	}
 }

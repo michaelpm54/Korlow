@@ -46,7 +46,7 @@ void OpenGLWidget::resizeGL(int w, int h)
 
 void OpenGLWidget::paintGL()
 {
-	glClear(GL_COLOR_BUFFER_BIT);
+	//glClear(GL_COLOR_BUFFER_BIT);
 	for (Renderer* renderer : mRenderers)
 	{
 		renderer->render();

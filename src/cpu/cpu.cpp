@@ -108,7 +108,7 @@ int Cpu::tick(Component &mmu)
 		if (int_cycles)
 			return int_cycles + cycles;
 	}
-
+	
 	if (op == 0xCB)
 		op = d8 + 0x100;
 

@@ -1,21 +1,21 @@
-#ifndef GAMEBOY_RENDERER_H
-#define GAMEBOY_RENDERER_H
+#ifndef MAP_RENDERER_H
+#define MAP_RENDERER_H
 
 #include <glm/glm.hpp>
 
 #include "opengl.h"
 #include "renderer.h"
 
-class GameboyRenderer : public Renderer
+class MapRenderer : public Renderer
 {
 public:
-	GameboyRenderer();
-	~GameboyRenderer();
+	MapRenderer();
+	~MapRenderer();
 
 	void initGL() override;
 	void render() override;
 
-	void update(const uint8_t *pixels);
+	void update(const uint8_t *data);
 
 private:
 	void createGLObjects();
@@ -23,16 +23,15 @@ private:
 
 private:
 	GLuint mProgram { 0 };
-	GLuint mFrameTexture { 0 };
 	GLuint mVao { 0 };
 	GLuint mVbo { 0 };
 
-	int mWidth { 0 };
-	int mHeight { 0 };
-	int mNumPixels { 0 };
+	GLuint mMapTex;
+	GLuint mMapBuf;
+	GLuint mMapVao;
 
 	glm::mat4 proj_matrix { 1.0f };
+	glm::mat4 model_matrix { 1.0f };
 };
 
-#endif // GAMEBOY_RENDERER_H
-
+#endif // MAP_RENDERER_H
