@@ -6,9 +6,6 @@
 
 #include "component.h"
 
-constexpr int kCpuFreq = 4194304;
-constexpr int kMaxCyclesPerFrame = kCpuFreq / 60;
-
 enum class HaltBug
 {
 	None,
@@ -51,7 +48,7 @@ struct Cpu : Component
 	HaltBug halt_bug_state { HaltBug::None };
 	EIBug ei_bug_state { EIBug::None };
 
-	bool debug { true };
+	bool debug { false };
 
 	CpuRegisters registers;
 

@@ -4,8 +4,8 @@
 #include "render/font/ft_util.h"
 
 MessageRenderer::MessageRenderer(MessageManager *msgMan, FTFont *font)
-	: mMessageManager(msgMan)
-	, mFont(font)
+	: message_manager(msgMan)
+	, font(font)
 {
 	FTUtil::Init();
 }
@@ -15,26 +15,26 @@ MessageRenderer::~MessageRenderer()
 	FTUtil::Done();
 }
 
-void MessageRenderer::initGL()
+void MessageRenderer::setup_opengl_resources()
 {}
 
 void MessageRenderer::render()
 {
-	if (!mFont)
+	if (!font)
 	{
 		return;
 	}
 
-	for (const auto& msg : mMessageManager->getMessages())
+	for (const auto& msg : message_manager->getMessages())
 	{
 		if (mRenderedMessages.count(msg.begin))
-			mFont->drawString(mRenderedMessages[msg.begin]);
+			font->drawString(mRenderedMessages[msg.begin]);
 		else
-			mRenderedMessages.insert({msg.begin, mFont->createString(msg.text, msg.x, msg.y)});
+			mRenderedMessages.insert({msg.begin, font->createString(msg.text, msg.x, msg.y)});
 	}
 }
 
-void MessageRenderer::setFont(FTFont* font)
+void MessageRenderer::set_font(FTFont* font)
 {
-	mFont = font;
+	font = font;
 }

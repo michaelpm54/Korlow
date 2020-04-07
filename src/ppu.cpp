@@ -1,6 +1,8 @@
 #include "ppu.h"
 #include "memory_map.h"
 
+#include "constants.h"
+
 constexpr uint8_t kShades[4] =
 {
 	0x00,
@@ -293,4 +295,10 @@ void Ppu::tick(int cycles)
 	}
 
 	registers.stat = (registers.stat & 0b1111'1100) | mode;
+}
+
+void Ppu::refresh()
+{
+	for (int i = 1; i <= kLcdHeight; i++)
+		draw_scanline(i);
 }

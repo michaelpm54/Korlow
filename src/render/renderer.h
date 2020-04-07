@@ -5,9 +5,9 @@ class Renderer
 {
 public:
 	virtual ~Renderer() = default;
-	virtual void initGL() {};
+	virtual void setup_opengl_resources() {};
 	virtual void render() {};
-	void setEnabled(bool value) { mEnabled = value; }
+	void set_enabled(bool value) { mEnabled = value; }
 
 protected:
 	bool mEnabled { true };

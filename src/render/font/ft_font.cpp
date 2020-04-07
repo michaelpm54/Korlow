@@ -114,13 +114,13 @@ RenderedString FTFont::createString(const std::string& text, float x, float y) c
 		return RenderedString{ .size = 0, .vbo = 0 };
 
 	RenderedString rs;
-	rs.size = size;
+	rs.size = static_cast<int>(size);
 	rs.textures.resize(size);
 
 	glGenBuffers(1, &rs.vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, rs.vbo);
 	glBufferData(GL_ARRAY_BUFFER, size * 6 * 4 * sizeof(GLfloat), nullptr, GL_STATIC_DRAW);
-	glObjectLabel(GL_BUFFER, rs.vbo, text.size(), text.c_str());
+	glObjectLabel(GL_BUFFER, rs.vbo, static_cast<GLsizei>(text.size()), text.c_str());
 
 	glGenVertexArrays(1, &rs.vao);
 	glBindVertexArray(rs.vao);

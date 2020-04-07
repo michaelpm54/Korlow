@@ -41,6 +41,7 @@ struct Ppu : Component
 {
 	Ppu(PpuRegisters);
 
+	void refresh();
 	const uint8_t *get_pixels() const;
 	void reset() override;
 	void write8(uint16_t address, uint8_t value) override;

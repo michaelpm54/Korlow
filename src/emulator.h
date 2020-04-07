@@ -1,14 +1,15 @@
 #ifndef EMULATOR_H
 #define EMULATOR_H
 
+#include "render/opengl.h"
+
 #include <chrono>
 #include <string>
 #include <vector>
 
 #include <QMainWindow>
+#include <QOpenGLContext>
 #include <QTimer>
-
-#include "render/opengl.h"
 
 #include "gui/opengl_widget.h"
 
@@ -20,75 +21,80 @@
 #include "memory_map.h"
 #include "types.h"
 
-class Window;
 class FTFont;
-class GameboyRenderer;
+class MainScene;
+class MapScene;
 class MessageManager;
 class MessageRenderer;
 class MapRenderer;
-class QSplitter;
-class PpuMapProxy;
+struct PpuMapProxy;
+
+struct Config
+{
+	bool map_visible { false };
+	bool paused { false };
+	std::string rom_path;
+};
 
 class Emulator : public QMainWindow
 {
 	Q_OBJECT
 public:
 	Emulator(QWidget *parent = nullptr);
+
+	/* NOTE: Keep this destructor to make unique_ptr's work. */
 	~Emulator();
 
 protected:
 	virtual void keyPressEvent(QKeyEvent *event) override;
 
 private:
-	// Window
-	void setupWindow();
-	void createMenuBar();
-
-	// Renderers
-	void initGL();
-
-	// Misc
-	void dumpRam();
-	void printTotalInstructions();
-	bool shouldRun() const;
-	void openFile(const std::string &path);
+	void setup();
+	void setup_window();
+	void setup_menu_bar();
+	void setup_widgets();
+	void setup_slots();
+	void setup_gameboy_components();
+	
+	void dump_memory();
+	void print_total_instructions();
 	void set_map_visible(bool value);
 
-	// Machine
-public slots:
-	void run();
+	void update();
 
-public:
-	void initHardware();
+	void set_have_rom(bool value);
+
+public slots:
+	void slot_tick();
+
+	void slot_open();
+	void slot_close();
+	void slot_quit();
 
 private:
-	std::string rom_path;
+	Config config;
 
-	std::unique_ptr<FTFont> mFont;
+	std::unique_ptr<FTFont> font;
 
-	std::unique_ptr<GameboyRenderer> mGameboyRenderer;
-	std::unique_ptr<MessageManager> mMessageManager;
-	std::unique_ptr<MessageRenderer> mMessageRenderer;
-	std::unique_ptr<MapRenderer> map_renderer;
+	MainScene *main_scene;
+	MapScene *map_scene;
 
-	QSplitter *splitter;
-	OpenGLWidget *main_opengl_widget;
-	OpenGLWidget *side_opengl_widget;
+	bool have_rom { false };
 
-	bool mContinue { true };
-	bool mPaused { false };
-	bool mHaveBios { false };
-	bool mHaveRom { false };
-	QTimer mFrameTimer;
-	std::chrono::time_point<std::chrono::system_clock> mLastDumpTime;
+	QTimer frame_timer;
+	std::chrono::time_point<std::chrono::system_clock> last_dump_time;
 
-	std::unique_ptr<PpuMapProxy> ppuMapProxy;
+	std::unique_ptr<PpuMapProxy> ppu_proxy;
 
 	std::unique_ptr<Cpu> cpu;
 	std::unique_ptr<Ppu> ppu;
 	std::unique_ptr<Mmu> mmu;
 
 	std::unique_ptr<Gameboy> gameboy;
+
+	QAction *action_open;
+	QAction *action_close;
+	QAction *action_quit;
 };
 
 #endif // EMULATOR_H

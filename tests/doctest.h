@@ -1651,7 +1651,7 @@ public:
 
     void setAssertHandler(detail::assert_handler ah);
 
-    int run();
+    int tick();
 };
 
 namespace TestCaseFailureReason {

@@ -4,27 +4,17 @@
 #include "render/opengl.h"
 
 #include <QOpenGLWidget>
-#include <QOpenGLFunctions>
 
-class Renderer;
-
-class OpenGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
+class OpenGLWidget : public QOpenGLWidget
 {
 public:
 	OpenGLWidget(QWidget *parent = nullptr);
-
-	void addRenderer(Renderer *renderer);
+	virtual ~OpenGLWidget();
 
 protected:
-	void initializeGL() override;
 	void resizeGL(int w, int h) override;
-	void paintGL() override;
-
-private:
-	std::vector<Renderer*> mRenderers;
-
-	int mWidth { 0 };
-	int mHeight { 0 };
+	virtual void paintGL() = 0;
+	virtual void initializeGL() = 0;
 };
 
 #endif // OPENGL_WIDGET_H

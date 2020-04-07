@@ -34,9 +34,10 @@ set(KORLOW_FONT_HEADERS
 set(KORLOW_RENDER_SOURCES
 	${KORLOW_FONT_SOURCES}
 	src/render/gl_util.cpp
-	src/render/gameboy_renderer.cpp
+	src/render/main_scene.cpp
+	src/render/map_scene.cpp
 	src/render/message_renderer.cpp
-	src/render/map_renderer.cpp
+	src/textured_quad_gl.cpp
 )
 
 set(KORLOW_RENDER_HEADERS
@@ -44,9 +45,10 @@ set(KORLOW_RENDER_HEADERS
 	src/render/opengl.h
 	src/render/gl_util.h
 	src/render/renderer.h
-	src/render/gameboy_renderer.h
+	src/render/main_scene.h
+	src/render/map_scene.h
 	src/render/message_renderer.h
-	src/render/map_renderer.h
+	src/textured_quad_gl.h
 )
 
 set(KORLOW_CPU_SOURCES
@@ -75,7 +77,6 @@ set(KORLOW_SOURCES
 	src/fs.cpp
 	src/rom_util.cpp
 	src/message_manager.cpp
-
 	src/gameboy.cpp
 )
 
@@ -93,7 +94,7 @@ set(KORLOW_HEADERS
 	src/rom_util.h
 	src/memory_map.h
 	src/message_manager.h
-
+	src/constants.h
 	src/component.h
 	src/gameboy.h
 )

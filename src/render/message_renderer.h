@@ -15,13 +15,13 @@ public:
 	MessageRenderer(MessageManager *msgMan, FTFont *font);
 	~MessageRenderer();
 
-	void initGL() override;
+	void setup_opengl_resources() override;
 	void render() override;
-	void setFont(FTFont *font);
+	void set_font(FTFont *font);
 
 private:
-	MessageManager *mMessageManager { nullptr };
-	FTFont *mFont { nullptr };
+	MessageManager *message_manager { nullptr };
+	FTFont *font { nullptr };
 	std::map<std::chrono::system_clock::time_point, RenderedString> mRenderedMessages;
 };
 

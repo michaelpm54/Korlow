@@ -5,6 +5,19 @@
 
 #include "fs.h"
 
+namespace GLUtil
+{
+
+GLuint QuadProgram = GL_NONE;
+
+void LoadShaders()
+{
+	QuadProgram = glCreateProgram();
+	loadShaders(QuadProgram, "assets/shaders/ssquad.vs", "assets/shaders/ssquad.fs");
+}
+
+}
+
 void compileShader(GLuint shader)
 {
 	glCompileShader(shader);
@@ -16,6 +29,10 @@ void compileShader(GLuint shader)
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
 		GLint maxLength = 0;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+		if (logSize == 0 || maxLength == 0)
+		{
+			throw std::runtime_error("Failed to get shader info log.\nMake sure your OpenGL functions are working correctly.");
+		}
 		std::vector<GLchar> errorLog(logSize);
 		glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
 		glDeleteShader(shader);
@@ -34,6 +51,10 @@ void linkProgram(GLuint program)
 		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
 		GLint maxLength = 0;
 		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+		if (logSize == 0 || maxLength == 0)
+		{
+			throw std::runtime_error("Failed to get program info log.\nMake sure your OpenGL functions are working correctly.");
+		}
 		std::vector<GLchar> errorLog(maxLength);
 		glGetProgramInfoLog(program, maxLength, &maxLength, &errorLog[0]);
 		glDeleteProgram(program);

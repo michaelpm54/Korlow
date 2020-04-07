@@ -1,23 +1,37 @@
-#include "emulator.h"
+#include "render/opengl.h"
 
-#include <iostream>
+#include <stdexcept>
+#include <string>
 
 #include <QApplication>
+#include <QOffscreenSurface>
+
+#include "emulator.h"
 
 int main(int argc, char *argv[])
 {
 	try
 	{
+		QSurfaceFormat format;
+		format.setStencilBufferSize(8);
+		format.setVersion(4, 5);
+		format.setProfile(QSurfaceFormat::CoreProfile);
+		QSurfaceFormat::setDefaultFormat(format);
+
 		QApplication app(argc, argv);
 
 		auto emu = Emulator();
 
-		app.exec();
+		return app.exec();
 	}
 	catch (const std::runtime_error& e)
 	{
-		std::cerr << e.what() << std::endl;
+		fprintf(stderr, "%s", e.what());
 		return 1;
 	}
-	return 0;
+	catch (const GLubyte* str)
+	{
+		fprintf(stderr, "%s", str);
+		return 1;
+	}
 }

@@ -70,6 +70,8 @@ PpuMapProxy::PpuMapProxy(Ppu &ppu)
 
 void PpuMapProxy::reset()
 {
+	std::fill(std::begin(map_pixels), std::end(map_pixels), 0x12);
+	ppu.reset();
 }
 
 void PpuMapProxy::write8(uint16_t address, uint8_t value)
@@ -151,6 +153,11 @@ void PpuMapProxy::write8(uint16_t address, uint8_t value)
 }
 
 const uint8_t *PpuMapProxy::get_pixels() const
+{
+	return ppu.get_pixels();
+}
+
+const uint8_t *PpuMapProxy::get_map_pixels() const
 {
 	return map_pixels.data();
 }

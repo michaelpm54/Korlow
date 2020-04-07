@@ -2,6 +2,8 @@
 
 #include "memory_map.h"
 
+#include "constants.h"
+
 Gameboy::Gameboy()
 	: memory(0x10000)
 {}
@@ -78,4 +80,9 @@ void Gameboy::set_components(Cpu& cpu, Ppu& ppu, Mmu& mmu)
 	this->cpu = &cpu;
 	this->ppu = &ppu;
 	this->mmu = &mmu;
+}
+
+const uint8_t* Gameboy::get_lcd_pixels() const
+{
+	return ppu->get_pixels();
 }

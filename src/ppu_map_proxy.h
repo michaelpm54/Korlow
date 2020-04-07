@@ -22,6 +22,7 @@ struct PpuMapProxy : Component
 	void reset() override;
 	void write8(uint16_t address, uint8_t value) override;
 	const uint8_t *get_pixels() const;
+	const uint8_t *get_map_pixels() const;
 
 	Ppu &ppu;
 	std::vector<uint8_t> map_pixels;

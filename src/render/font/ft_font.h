@@ -1,11 +1,12 @@
 #ifndef FT_FONT_H
 #define FT_FONT_H
 
+#include "render/opengl.h"
+
 #include <string>
 #include <vector>
 
 #include "render/font/ft_util.h"
-#include "render/opengl.h"
 
 class FTFont;
 
