@@ -17,7 +17,7 @@ public:
 
 protected:
 	void paintGL() override;
-	void initializeGL() override;
+	void init() override;
 
 private:
 	GLuint quad_program;

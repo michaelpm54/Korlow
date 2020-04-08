@@ -16,15 +16,12 @@ Which one is used is set based on LCDC.3.
 #include "render/map_scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include "ppu_map_proxy.h"
 #include "gl_util.h"
 #include "textured_quad_gl.h"
 
 #include "constants.h"
-
-#include <QOpenGLContext>
 
 MapScene::MapScene(QWidget *parent)
 	: OpenGLWidget(parent)
@@ -41,15 +38,8 @@ void MapScene::set_have_rom(bool value)
 	OpenGLWidget::update();
 }
 
-void MapScene::initializeGL()
+void MapScene::init()
 {
-	glewExperimental = GL_TRUE;
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-		throw glewGetErrorString(err);
-
-	glClearColor(kClearColor[0], kClearColor[1], kClearColor[2], 1.0f);
-
 	quad_program = glCreateProgram();
 	loadShaders(quad_program, kQuadVertexShader, kQuadFragmentShader);
 

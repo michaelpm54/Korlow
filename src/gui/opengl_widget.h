@@ -13,8 +13,9 @@ public:
 
 protected:
 	void resizeGL(int w, int h) override;
+	void initializeGL() override;
 	virtual void paintGL() = 0;
-	virtual void initializeGL() = 0;
+	virtual void init() = 0;
 };
 
 #endif // OPENGL_WIDGET_H

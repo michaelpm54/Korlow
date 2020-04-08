@@ -1,7 +1,6 @@
 #include "render/main_scene.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include "gameboy.h"
 #include "gl_util.h"
@@ -23,15 +22,8 @@ void MainScene::set_have_rom(bool value)
 	OpenGLWidget::update();
 }
 
-void MainScene::initializeGL()
+void MainScene::init()
 {
-	glewExperimental = GL_TRUE;
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-		throw glewGetErrorString(err);
-
-	glClearColor(kClearColor[0], kClearColor[1], kClearColor[2], 1.0f);
-
 	quad_program = glCreateProgram();
 	loadShaders(quad_program, kQuadVertexShader, kQuadFragmentShader);
 
