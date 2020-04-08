@@ -25,12 +25,12 @@ void MessageRenderer::render()
 		return;
 	}
 
-	for (const auto& msg : message_manager->getMessages())
+	for (const auto& msg : message_manager->get_messages())
 	{
-		if (mRenderedMessages.count(msg.begin))
-			font->drawString(mRenderedMessages[msg.begin]);
-		else
-			mRenderedMessages.insert({msg.begin, font->createString(msg.text, msg.x, msg.y)});
+		//if (mRenderedMessages.count(msg.begin))
+			//font->drawString(0, mRenderedMessages[msg.begin]);
+		//else
+			//mRenderedMessages.insert({msg.begin, font->createString(msg.text, msg.x, msg.y)});
 	}
 }
 

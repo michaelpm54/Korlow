@@ -12,7 +12,7 @@ class MapScene : public OpenGLWidget
 {
 public:
 	MapScene(QWidget *parent = nullptr);
-	void update(PpuMapProxy *ppu_proxy);
+	void set_map_pixels(const uint8_t *pixels);
 	void set_have_rom(bool);
 
 protected:

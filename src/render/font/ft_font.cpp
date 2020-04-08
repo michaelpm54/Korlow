@@ -16,7 +16,6 @@ FTFont::~FTFont()
 
 void FTFont::cleanup()
 {
-	glDeleteProgram(mProgram);
 	for (auto& c : mCharMap)
 	{
 		glDeleteTextures(1, &c.tex);
@@ -47,9 +46,6 @@ void FTFont::setSize(int size)
 void FTFont::rebuildAtlas()
 {
 	cleanup();
-
-	mProgram = glCreateProgram();
-	loadShaders(mProgram, "assets/shaders/font.vs", "assets/shaders/font.fs");
 
 	for (int i = 32; i < 128; i++)
 	{
@@ -86,14 +82,14 @@ void FTFont::rebuildAtlas()
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void FTFont::drawString(const RenderedString& rs) const
+void FTFont::drawString(GLuint program, const RenderedString& rs) const
 {
-	glUseProgram(mProgram);
+	glUseProgram(program);
 	glBindVertexArray(rs.vao);
 	glBindBuffer(GL_ARRAY_BUFFER, rs.vbo);
 
 	glm::mat4 proj(glm::ortho(0.0f, 1280.0f, 1152.0f, 0.0f));
-	glUniformMatrix4fv(glGetUniformLocation(mProgram, "mvp"), 1, GL_FALSE, glm::value_ptr(proj));
+	glUniformMatrix4fv(glGetUniformLocation(program, "mvp"), 1, GL_FALSE, glm::value_ptr(proj));
 
 	for (int i = 0; i < rs.size; i++)
 	{
@@ -162,8 +158,6 @@ RenderedString FTFont::createString(const std::string& text, float x, float y) c
 
 		x += c.advanceX;
 	}
-
-	drawString(rs);
 
 	return rs;
 }

@@ -27,7 +27,7 @@ public:
 	void cleanup();
 	void load(const std::string &path, int size = 12);
 	void setSize(int size);
-	void drawString(const RenderedString &rs) const;
+	void drawString(GLuint program, const RenderedString &rs) const;
 	RenderedString createString(const std::string& text, float x, float y) const;
 
 private:
@@ -47,7 +47,6 @@ private:
 
 private:
 	FT_Face mFace { nullptr };
-	GLuint mProgram { 0 };
 	std::vector<FTChar> mCharMap;
 };
 

@@ -132,26 +132,6 @@ void Emulator::setup_menu_bar()
 	menuBar()->addMenu(file_menu);
 }
 
-//void Emulator::setup_opengl_resources()
-//{
-	/*
-	if (!main_opengl_widget->context())
-		throw std::runtime_error("OpenGL context doesn't exist");
-
-	font->load("E:/Projects/Emulators/GB/Korlow2/assets/fonts/IBMPlexMono-Semibold.otf", 12);
-	message_renderer->set_font(font.get());
-	main_opengl_widget->doneCurrent();
-
-	side_opengl_widget->makeCurrent();
-
-	if (!main_opengl_widget->context())
-		throw std::runtime_error("OpenGL context doesn't exist");
-
-	map_renderer->setup_opengl_resources();
-	main_opengl_widget->doneCurrent();
-	*/
-//}
-
 void Emulator::print_total_instructions()
 {
 	std::string numWithCommas = std::to_string(0); // FIXME
@@ -200,18 +180,21 @@ void Emulator::setup_gameboy_components()
 
 void Emulator::update()
 {
+	main_scene->update();
+
 	if (config.paused || !have_rom)
 		return;
 
 	gameboy->tick();
-
 }
 
 void Emulator::slot_tick()
 {
 	update();
-	main_scene->update(gameboy.get());
-	map_scene->update(ppu_proxy.get());
+
+	main_scene->set_lcd_pixels(gameboy->get_lcd_pixels());
+	map_scene->set_map_pixels(ppu_proxy->get_map_pixels());
+
 	QApplication::processEvents();
 }
 
@@ -239,8 +222,8 @@ void Emulator::dump_memory()
 		QMessageBox::warning(this, "Failed to dump memory", QString::fromStdString(e.what()));
 	}
 
-	std::string text = "Dumped RAM to file: " + filename;
-	//message_manager->addMessage(text, 8, 40, 2000);
+	main_scene->add_message("Dumped RAM to file:");
+	main_scene->add_message(filename);
 }
 
 void Emulator::keyPressEvent(QKeyEvent* event)
@@ -249,13 +232,13 @@ void Emulator::keyPressEvent(QKeyEvent* event)
 	{
 		case Qt::Key_Space:
 			config.paused = !config.paused;
-			//message_manager->addMessage(paused ? "Paused" : "Unpaused", 8, 40, 2000);
+			main_scene->add_message(config.paused ? "Paused" : "Unpaused");
 			break;
 		case Qt::Key_D:
 			if (event->modifiers() & Qt::ShiftModifier)
 			{
 				cpu->debug = !cpu->debug;
-				//message_manager->addMessage(cpu->debug ? "Debug enabled" : "Debug disabled", 8, 40, 2000);
+				main_scene->add_message(cpu->debug ? "Debug enabled" : "Debug disabled");
 			}
 			else
 			{
@@ -295,7 +278,7 @@ void Emulator::set_map_visible(bool value)
 	else
 		size = {kLcdWidth * kScale, kLcdHeight * kScale};
 
-	resize(size);
+	setFixedSize(size);
 }
 
 void Emulator::slot_open()

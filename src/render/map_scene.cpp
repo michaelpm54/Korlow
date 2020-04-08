@@ -51,11 +51,12 @@ void MapScene::paintGL()
 	map_view->draw(quad_program, projection);
 }
 
-void MapScene::update(PpuMapProxy *ppu_proxy)
+void MapScene::set_map_pixels(const uint8_t *pixels)
 {
 	makeCurrent();
-	map_view->set_pixels(ppu_proxy->get_map_pixels());
-	OpenGLWidget::update();
+	map_view->set_pixels(pixels);
 	doneCurrent();
+
+	OpenGLWidget::update();
 }
 
