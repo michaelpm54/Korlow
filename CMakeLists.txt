@@ -3,8 +3,10 @@ project(Korlow LANGUAGES CXX)
 
 option(DO_TESTS "Enable testing" OFF)
 
+# Used for doctest
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
-set(OUT_DIR "bin")
+
+# Qt
 set(CMAKE_AUTOMOC ON)
 
 set(KORLOW_GUI_SOURCES
@@ -103,7 +105,7 @@ add_executable(app
 	${LIB_SRC}
 )
 
-# Copy Qt DLLs to bin
+# Copy Qt DLLs to output
 add_custom_command(
     TARGET app POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -138,12 +140,6 @@ target_link_libraries(
 		${CONAN_LIBS_freetype}
 		${CONAN_LIBS}
 		Qt5::Core Qt5::Widgets Qt5::Gui
-)
-
-set_target_properties(app
-	PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY 
-			${OUT_DIR}
 )
 
 add_custom_command(TARGET app PRE_BUILD
@@ -181,12 +177,6 @@ if (DO_TESTS)
 	target_include_directories(test_app PUBLIC src)
 
 	target_link_libraries(test_app PRIVATE CONAN_LIBS_doctest)
-
-	set_target_properties(test_app
-		PROPERTIES
-			RUNTIME_OUTPUT_DIRECTORY
-				${OUT_DIR}
-	)
 
 	set_property(TARGET test_app PROPERTY CXX_STANDARD 17)
 	set_property(TARGET test_app PROPERTY CXX_STANDARD_REQUIRED ON)
