@@ -105,14 +105,6 @@ add_executable(app
 	${LIB_SRC}
 )
 
-# Copy Qt DLLs to output
-add_custom_command(
-    TARGET app POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:Qt5::Core> $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE:Qt5::Widgets>
-        $<TARGET_FILE_DIR:app>
-)
-
 target_include_directories(app PUBLIC src include)
 
 target_include_directories(app
@@ -132,12 +124,9 @@ conan_basic_setup()
 
 find_package(Qt5 COMPONENTS Widgets Gui CONFIG REQUIRED)
 
-message(STATUS ${CONAN_LIBS})
-
 target_link_libraries(
 	app
 	PRIVATE
-		${CONAN_LIBS_freetype}
 		${CONAN_LIBS}
 		Qt5::Core Qt5::Widgets Qt5::Gui
 )
@@ -145,6 +134,23 @@ target_link_libraries(
 add_custom_command(TARGET app PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
               ${CMAKE_CURRENT_LIST_DIR}/assets $<TARGET_FILE_DIR:app>/assets
+)
+
+# Copy Qt DLL's to output
+add_custom_command(
+    TARGET app POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:Qt5::Core> $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE:Qt5::Widgets>
+        $<TARGET_FILE_DIR:app>
+)
+
+# Copy the DLL's built by Conan to the output directory
+# Note: Conan places them in build/bin/, as configured in conanfile.txt
+add_custom_command(
+    TARGET app POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_BINARY_DIR}/bin/
+        $<TARGET_FILE_DIR:app>
 )
 
 if (DO_TESTS)

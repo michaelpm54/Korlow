@@ -9,5 +9,11 @@ cmake
 freetype:shared=True
 
 [imports]
-., *.dll -> ./bin/Debug @ keep_path=False
+# Copy all DLL's to build/bin/ for easy copying by cmake to exe folder.
+., *.dll -> bin/ @ keep_path=False
+
+# Likewise for libs, although maybe unnecessary.
+lib, *.lib -> lib/
+
+# Again, but to the build/ root. This is necessary for linking freetype.
 lib, *.lib -> .
