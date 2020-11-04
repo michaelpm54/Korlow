@@ -15,7 +15,7 @@ constexpr const char *kQuadFragmentShader { "assets/shaders/ssquad.fs" };
 constexpr const char *kTextVertexShader { "assets/shaders/font.vs" };
 constexpr const char *kTextFragmentShader { "assets/shaders/font.fs" };
 
-constexpr float kClearColor[3] { 0.25f, 0.04f, 0.18f };
+constexpr float kClearColor[3] { 48 / 255.0f, 146 / 255.0f, 153 / 255.0f };
 
 constexpr int kCpuFreq { 4'194'304 };
 constexpr int kMaxCyclesPerFrame { kCpuFreq / 60 };

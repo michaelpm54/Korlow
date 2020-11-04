@@ -18,14 +18,11 @@ void Gameboy::set_rom(const std::vector<uint8_t>& bytes)
 	std::copy_n(bytes.data(), std::min(0xFFFF, static_cast<int>(bytes.size())), &memory[0]);
 }
 
-void Gameboy::tick()
+int Gameboy::tick()
 {
-	int cycles = 0;
-	while (cycles < kMaxCyclesPerFrame && cpu->is_enabled())
-	{
-		cycles += cpu->tick(*mmu);
-		ppu->tick(cycles);
-	}
+	int cycles = cpu->tick(*mmu);
+	ppu->tick(cycles);
+	return cycles;
 }
 
 void Gameboy::reset()

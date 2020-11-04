@@ -1,13 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-
-option(DO_TESTS "Enable testing" ON)
-
-if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-      CACHE STRING "")
-endif()
-
 project(Korlow LANGUAGES CXX)
+
+option(DO_TESTS "Enable testing" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 set(OUT_DIR "bin")
@@ -89,7 +83,7 @@ set(KORLOW_HEADERS
 	src/mmu.h
 	src/ppu.h
 	src/ppu_map_proxy.h
-	src/types.h
+	src/emu_types.h
 	src/fs.h
 	src/rom_util.h
 	src/memory_map.h
@@ -99,37 +93,50 @@ set(KORLOW_HEADERS
 	src/gameboy.h
 )
 
+set(LIB_SRC
+	lib/glad/glad.cpp
+)
+
 add_executable(app
 	${KORLOW_SOURCES}
 	${KORLOW_HEADERS}
+	${LIB_SRC}
 )
 
-target_include_directories(app PUBLIC src)
+# Copy Qt DLLs to bin
+add_custom_command(
+    TARGET app POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:Qt5::Core> $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE:Qt5::Widgets>
+        $<TARGET_FILE_DIR:app>
+)
+
+target_include_directories(app PUBLIC src include)
 
 target_include_directories(app
 	INTERFACE
 		${CMAKE_SOURCE_DIR}/src
 )
 
-set_property(TARGET app PROPERTY CXX_STANDARD 20)
+set_property(TARGET app PROPERTY CXX_STANDARD 17)
 set_property(TARGET app PROPERTY CXX_STANDARD_REQUIRED ON)
 
 if (MSVC_VERSION GREATER_EQUAL "1900")
-    target_compile_features(app PRIVATE cxx_std_20)
+    target_compile_features(app PRIVATE cxx_std_17)
 endif()
 
-find_package(GLEW REQUIRED)
-find_package(freetype CONFIG REQUIRED)
-find_package(glm CONFIG REQUIRED)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
 find_package(Qt5 COMPONENTS Widgets Gui CONFIG REQUIRED)
-find_package(doctest CONFIG REQUIRED)
+
+message(STATUS ${CONAN_LIBS})
 
 target_link_libraries(
 	app
 	PRIVATE
-		GLEW::GLEW
-		freetype
-		glm
+		${CONAN_LIBS_freetype}
+		${CONAN_LIBS}
 		Qt5::Core Qt5::Widgets Qt5::Gui
 )
 
@@ -173,7 +180,7 @@ if (DO_TESTS)
 
 	target_include_directories(test_app PUBLIC src)
 
-	target_link_libraries(test_app PRIVATE doctest::doctest)
+	target_link_libraries(test_app PRIVATE CONAN_LIBS_doctest)
 
 	set_target_properties(test_app
 		PROPERTIES
@@ -181,11 +188,11 @@ if (DO_TESTS)
 				${OUT_DIR}
 	)
 
-	set_property(TARGET test_app PROPERTY CXX_STANDARD 20)
+	set_property(TARGET test_app PROPERTY CXX_STANDARD 17)
 	set_property(TARGET test_app PROPERTY CXX_STANDARD_REQUIRED ON)
 
 	if (MSVC_VERSION GREATER_EQUAL "1900")
-		target_compile_features(test_app PRIVATE cxx_std_20)
+		target_compile_features(test_app PRIVATE cxx_std_17)
 	endif()
 
 	include(doctest)

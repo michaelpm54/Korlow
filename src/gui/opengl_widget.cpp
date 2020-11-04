@@ -1,6 +1,7 @@
 #include "gui/opengl_widget.h"
 
 #include <QOpenGLContext>
+#include <stdexcept>
 
 #include "constants.h"
 
@@ -14,10 +15,8 @@ OpenGLWidget::~OpenGLWidget()
 
 void OpenGLWidget::initializeGL()
 {
-	glewExperimental = GL_TRUE;
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-		throw glewGetErrorString(err);
+	if (!gladLoadGL())
+		throw std::runtime_error("Failed to load GL functions");
 
 	glClearColor(kClearColor[0], kClearColor[1], kClearColor[2], 1.0f);
 

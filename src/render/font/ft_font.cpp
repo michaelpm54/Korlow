@@ -107,7 +107,7 @@ RenderedString FTFont::createString(const std::string& text, float x, float y) c
 {
 	auto size { text.size() };
 	if (!size)
-		return RenderedString{ .size = 0, .vbo = 0 };
+		return RenderedString{ /*.size =*/ 0, /*.vbo =*/ 0 };
 
 	RenderedString rs;
 	rs.size = static_cast<int>(size);

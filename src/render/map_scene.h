@@ -4,6 +4,7 @@
 #include "gui/opengl_widget.h"
 
 #include <glm/glm.hpp>
+#include <memory>
 
 struct PpuMapProxy;
 class TexturedQuadGL;

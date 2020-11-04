@@ -1,8 +1,7 @@
 #ifndef CPU_INSTRUCTIONS_H
 #define CPU_INSTRUCTIONS_H
 
-#include <cstdint>
-#include "types.h"
+#include "emu_types.h"
 
 extern const Instruction kInstructions[];
 

@@ -6,8 +6,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-namespace FTUtil
-{
+namespace FTUtil {
 
 void Init();
 void Done();
@@ -17,6 +16,6 @@ FT_Face LoadFace(const std::string &path);
 void LoadChar(FT_Face face, FT_ULong index, FT_Int32 flags);
 void SetCharSize(FT_Face face, int size);
 
-}
+} // namespace FTUtil
 
 #endif // FT_UTIL_H

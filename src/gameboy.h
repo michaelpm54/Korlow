@@ -16,7 +16,7 @@ struct Gameboy
 	uint8_t *get_memory();
 	bool is_running() const;
 	void set_rom(const std::vector<uint8_t> &bytes);
-	void tick();
+	int tick();
 	void reset();
 	const uint8_t *get_lcd_pixels() const;
 

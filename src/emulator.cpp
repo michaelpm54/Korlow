@@ -103,7 +103,7 @@ void Emulator::setup_window()
 	setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 	setAttribute(Qt::WA_QuitOnClose);
 	resize(kLcdWidth * kScale, kLcdHeight * kScale);
-	setWindowTitle("[AETHIC]");
+	setWindowTitle("DMG Emulator");
 	setWindowFlags(
 		Qt::CustomizeWindowHint |
 		Qt::WindowTitleHint |
@@ -151,23 +151,23 @@ void Emulator::setup_gameboy_components()
 
 	cpu = std::make_unique<Cpu>(
 		CpuRegisters {
-			.io  = mem[kIo],
-			.if_ = mem[kIf],
-			.ie  = mem[kIe],
+			/*.io  =*/ mem[kIo],
+			/*.if_ =*/ mem[kIf],
+			/*.ie  =*/ mem[kIe],
 		}
 	);
 
 	ppu = std::make_unique<Ppu>(
 		PpuRegisters {
-			.if_  = mem[kIf],
-			.lcdc = mem[kLcdc],
-			.stat = mem[kStat],
-			.scx  = mem[kScx],
-			.scy  = mem[kScy],
-			.ly   = mem[kLy],
-			.lyc  = mem[kLyc],
-			.wy   = mem[kWy],
-			.wx   = mem[kWx],
+			/*.if_  =*/ mem[kIf],
+			/*.lcdc =*/ mem[kLcdc],
+			/*.stat =*/ mem[kStat],
+			/*.scx  =*/ mem[kScx],
+			/*.scy  =*/ mem[kScy],
+			/*.ly   =*/ mem[kLy],
+			/*.lyc  =*/ mem[kLyc],
+			/*.wy   =*/ mem[kWy],
+			/*.wx   =*/ mem[kWx],
 		}
 	);
 
@@ -180,12 +180,26 @@ void Emulator::setup_gameboy_components()
 
 void Emulator::update()
 {
-	main_scene->update();
-
-	if (config.paused || !have_rom)
+	if (config.paused || !gameboy->is_running())
 		return;
 
-	gameboy->tick();
+	int instructions = 0;
+	int cycles = 0;
+	while (cycles < kMaxCyclesPerFrame && cpu->is_enabled() && gameboy->is_running())
+	{
+		cycles += gameboy->tick();
+
+		if ((instructions % 200) == 0)
+			QApplication::processEvents();
+		instructions++;
+	}
+
+	main_scene->update();
+
+	main_scene->set_lcd_pixels(gameboy->get_lcd_pixels());
+	map_scene->set_map_pixels(ppu_proxy->get_map_pixels());
+
+	QApplication::processEvents();
 }
 
 void Emulator::slot_tick()
