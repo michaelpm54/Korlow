@@ -1,11 +1,16 @@
 [requires]
-freetype/2.10.4
 doctest/2.4.0
+sdl2/2.0.12@bincrafters/stable
+glm/0.9.9.8
+imgui/1.79
+freetype/2.10.4
+zlib/1.2.11
 
 [generators]
 cmake
 
 [options]
+sdl2:sdl2main=False
 freetype:shared=True
 
 [imports]
@@ -17,3 +22,9 @@ lib, *.lib -> lib/
 
 # Again, but to the build/ root. This is necessary for linking freetype.
 lib, *.lib -> .
+
+# ImGui backends
+./res/bindings, imgui_impl_opengl3.cpp -> ../lib/imgui/
+./res/bindings, imgui_impl_sdl.cpp -> ../lib/imgui/
+./res/bindings, imgui_impl_opengl3.h -> ../include/imgui/
+./res/bindings, imgui_impl_sdl.h -> ../include/imgui/

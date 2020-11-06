@@ -5,7 +5,7 @@
 # Build
 
 ## Install dependencies
-`conan install . -if build -s build_type=debug`
+`conan install . -if build -s build_type=Debug`
 
 Downloads and installs dependencies into `build`.
 
