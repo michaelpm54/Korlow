@@ -4,7 +4,6 @@
 #include <cstdint>
 
 #include "component.h"
-#include "types.h"
 
 enum class HaltBug {
     None,

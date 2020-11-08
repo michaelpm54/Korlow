@@ -4,7 +4,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
 
-
 constexpr int kLcdWidth {160};
 constexpr int kLcdHeight {144};
 

@@ -1,8 +1,6 @@
 #ifndef INST_DATA_H
 #define INST_DATA_H
 
-#include "types.h"
-
 extern const int kInstSizes[];
 extern const int kInstCycles[];
 extern const int kInstCyclesAlt[];

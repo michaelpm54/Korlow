@@ -5,7 +5,6 @@
 
 #include "render/opengl.h"
 
-
 void loadShaders(GLuint program, const std::string &vsPath, const std::string &fsPath);
 
 namespace GLUtil {

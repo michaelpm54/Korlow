@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "component.h"
-#include "types.h"
-
 
 struct Mmu : Component {
     Mmu(Component& cpu, Component& ppu, uint8_t* memory);

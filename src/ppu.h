@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "component.h"
-#include "types.h"
-
 
 struct sprite_t {
     uint8_t y;

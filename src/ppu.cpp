@@ -5,7 +5,6 @@
 #include "constants.h"
 #include "memory_map.h"
 
-
 constexpr uint8_t kShades[4] = {0x00, 0x3F, 0x7E, 0xFF};
 
 /*

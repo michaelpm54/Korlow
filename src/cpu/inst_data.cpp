@@ -4,7 +4,6 @@
 
 #include "cpu_instructions.h"
 
-
 // clang-format off
 
 const int kInstSizes[] =
