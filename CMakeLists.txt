@@ -10,9 +10,6 @@ list(APPEND
 	${CMAKE_SOURCE_DIR}
 )
 
-# Qt
-set(CMAKE_AUTOMOC ON)
-
 set(KORLOW_SRC_SOURCES
 	src/main.cpp
 	src/fs.cpp
@@ -79,26 +76,15 @@ conan_cmake_run(CONANFILE conanfile.txt
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-find_package(Qt5 COMPONENTS Widgets Gui CONFIG REQUIRED)
-
 target_link_libraries(
 	app
 	PRIVATE
 		${CONAN_LIBS}
-		Qt5::Core Qt5::Widgets Qt5::Gui
 )
 
 add_custom_command(TARGET app PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
               ${CMAKE_CURRENT_LIST_DIR}/assets $<TARGET_FILE_DIR:app>/assets
-)
-
-# Copy Qt DLL's to output
-add_custom_command(
-    TARGET app POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:Qt5::Core> $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE:Qt5::Widgets>
-        $<TARGET_FILE_DIR:app>
 )
 
 # Copy the DLL's built by Conan to the output directory
