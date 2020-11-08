@@ -11,13 +11,16 @@
 struct Mmu : Component {
     Mmu(Component& cpu, Component& ppu, u8* memory);
 
-    void reset(bool) override {};
+    void reset(bool) override;
     u8 read8(u16 address) override;
     u16 read16(u16 address) override;
     void write8(u16 address, u8 value) override;
     void write16(u16 address, u16 value) override;
 
-    u8* memory;
+    void set_rom_start(u8* data);
+
+    u8* memory {nullptr};
+    u8* rom_start {nullptr};
 
 private:
     Component& cpu;

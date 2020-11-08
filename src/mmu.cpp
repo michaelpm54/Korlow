@@ -19,6 +19,12 @@ Mmu::Mmu(Component &cpu, Component &ppu, u8 *memory)
 {
 }
 
+void Mmu::reset(bool skip_bios)
+{
+    if (memory)
+        std::fill_n(memory, 0x10000, 0);
+}
+
 u8 Mmu::read8(u16 address)
 {
     return memory[address];
@@ -44,6 +50,12 @@ void Mmu::write8(u16 addr, u8 value)
     {
         value |= 0b0111'1100;
     }
+    else if (addr == 0xFF50) {
+        if (rom_start) {
+            printf("Exiting Boot ROM.\n");
+            std::memcpy(memory, rom_start, 0x100);
+        }
+    }
     else if (is_ppu_address(addr)) {
         if (addr == kDmaStartAddr) {
             for (int i = 0; i < 0xA0; i++)
@@ -64,4 +76,9 @@ void Mmu::write16(u16 address, u16 value)
 {
     write8(address, static_cast<u8>(value));
     write8(address + 1, (value & 0xFF00) >> 8);
+}
+
+void Mmu::set_rom_start(u8 *data)
+{
+    rom_start = data;
 }

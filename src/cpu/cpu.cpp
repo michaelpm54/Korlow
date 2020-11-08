@@ -14,24 +14,26 @@ Cpu::Cpu(CpuRegisters registers)
 {
 }
 
-void Cpu::reset(bool)
+void Cpu::reset(bool skip_bios)
 {
-    pc = 0;
-    sp = 0xFFFF;
-    af = 0;
-    bc = 0;
-    de = 0;
-    hl = 0;
-    ime = true;
-    /*
-	pc = 0x0100;
-	sp = 0xFFFE;
-	af = 0x01B0;
-	bc = 0x0013;
-	de = 0x00D8;
-	hl = 0x014D;
-	ime = false;
-	*/
+    if (skip_bios) {
+        pc = 0x0100;
+        sp = 0xFFFE;
+        af = 0x01B0;
+        bc = 0x0013;
+        de = 0x00D8;
+        hl = 0x014D;
+        ime = false;
+    }
+    else {
+        pc = 0;
+        sp = 0xFFFF;
+        af = 0;
+        bc = 0;
+        de = 0;
+        hl = 0;
+        ime = true;
+    }
 }
 
 bool Cpu::is_enabled() const

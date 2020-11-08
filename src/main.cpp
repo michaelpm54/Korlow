@@ -52,7 +52,6 @@ int main(int argc, char* argv[])
 
     ImGui::FileBrowser file_dialog;
     file_dialog.SetTitle("Choose a ROM");
-    bool file_dialog_open {false};
 
     u8* mem = new u8[0x10000]();
 
@@ -75,52 +74,57 @@ int main(int argc, char* argv[])
     PpuMapProxy ppu_proxy(ppu);
     Mmu mmu(cpu, ppu_proxy, mem);
 
-    //cpu.debug = true;
+    cpu.debug = false;
 
-    bool use_bios = true;
+    bool skip_bios = false;
 
-    if (use_bios) {
+    if (!skip_bios) {
         auto data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
-        memcpy(mmu.memory, data.data(), data.size());
+        std::memcpy(mmu.memory, data.data(), data.size());
     }
 
-    cpu.reset(use_bios);
-    ppu.reset(use_bios);
+    std::vector<u8> rom_data;
+    std::vector<u8> rom_start(0x100);
+
+    cpu.reset(skip_bios);
+    ppu.reset(skip_bios);
 
     // Sound
-    mmu.write8(kNr10, 0x80);
-    mmu.write8(kNr11, 0xBF);
-    mmu.write8(kNr12, 0xF3);
-    mmu.write8(kNr14, 0xBF);
-    mmu.write8(kNr21, 0x3F);
-    mmu.write8(kNr24, 0xBF);
-    mmu.write8(kNr30, 0x7F);
-    mmu.write8(kNr31, 0xFF);
-    mmu.write8(kNr32, 0x9F);
-    mmu.write8(kNr34, 0xBF);
-    mmu.write8(kNr41, 0xFF);
-    mmu.write8(kNr44, 0xBF);
-    mmu.write8(kNr50, 0x77);
-    mmu.write8(kNr51, 0xF3);
-    mmu.write8(kNr52, 0xF1);
+    if (!skip_bios) {
+        mmu.write8(kNr10, 0x80);
+        mmu.write8(kNr11, 0xBF);
+        mmu.write8(kNr12, 0xF3);
+        mmu.write8(kNr14, 0xBF);
+        mmu.write8(kNr21, 0x3F);
+        mmu.write8(kNr24, 0xBF);
+        mmu.write8(kNr30, 0x7F);
+        mmu.write8(kNr31, 0xFF);
+        mmu.write8(kNr32, 0x9F);
+        mmu.write8(kNr34, 0xBF);
+        mmu.write8(kNr41, 0xFF);
+        mmu.write8(kNr44, 0xBF);
+        mmu.write8(kNr50, 0x77);
+        mmu.write8(kNr51, 0xF3);
+        mmu.write8(kNr52, 0xF1);
 
-    // CPU registers
-    mmu.write8(kIo, 0xCF);
-    mmu.write8(kIf, 0xE1);
-    mmu.write8(kIe, 0x00);
+        // CPU registers
+        mmu.write8(kIo, 0xCF);
+        mmu.write8(kIf, 0xE1);
+        mmu.write8(kIe, 0x00);
 
-    // PPU registers
-    mmu.write8(kLcdc, 0x91);
-    mmu.write8(kStat, 0x00);
-    mmu.write8(kScy, 0x00);
-    mmu.write8(kScy, 0x00);
-    mmu.write8(kLy, 0x00);
-    mmu.write8(kLyc, 0x00);
-    mmu.write8(kBgPalette, 0xFC);
-    mmu.write8(kObj0Palette, 0xFF);
-    mmu.write8(kObj1Palette, 0xFF);
-    mmu.write8(kWy, 0x00);
-    mmu.write8(kWx, 0x00);
+        // PPU registers
+        mmu.write8(kLcdc, 0x91);
+        mmu.write8(kStat, 0x00);
+        mmu.write8(kScy, 0x00);
+        mmu.write8(kScy, 0x00);
+        mmu.write8(kLy, 0x00);
+        mmu.write8(kLyc, 0x00);
+        mmu.write8(kBgPalette, 0xFC);
+        mmu.write8(kObj0Palette, 0xFF);
+        mmu.write8(kObj1Palette, 0xFF);
+        mmu.write8(kWy, 0x00);
+        mmu.write8(kWx, 0x00);
+    }
 
     Texture screen;
     texture_init(&screen, kLcdWidth, kLcdHeight, 1);
@@ -139,8 +143,25 @@ int main(int argc, char* argv[])
 
     glClearColor(0.0f, 0.2f, 0.6f, 1.0f);
 
+    rom_data = FS::read_bytes("C:\\Dev\\Korlow\\roms\\alleyway.gb");
+    std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
+
+    if (!skip_bios) {
+        std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
+        mmu.set_rom_start(rom_start.data());
+    }
+    else {
+        std::memcpy(mem, rom_data.data(), rom_data.size());
+    }
+
     bool map_visible {false};
-    bool paused = false;
+    bool paused {true};
+    bool file_dialog_open {true};
+
+    file_dialog.Open();
+
+    int total_instructions = 0;
+
     while (true) {
         bool quit = false;
         quit |= sdl_poll(&window);
@@ -150,6 +171,7 @@ int main(int argc, char* argv[])
 
         if (sdl_get_action(&window, ButtonOpenFile, false)) {
             if (!file_dialog_open) {
+                paused = true;
                 file_dialog.Open();
                 file_dialog_open = true;
             }
@@ -157,6 +179,7 @@ int main(int argc, char* argv[])
 
         if (sdl_get_action(&window, ButtonCloseDialog, false)) {
             if (file_dialog_open) {
+                paused = false;
                 file_dialog.Close();
                 file_dialog_open = false;
             }
@@ -180,6 +203,7 @@ int main(int argc, char* argv[])
                 int instruction_cycles = cpu.tick(mmu);
                 ppu.tick(instruction_cycles);
                 cycles += instruction_cycles;
+                total_instructions++;
             }
             if (redraw) {
                 texture_set_pixels(&screen, ppu.get_pixels());
@@ -194,7 +218,28 @@ int main(int argc, char* argv[])
             if (file_dialog.HasSelected()) {
                 auto selection = file_dialog.GetSelected();
                 if (selection.extension() == ".bin" || selection.extension() == ".gb" || selection.extension() == ".dmg") {
-                    //mmu_set_rom(&mmu, FS::read_bytes(selection.string()));
+                    cpu.reset(skip_bios);
+                    mmu.reset(skip_bios);
+                    ppu.reset(skip_bios);
+
+                    // Load ROM
+                    rom_data = FS::read_bytes(selection.string());
+
+                    // Get first 0x100 bytes, which will replace the bootrom
+                    std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
+                    mmu.set_rom_start(rom_start.data());
+
+                    printf("Setting rom %s\n", selection.string().c_str());
+
+                    // If we want to see the boot screen, set it up
+                    if (!skip_bios) {
+                        std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
+                        mmu.set_rom_start(rom_start.data());
+                    }
+                    // Otherwise just copy the whole thing
+                    else {
+                        std::memcpy(mem, rom_data.data(), rom_data.size());
+                    }
                     file_dialog.ClearSelected();
                     file_dialog.Close();
                     file_dialog_open = false;
@@ -211,6 +256,11 @@ int main(int argc, char* argv[])
             ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(map.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
             ImGui::End();
         }
+
+        ImGui::Begin("Debug");
+        ImGui::Checkbox("Paused", &paused);
+        ImGui::Checkbox("Debug", &cpu.debug);
+        ImGui::End();
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
