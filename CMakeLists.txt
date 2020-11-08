@@ -20,7 +20,7 @@ set(KORLOW_SRC_SOURCES
 	src/cpu/cpu_base.cpp
 	src/cpu/cpu_instructions.cpp
 	src/cpu/inst_data.cpp
-	src/render/gl_util.cpp
+	src/render/gl_shader.cpp
 	src/render/screen_texture.cpp
 	src/render/sdl.cpp
 	src/render/rect.cpp

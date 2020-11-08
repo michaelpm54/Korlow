@@ -11,7 +11,7 @@
 #include "mmu.h"
 #include "ppu.h"
 #include "ppu_map_proxy.h"
-#include "render/gl_util.h"
+#include "render/gl_shader.h"
 #include "render/opengl.h"
 #include "render/rect.h"
 #include "render/screen_texture.h"
@@ -136,8 +136,7 @@ int main(int argc, char* argv[])
     const auto map_transform {glm::translate(glm::vec3 {0.0f, 0.5f, 0.0f}) * glm::scale(glm::vec3 {0.5f, 0.5f, 1.0f})};
     const auto map_projection {glm::ortho(0.0f, 1.0f, 0.0f, 1.0f)};
 
-    GLuint rect_program = glCreateProgram();
-    loadShaders(rect_program, kQuadVertexShader, kQuadFragmentShader);
+    GLuint rect_program = load_shader("assets/shaders/quad.vert.glsl", "assets/shaders/quad.frag.glsl");
 
     glClearColor(0.0f, 0.2f, 0.6f, 1.0f);
 
