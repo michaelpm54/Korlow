@@ -56,11 +56,15 @@ target_include_directories(app
 		${CMAKE_SOURCE_DIR}/src
 )
 
-set_property(TARGET app PROPERTY CXX_STANDARD 17)
+set_property(TARGET app PROPERTY CXX_STANDARD 20)
 set_property(TARGET app PROPERTY CXX_STANDARD_REQUIRED ON)
 
 if (MSVC_VERSION GREATER_EQUAL "1900")
-    target_compile_features(app PRIVATE cxx_std_17)
+    include(CheckCXXCompilerFlag)
+    CHECK_CXX_COMPILER_FLAG("/std:c++latest" _cpp_latest_flag_supported)
+    if (_cpp_latest_flag_supported)
+        add_compile_options("/std:c++latest")
+    endif()
 endif()
 
 include(cmake/conan.cmake)

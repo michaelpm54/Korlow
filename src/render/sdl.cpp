@@ -112,7 +112,7 @@ void sdl_bind(Window* window, SDL_Keycode keycode, int action)
 
 bool sdl_get_action(Window* window, int action, bool held)
 {
-    if (window->actions.count(action)) {
+    if (window->actions.contains(action)) {
         return held ? window->actions[action]->held : window->actions[action]->pressed;
     }
     return false;

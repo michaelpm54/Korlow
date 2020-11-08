@@ -57,20 +57,20 @@ int main(int argc, char* argv[])
     u8* mem = new u8[0x10000]();
 
     Cpu cpu(CpuRegisters {
-        /*.io  =*/mem[kIo],
-        /*.if_ =*/mem[kIf],
-        /*.ie  =*/mem[kIe],
+        .io = mem[kIo],
+        .if_ = mem[kIf],
+        .ie = mem[kIe],
     });
     Ppu ppu(PpuRegisters {
-        /*.if_  =*/mem[kIf],
-        /*.lcdc =*/mem[kLcdc],
-        /*.stat =*/mem[kStat],
-        /*.scx  =*/mem[kScx],
-        /*.scy  =*/mem[kScy],
-        /*.ly   =*/mem[kLy],
-        /*.lyc  =*/mem[kLyc],
-        /*.wy   =*/mem[kWy],
-        /*.wx   =*/mem[kWx],
+        .if_ = mem[kIf],
+        .lcdc = mem[kLcdc],
+        .stat = mem[kStat],
+        .scx = mem[kScx],
+        .scy = mem[kScy],
+        .ly = mem[kLy],
+        .lyc = mem[kLyc],
+        .wy = mem[kWy],
+        .wx = mem[kWx],
     });
     PpuMapProxy ppu_proxy(ppu);
     Mmu mmu(cpu, ppu_proxy, mem);
