@@ -82,16 +82,19 @@ bool sdl_poll(Window* window)
     }
     const unsigned char* keys = SDL_GetKeyboardState(nullptr);
     for (auto& [keycode, binding] : window->bindings) {
-        /* Set pressed to false if so. */
         if (!keys[keycode]) {
-            if (binding.pressed)
-                binding.pressed = false;
-            continue;
+            binding.pressed = false;
+            binding.held = false;
         }
-
-        /* Key is pressed. */
-        //binding.prev = binding.pressed;
-        binding.pressed = true;
+        else {
+            if (binding.held) {
+                binding.pressed = false;
+            }
+            else {
+                binding.pressed = true;
+            }
+            binding.held = true;
+        }
     }
     return false;
 }
@@ -107,9 +110,10 @@ void sdl_bind(Window* window, SDL_Keycode keycode, int action)
     window->actions[action] = &window->bindings[keycode];
 }
 
-bool sdl_get_action(Window* window, int action)
+bool sdl_get_action(Window* window, int action, bool held)
 {
-    if (window->actions.count(action))
-        return window->actions[action]->pressed;
+    if (window->actions.count(action)) {
+        return held ? window->actions[action]->held : window->actions[action]->pressed;
+    }
     return false;
 }

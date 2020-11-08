@@ -144,31 +144,27 @@ int main(int argc, char* argv[])
     while (true) {
         bool quit = false;
         quit |= sdl_poll(&window);
-        quit |= sdl_get_action(&window, ButtonQuit);
+        quit |= sdl_get_action(&window, ButtonQuit, false);
         if (quit)
             break;
 
-        if (file_dialog_open) {
-            file_dialog_open = !sdl_get_action(&window, ButtonCloseDialog);
+        if (sdl_get_action(&window, ButtonOpenFile, false)) {
             if (!file_dialog_open) {
-                file_dialog.Close();
-            }
-        }
-        else {
-            file_dialog_open = sdl_get_action(&window, ButtonOpenFile);
-            if (file_dialog_open) {
                 file_dialog.Open();
+                file_dialog_open = true;
             }
         }
 
-        if (map_visible) {
-            map_visible = !sdl_get_action(&window, ButtonToggleMap);
-            paused = true;
+        if (sdl_get_action(&window, ButtonCloseDialog, false)) {
+            if (file_dialog_open) {
+                file_dialog.Close();
+                file_dialog_open = false;
+            }
         }
-        else {
-            if (sdl_get_action(&window, ButtonToggleMap))
-                map_visible = true;
-            paused = false;
+
+        if (sdl_get_action(&window, ButtonToggleMap, false)) {
+            map_visible = !map_visible;
+            paused = !paused;
         }
 
         ImGui_ImplOpenGL3_NewFrame();

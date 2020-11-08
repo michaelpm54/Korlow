@@ -7,7 +7,7 @@
 
 struct KeyState {
     bool pressed;
-    //bool prev;
+    bool held;
 };
 
 struct Window {
@@ -23,7 +23,7 @@ bool sdl_open(Window* window);
 void sdl_close(Window* window);
 
 void sdl_bind(Window* window, SDL_Keycode keycode, int action);
-bool sdl_get_action(Window* window, int action);
+bool sdl_get_action(Window* window, int action, bool held);
 
 /* Returns true when quit triggered. */
 bool sdl_poll(Window* window);
