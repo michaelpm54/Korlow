@@ -122,11 +122,11 @@ int main(int argc, char* argv[])
     mmu.write8(kWy, 0x00);
     mmu.write8(kWx, 0x00);
 
-    GLuint screen;
-    texture_init(&screen, kLcdWidth, kLcdHeight);
+    Texture screen;
+    texture_init(&screen, kLcdWidth, kLcdHeight, 1);
 
-    GLuint map;
-    texture_init(&map, kMapWidth, kMapHeight * 2);
+    Texture map;
+    texture_init(&map, kMapWidth, kMapHeight * 2, 4);
 
     Rect rect;
     rect_init(&rect);
@@ -182,12 +182,12 @@ int main(int argc, char* argv[])
                 cycles += instruction_cycles;
             }
             if (redraw) {
-                texture_set_pixels(screen, ppu.get_pixels(), kLcdWidth, kLcdHeight);
-                texture_set_pixels(map, ppu_proxy.get_map_pixels(), kMapWidth, kMapHeight * 2);
+                texture_set_pixels(&screen, ppu.get_pixels());
+                texture_set_pixels(&map, ppu_proxy.get_map_pixels());
             }
         }
 
-        rect_draw(&rect, screen, rect_program, screen_projection, screen_transform);
+        rect_draw(&rect, screen.handle, rect_program, screen_projection, screen_transform);
 
         if (file_dialog_open) {
             file_dialog.Display();
@@ -204,15 +204,12 @@ int main(int argc, char* argv[])
         }
 
         if (map_visible) {
-            /*
-			ImGui::Begin("Map");
-			ImVec2 uv_min{ 0.0f, 0.0f };
-			ImVec2 uv_max{ 1.0f, 1.0f };
-			ImGui::Image((GLuint*)map, ImVec2(200.0f, 200.0f), uv_min, uv_max);
-			ImGui::End();
-			*/
-
-            rect_draw(&rect, map, rect_program, map_projection, map_transform);
+            ImGui::SetNextWindowSize({0.0f, 0.0f});
+            ImGui::Begin("Map", nullptr, ImGuiWindowFlags_NoResize);
+            ImVec2 uv_min {0.0f, 0.0f};
+            ImVec2 uv_max {1.0f, 1.0f};
+            ImGui::Image((ImTextureID)map.handle, ImVec2(400.0f, 400.0f), uv_min, uv_max);
+            ImGui::End();
         }
 
         ImGui::Render();
@@ -224,6 +221,7 @@ int main(int argc, char* argv[])
     delete[] mem;
 
     rect_free(&rect);
+    texture_free(&map);
     texture_free(&screen);
     glDeleteProgram(rect_program);
     sdl_close(&window);

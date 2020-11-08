@@ -24,7 +24,7 @@ struct PpuMapProxy : Component {
     const u8* get_map_pixels() const;
 
     Ppu& ppu;
-    std::vector<u8> map_pixels;
+    std::vector<u32> map_pixels;
 };
 
 #endif    // PPU_MAP_PROXY_H
