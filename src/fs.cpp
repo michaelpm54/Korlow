@@ -1,5 +1,6 @@
 #include "fs.h"
 
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -17,10 +18,7 @@ template <typename T>
 void check_good(T &file, const std::string &path)
 {
     if (!file.good()) {
-        std::stringstream ss;
-        ss << "Failed to open '" << path << "'";
-        ss << "\nerrno: " << strerror(errno);
-        throw std::runtime_error(ss.str());
+        throw std::system_error(errno, std::system_category(), "Failed to open " + path);
     }
 }
 template void check_good<>(std::ifstream &, const std::string &);
