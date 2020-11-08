@@ -21,7 +21,7 @@ void RL(u8 val, u8 *result, u8 *flags);
 
 // Z00C
 // Doesn't set LSB
-void RLC(u8 val, u8 *result, u8 *flags);
+void RLC(u8 val, u8 *result, u8 *flags, bool unset_zero = false);
 
 // Z00C
 // Sets LSB to carry

@@ -1647,7 +1647,7 @@ void RLC_A(Cpu &cpu, Component &mmu, u8 d8, u16 d16, bool &extraCycles)
 {
     u8 flags = 0;
     u8 result = 0;
-    RLC(cpu.a, &result, &flags);
+    RLC(cpu.a, &result, &flags, true);
     cpu.a = result;
     cpu.f = flags;
 }

@@ -6,24 +6,44 @@ void RL(u8 val, u8 *result, u8 *flags)
 {
     // Z00C
 
-    // LSH 1 and add carry bit
-    *result = (val << 1) + ((*flags & 0x10) >> 4);
+    u8 old_carry = !!(*flags & FLAGS_CARRY);
+    u8 new_carry = val & 1;
+    u8 r = (val << 1) | old_carry;
 
-    // MSB becomes new carry bit
-    *flags = (val & 0x80) >> 3;
-
-    if (!*result) {
-        *flags |= 0x80;
+    if (r == 0) {
+        *flags |= FLAGS_ZERO;
     }
+    else {
+        *flags &= ~(FLAGS_ZERO);
+    }
+
+    if (new_carry) {
+        *flags |= FLAGS_CARRY;
+    }
+    else {
+        *flags &= ~(FLAGS_CARRY);
+    }
+
+    *result = r;
 }
 
-void RLC(u8 val, u8 *result, u8 *flags)
+void RLC(u8 val, u8 *result, u8 *flags, bool unset_zero)
 {
+    /* Push the MSB to LSB. */
     u8 msb = (val & 0x80) >> 7;
+
+    /* Left shift and add the MSB (now LSB). */
     *result = (val << 1) | msb;
+
+    /* Push the former MSB to the carry flag. */
     *flags = msb << 4;
-    if (!*result) {
-        *flags |= 0x80;
+
+    /* RLC A always unsets the zero flag. */
+    if (*result != 0 || unset_zero) {
+        *flags &= ~(FLAGS_ZERO);
+    }
+    else {
+        *flags |= FLAGS_ZERO;
     }
 }
 
