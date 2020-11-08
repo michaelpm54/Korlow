@@ -4,5 +4,4 @@
 #include <Windows.h>
 #include <glad/glad.h>
 
-
-#endif // KORLOW_OPENGL_H
+#endif    // KORLOW_OPENGL_H

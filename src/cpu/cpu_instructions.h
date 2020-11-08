@@ -74,10 +74,10 @@ void LD_SP_IMM16(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extra
 void LDD_HL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 void INC_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 void INC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
-void DEC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles); // 0x35
+void DEC_AHL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);    // 0x35
 void LD_AHL_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 void SCF(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
-void JR_C_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles); // 0x38
+void JR_C_IMM8(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);    // 0x38
 void ADD_HL_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 void LDD_A_HL(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 void DEC_SP(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
@@ -396,4 +396,4 @@ void SRL_A(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles
 
 void BIT_7H(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
 
-#endif // CPU_INSTRUCTIONS_H
+#endif    // CPU_INSTRUCTIONS_H

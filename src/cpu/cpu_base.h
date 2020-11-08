@@ -3,12 +3,11 @@
 
 #include <cstdint>
 
-enum
-{
-	FLAGS_ZERO = 0x80,
-	FLAGS_SUBTRACT = 0x40,
-	FLAGS_HALFCARRY = 0x20,
-	FLAGS_CARRY = 0x10,
+enum {
+    FLAGS_ZERO = 0x80,
+    FLAGS_SUBTRACT = 0x40,
+    FLAGS_HALFCARRY = 0x20,
+    FLAGS_CARRY = 0x10,
 };
 
 class CPU;
@@ -49,4 +48,4 @@ void CP(uint8_t a, uint8_t r, uint8_t &f);
 void SUB(CPU *cpu, uint8_t r);
 void TestBit(uint8_t bit, uint8_t &f);
 
-#endif // CPU_BASE_H
+#endif    // CPU_BASE_H

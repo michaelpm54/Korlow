@@ -1,6 +1,11 @@
-#include <cinttypes>
 #include "inst_data.h"
+
+#include <cinttypes>
+
 #include "cpu_instructions.h"
+
+
+// clang-format off
 
 const int kInstSizes[] =
 {
@@ -177,4 +182,6 @@ const int kInstFmtSizes[] =
 /* D */ 0, 0,  0,  0,  0,  0, 0, 0, 0,  0, 0,  0, 0,  0,  0, 0,
 /* E */ 0, 0,  0,  0,  0,  0, 0, 0, 0,  0, 0,  0, 0,  0,  0, 0,
 /* F */ 0, 0,  0,  0,  0,  0, 0, 0, 0,  0, 0,  0, 0,  0,  0, 0,
-};				   
+};
+
+// clang-format on

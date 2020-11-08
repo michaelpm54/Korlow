@@ -6,15 +6,15 @@
 #include <unordered_map>
 
 struct KeyState {
-	bool pressed;
-	//bool prev;
+    bool pressed;
+    //bool prev;
 };
 
 struct Window {
-	SDL_Window* handle{ nullptr };
-	SDL_GLContext context{ nullptr };
-	std::unordered_map<SDL_Keycode, KeyState> bindings;
-	std::unordered_map<int, KeyState*> actions;
+    SDL_Window* handle {nullptr};
+    SDL_GLContext context {nullptr};
+    std::unordered_map<SDL_Keycode, KeyState> bindings;
+    std::unordered_map<int, KeyState*> actions;
 };
 
 void sdl_init();
@@ -30,4 +30,4 @@ bool sdl_poll(Window* window);
 
 void sdl_flip(Window* window);
 
-#endif // KORLOW_SDL_H
+#endif    // KORLOW_SDL_H

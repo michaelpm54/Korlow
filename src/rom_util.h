@@ -7,4 +7,4 @@
 void printRomInfo(const std::vector<std::uint8_t> &rom);
 std::vector<std::uint8_t> ghostRom();
 
-#endif // ROMUTIL_H
+#endif    // ROMUTIL_H

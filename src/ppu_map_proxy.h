@@ -15,17 +15,16 @@
 
 struct Ppu;
 
-struct PpuMapProxy : Component
-{
-	PpuMapProxy(Ppu& ppu);
+struct PpuMapProxy : Component {
+    PpuMapProxy(Ppu& ppu);
 
-	void reset(bool) override;
-	void write8(uint16_t address, uint8_t value) override;
-	const uint8_t* get_pixels() const;
-	const uint8_t* get_map_pixels() const;
+    void reset(bool) override;
+    void write8(uint16_t address, uint8_t value) override;
+    const uint8_t* get_pixels() const;
+    const uint8_t* get_map_pixels() const;
 
-	Ppu& ppu;
-	std::vector<uint8_t> map_pixels;
+    Ppu& ppu;
+    std::vector<uint8_t> map_pixels;
 };
 
-#endif // PPU_MAP_PROXY_H
+#endif    // PPU_MAP_PROXY_H

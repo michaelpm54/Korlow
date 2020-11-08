@@ -59,4 +59,4 @@ constexpr inline uint16_t kExitBootRomReg = 0xFF50;
 constexpr inline uint16_t kZeroPage = 0xFF80;
 constexpr inline uint16_t kIe = 0xFFFF;
 
-#endif // MEMORY_MAP_H
+#endif    // MEMORY_MAP_H
