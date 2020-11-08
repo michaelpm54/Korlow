@@ -78,19 +78,32 @@ int main(int argc, char* argv[])
 
     bool skip_bios = false;
 
-    if (!skip_bios) {
-        auto data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
-        std::memcpy(mmu.memory, data.data(), data.size());
-    }
-
-    std::vector<u8> rom_data;
+    std::vector<u8> rom_data = FS::read_bytes("C:/Dev/Korlow/roms/cpu_instrs/cpu_instrs.gb");
     std::vector<u8> rom_start(0x100);
 
     cpu.reset(skip_bios);
     ppu.reset(skip_bios);
 
-    // Sound
     if (!skip_bios) {
+        if (rom_data.size()) {
+            // Copy from 0x100-N to memory
+            std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
+
+            // Copy from 0-0x100 to temporary area
+            // This gets swapped to actual memory when BIOS exits
+            std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
+            mmu.set_rom_start(rom_start.data());
+        }
+
+        // Load BIOS
+        auto data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+        std::memcpy(mmu.memory, data.data(), data.size());
+    }
+    else {
+        // Copy the entire ROM to memory
+        std::memcpy(mem, rom_data.data(), rom_data.size());
+
+        // Sound
         mmu.write8(kNr10, 0x80);
         mmu.write8(kNr11, 0xBF);
         mmu.write8(kNr12, 0xF3);
@@ -143,22 +156,15 @@ int main(int argc, char* argv[])
 
     glClearColor(0.0f, 0.2f, 0.6f, 1.0f);
 
-    rom_data = FS::read_bytes("C:\\Dev\\Korlow\\roms\\alleyway.gb");
-    std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
-
-    if (!skip_bios) {
-        std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
-        mmu.set_rom_start(rom_start.data());
-    }
-    else {
-        std::memcpy(mem, rom_data.data(), rom_data.size());
-    }
-
     bool map_visible {false};
-    bool paused {true};
-    bool file_dialog_open {true};
+    bool paused {false};
+    bool file_dialog_open {false};
 
-    file_dialog.Open();
+    if (rom_data.empty()) {
+        paused = true;
+        file_dialog_open = true;
+        file_dialog.Open();
+    }
 
     int total_instructions = 0;
 
@@ -247,6 +253,12 @@ int main(int argc, char* argv[])
                 }
             }
         }
+        else {
+            ImGui::Begin("Debug");
+            ImGui::Checkbox("Paused", &paused);
+            ImGui::Checkbox("Debug", &cpu.debug);
+            ImGui::End();
+        }
 
         if (map_visible) {
             ImGui::SetNextWindowSize({0.0f, 0.0f});
@@ -256,11 +268,6 @@ int main(int argc, char* argv[])
             ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(map.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
             ImGui::End();
         }
-
-        ImGui::Begin("Debug");
-        ImGui::Checkbox("Paused", &paused);
-        ImGui::Checkbox("Debug", &cpu.debug);
-        ImGui::End();
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
