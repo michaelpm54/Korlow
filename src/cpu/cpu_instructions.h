@@ -3,6 +3,9 @@
 
 #include "emu_types.h"
 
+struct Cpu;
+struct Component;
+using Instruction = void (*)(Cpu &cpu, Component &mmu, u8 d8, u16 d16, bool &extraCycles);
 extern const Instruction kInstructions[];
 
 // Generic
