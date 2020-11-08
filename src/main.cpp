@@ -8,13 +8,16 @@
 #include <glm/gtx/transform.hpp>
 
 #include "ppu_map_proxy.h"
-#include "emulator.h"
 #include "render/screen_texture.h"
 #include "render/rect.h"
 #include "render/sdl.h"
 #include "constants.h"
 #include "render/gl_util.h"
 #include "fs.h"
+#include "memory_map.h"
+#include "cpu/cpu.h"
+#include "mmu.h"
+#include "ppu.h"
 
 /* clang-format off */
 // Order matters here

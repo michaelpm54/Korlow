@@ -9,42 +9,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 # Qt
 set(CMAKE_AUTOMOC ON)
 
-set(KORLOW_GUI_SOURCES
-	src/gui/opengl_widget.cpp
-)
-
-set(KORLOW_GUI_HEADERS
-	src/gui/opengl_widget.h
-)
-
-set(KORLOW_FONT_SOURCES
-	src/render/font/ft_font.cpp
-	src/render/font/ft_util.cpp
-)
-
-set(KORLOW_FONT_HEADERS
-	src/render/font/ft_font.h
-	src/render/font/ft_util.h
-)
-
 set(KORLOW_RENDER_SOURCES
-	${KORLOW_FONT_SOURCES}
 	src/render/gl_util.cpp
-	src/render/main_scene.cpp
-	src/render/map_scene.cpp
-	src/render/message_renderer.cpp
-	src/textured_quad_gl.cpp
 )
 
 set(KORLOW_RENDER_HEADERS
-	${KORLOW_FONT_HEADERS}
 	src/render/opengl.h
 	src/render/gl_util.h
-	src/render/renderer.h
-	src/render/main_scene.h
-	src/render/map_scene.h
-	src/render/message_renderer.h
-	src/textured_quad_gl.h
 )
 
 set(KORLOW_CPU_SOURCES
@@ -66,13 +37,13 @@ set(KORLOW_SOURCES
 	${KORLOW_RENDER_SOURCES}
 	${KORLOW_CPU_SOURCES}
 	src/main.cpp
-	src/emulator.cpp
+	
 	src/mmu.cpp
 	src/ppu.cpp
 	src/ppu_map_proxy.cpp
 	src/fs.cpp
 	src/rom_util.cpp
-	src/message_manager.cpp
+	
 	src/gameboy.cpp
 	src/render/screen_texture.cpp
 	src/render/sdl.cpp
@@ -84,7 +55,7 @@ set(KORLOW_HEADERS
 	${KORLOW_RENDER_HEADERS}
 	${KORLOW_CPU_HEADERS}
 	src/args.hxx
-	src/emulator.h
+	
 	src/mmu.h
 	src/ppu.h
 	src/ppu_map_proxy.h
@@ -92,7 +63,7 @@ set(KORLOW_HEADERS
 	src/fs.h
 	src/rom_util.h
 	src/memory_map.h
-	src/message_manager.h
+	
 	src/constants.h
 	src/component.h
 	src/gameboy.h
