@@ -1,9 +1,9 @@
 #ifndef KORLOW_RECT_H
 #define KORLOW_RECT_H
 
-#include <glad/glad.h>
-
 #include <glm/mat4x4.hpp>
+
+#include "render/gl.h"
 
 struct Rect {
     GLuint vao {GL_NONE};

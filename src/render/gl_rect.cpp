@@ -1,6 +1,6 @@
-#include "render/rect.h"
-
 #include <glm/gtc/type_ptr.hpp>
+
+#include "render/gl_rect.h"
 
 void rect_init(Rect *rect)
 {

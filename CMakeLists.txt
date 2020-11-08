@@ -21,9 +21,9 @@ set(KORLOW_SRC_SOURCES
 	src/cpu/cpu_instructions.cpp
 	src/cpu/inst_data.cpp
 	src/render/gl_shader.cpp
-	src/render/screen_texture.cpp
+	src/render/gl_texture.cpp
+	src/render/gl_rect.cpp
 	src/render/sdl.cpp
-	src/render/rect.cpp
 )
 
 set(KORLOW_LIB_SOURCES

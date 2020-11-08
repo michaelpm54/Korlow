@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "render/opengl.h"
+#include "render/gl.h"
 
 GLuint load_shader(const std::string &vertex_path, const std::string &fragment_path);
 

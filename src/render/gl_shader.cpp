@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "fs.h"
-#include "render/gl_shader.h"
+#include "render/gl.h"
 
 void check_compile_error(GLuint handle)
 {

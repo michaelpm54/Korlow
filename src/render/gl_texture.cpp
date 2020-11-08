@@ -1,4 +1,4 @@
-#include "render/screen_texture.h"
+#include "render/gl_texture.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

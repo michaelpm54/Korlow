@@ -1,9 +1,8 @@
 #ifndef KORLOW_SCREEN_TEXTURE_H
 #define KORLOW_SCREEN_TEXTURE_H
 
-#include <glad/glad.h>
-
 #include "emu_types.h"
+#include "render/gl.h"
 
 void texture_init(GLuint* texture, int w, int h);
 void texture_free(GLuint* texture);

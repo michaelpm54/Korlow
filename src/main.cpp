@@ -11,10 +11,9 @@
 #include "mmu.h"
 #include "ppu.h"
 #include "ppu_map_proxy.h"
+#include "render/gl_rect.h"
 #include "render/gl_shader.h"
-#include "render/opengl.h"
-#include "render/rect.h"
-#include "render/screen_texture.h"
+#include "render/gl_texture.h"
 #include "render/sdl.h"
 
 /* clang-format off */
