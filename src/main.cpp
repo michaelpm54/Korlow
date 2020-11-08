@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
     texture_init(&screen, kLcdWidth, kLcdHeight);
 
     GLuint map;
-    texture_init(&map, 32, 64);
+    texture_init(&map, kMapWidth, kMapHeight * 2);
 
     Rect rect;
     rect_init(&rect);
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
             }
             if (redraw) {
                 texture_set_pixels(screen, ppu.get_pixels(), kLcdWidth, kLcdHeight);
-                texture_set_pixels(map, ppu_proxy.get_map_pixels(), 32, 64);
+                texture_set_pixels(map, ppu_proxy.get_map_pixels(), kMapWidth, kMapHeight * 2);
             }
         }
 

@@ -62,7 +62,7 @@ Ppu::Ppu(PpuRegisters registers)
     : registers(registers)
     , memory(0x2000)
     , oam(0x100)
-    , pixels(160 * 144)
+    , pixels(kLcdWidth * kLcdHeight)
 {
 }
 
@@ -91,13 +91,13 @@ void Ppu::draw_scanline(int line)
     int y_px_in_tile = y_abs % 8;
 
     // background
-    for (int x = 0; x < 160; x++) {
+    for (int x = 0; x < kLcdWidth; x++) {
         int x_abs = x + registers.scx;
         int x_map = x_abs / 8;
         int x_px_in_tile = x_abs % 8;
 
         // Wrap around if it tries to draw past the end of a map
-        int idx_offset_in_map = ((y_map * 32) + x_map) % 0x400;
+        int idx_offset_in_map = ((y_map * kMapWidth) + x_map) % 0x400;
 
         u8 map_val = bgMap[idx_offset_in_map];
         int idx = isSigned ? int8_t(map_val) : map_val;
@@ -116,13 +116,13 @@ void Ppu::draw_scanline(int line)
         u8* windowMap = registers.lcdc & 0x40 ? map1 : map0;
 
         // window
-        for (int x = 0; x < 160; x++) {
+        for (int x = 0; x < kLcdWidth; x++) {
             int x_abs = x + registers.scx;
             int x_map = x_abs / 8;
             int x_px_in_tile = x_abs % 8;
 
             // Wrap around if it tries to draw past the end of a map
-            int idx_offset = ((y_map * 32) + x_map) % 0x400;
+            int idx_offset = ((y_map * kMapWidth) + x_map) % 0x400;
             u8 map_val = windowMap[idx_offset];
             int idx = isSigned ? int8_t(map_val) : map_val;
 
@@ -155,7 +155,7 @@ void Ppu::draw_scanline(int line)
 
 void Ppu::set_pixel(int x, int y, u8 colour)
 {
-    pixels[(y * 160 + x) % (160 * 144)] = colour;
+    pixels[(y * kLcdWidth + x) % (kLcdWidth * kLcdHeight)] = colour;
 }
 
 void Ppu::reset(bool)
