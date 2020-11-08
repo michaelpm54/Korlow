@@ -14,7 +14,9 @@ struct Component {
     {
     }
 
-    virtual void reset(bool skip_bios) = 0;
+    virtual void reset(bool skip_bios)
+    {
+    }
 
     virtual u8 read8(u16 address)
     {

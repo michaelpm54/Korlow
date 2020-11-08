@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.14)
 project(Korlow LANGUAGES CXX)
 
-option(DO_TESTS "Enable testing" OFF)
+option(DO_TESTS "Enable testing" ON)
 
-# Used for doctest
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+# Used for doctest and conan
+list(APPEND
+	CMAKE_MODULE_PATH
+	${CMAKE_SOURCE_DIR}/cmake
+	${CMAKE_SOURCE_DIR}
+)
 
 # Qt
 set(CMAKE_AUTOMOC ON)
@@ -108,40 +112,41 @@ add_custom_command(
 
 if (DO_TESTS)
 	set(KORLOW_TEST_SOURCES
-	    ${KORLOW_CPU_SOURCES}
+		src/cpu/inst_data.cpp
+		src/cpu/cpu_base.cpp
+		src/cpu/cpu_instructions.cpp
+		src/cpu/cpu.cpp
 		src/mmu.cpp
 		src/ppu.cpp
 		tests/main.cpp
-		tests/rotation.cpp
-		tests/addition.cpp
-		tests/subtraction.cpp
-		tests/decrement.cpp
-		tests/increment.cpp
+		#tests/rotation.cpp
+		#tests/addition.cpp
+		#tests/subtraction.cpp
+		#tests/decrement.cpp
+		#tests/increment.cpp
 		tests/load.cpp
-		tests/flow.cpp
-		tests/stack.cpp
-		tests/logic.cpp
-	)
-
-	set(KORLOW_TEST_HEADERS
-		${KORLOW_CPU_HEADERS}
-		#doctest.h
+		#tests/flow.cpp
+		#tests/stack.cpp
+		#tests/logic.cpp
 	)
 
 	add_executable(test_app
 		${KORLOW_TEST_SOURCES}
-		${KORLOW_TEST_HEADERS}
 	)
 
-	target_include_directories(test_app PUBLIC src)
+	target_include_directories(test_app PRIVATE src include include/lib)
 
-	target_link_libraries(test_app PRIVATE CONAN_LIBS_doctest)
+	target_link_libraries(test_app PRIVATE CONAN_PKG::doctest)
 
-	set_property(TARGET test_app PROPERTY CXX_STANDARD 17)
+	set_property(TARGET test_app PROPERTY CXX_STANDARD 20)
 	set_property(TARGET test_app PROPERTY CXX_STANDARD_REQUIRED ON)
 
 	if (MSVC_VERSION GREATER_EQUAL "1900")
-		target_compile_features(test_app PRIVATE cxx_std_17)
+		include(CheckCXXCompilerFlag)
+		CHECK_CXX_COMPILER_FLAG("/std:c++latest" _cpp_latest_flag_supported)
+		if (_cpp_latest_flag_supported)
+			add_compile_options("/std:c++latest")
+		endif()
 	endif()
 
 	include(doctest)

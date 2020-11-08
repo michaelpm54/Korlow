@@ -28,9 +28,6 @@ struct Cpu : Component {
     Cpu(CpuRegisters);
 
     void reset(bool) override;
-    void write8(u16 address, u8 value)
-    {
-    }
     int tick(Component& mmu);    // Returns # of cycles taken
     int interrupts(u8 mask, Component& mmu);
     void enable_interrupts();
@@ -42,6 +39,8 @@ struct Cpu : Component {
     int interrupt_handler(Component& mmu);
     void halt_bug();
     void ei_bug();
+
+    int do_instruction(u16 op, u8 d8, u16 d16, Component& mmu);
 
     HaltBug halt_bug_state {HaltBug::None};
     EIBug ei_bug_state {EIBug::None};

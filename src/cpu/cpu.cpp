@@ -132,16 +132,19 @@ int Cpu::tick(Component& mmu)
     if (op > 0xFF)    // CB
         pc++;
 
-    /* Execute */
-    bool extraCycles {false};
-    kInstructions[op](*this, mmu, d8, d16, extraCycles);
-
-    cycles += extraCycles ? kInstCyclesAlt[op] : kInstCycles[op];
+    cycles += do_instruction(op, d8, d16, mmu);
 
     halt_bug();
     ei_bug();
 
     return cycles;
+}
+
+int Cpu::do_instruction(u16 op, u8 d8, u16 d16, Component& mmu)
+{
+    bool extra_cycles {false};
+    kInstructions[op](*this, mmu, d8, d16, extra_cycles);
+    return extra_cycles ? kInstCyclesAlt[op] : kInstCycles[op];
 }
 
 void Cpu::enable_interrupts()
