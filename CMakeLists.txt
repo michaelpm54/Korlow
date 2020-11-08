@@ -9,82 +9,46 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 # Qt
 set(CMAKE_AUTOMOC ON)
 
-set(KORLOW_RENDER_SOURCES
-	src/render/gl_util.cpp
-)
-
-set(KORLOW_RENDER_HEADERS
-	src/render/opengl.h
-	src/render/gl_util.h
-)
-
-set(KORLOW_CPU_SOURCES
+set(KORLOW_SRC_SOURCES
+	src/main.cpp
+	src/fs.cpp
+	src/mmu.cpp
+	src/ppu.cpp
+	src/ppu_map_proxy.cpp
+	src/rom_util.cpp
 	src/cpu/cpu.cpp
 	src/cpu/cpu_base.cpp
 	src/cpu/cpu_instructions.cpp
 	src/cpu/inst_data.cpp
-)
-
-set(KORLOW_CPU_HEADERS
-	src/cpu/cpu.h
-	src/cpu/cpu_base.h
-	src/cpu/cpu_instructions.h
-	src/cpu/inst_data.h
-)
-
-set(KORLOW_SOURCES
-	${KORLOW_GUI_SOURCES}
-	${KORLOW_RENDER_SOURCES}
-	${KORLOW_CPU_SOURCES}
-	src/main.cpp
-	
-	src/mmu.cpp
-	src/ppu.cpp
-	src/ppu_map_proxy.cpp
-	src/fs.cpp
-	src/rom_util.cpp
-	
-	src/gameboy.cpp
+	src/render/gl_util.cpp
 	src/render/screen_texture.cpp
 	src/render/sdl.cpp
 	src/render/rect.cpp
 )
 
-set(KORLOW_HEADERS
-	${KORLOW_GUI_HEADERS}
-	${KORLOW_RENDER_HEADERS}
-	${KORLOW_CPU_HEADERS}
-	src/args.hxx
-	
-	src/mmu.h
-	src/ppu.h
-	src/ppu_map_proxy.h
-	src/emu_types.h
-	src/fs.h
-	src/rom_util.h
-	src/memory_map.h
-	
-	src/constants.h
-	src/component.h
-	src/gameboy.h
-)
-
-set(LIB_SRC
+set(KORLOW_LIB_SOURCES
 	lib/glad/glad.cpp
 	lib/imgui/imgui_impl_opengl3.cpp
 	lib/imgui/imgui_impl_sdl.cpp
 )
 
 add_executable(app
-	${KORLOW_SOURCES}
-	${KORLOW_HEADERS}
-	${LIB_SRC}
+	${KORLOW_SRC_SOURCES}
+	${KORLOW_LIB_SOURCES}
 )
 
 target_include_directories(app PRIVATE
 	src
+
+	# My includes
 	include
-	include/imgui # This one is required for the backends (imported by conan)
+
+	# Includes from external projects
+	include/lib
+
+	# Need to include this one specifically because the files there use `#include <file.h>` and not
+	# `include <imgui/file.h>`
+	include/lib/imgui
 )
 
 target_include_directories(app
@@ -114,7 +78,6 @@ target_link_libraries(
 	PRIVATE
 		${CONAN_LIBS}
 		Qt5::Core Qt5::Widgets Qt5::Gui
-		CONAN_PKG::zlib
 )
 
 add_custom_command(TARGET app PRE_BUILD
