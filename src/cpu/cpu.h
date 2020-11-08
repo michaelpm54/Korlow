@@ -22,19 +22,19 @@ enum class EIBug
 
 struct CpuRegisters
 {
-	uint8_t &io;
-	uint8_t &if_;
-	uint8_t &ie;
+	uint8_t& io;
+	uint8_t& if_;
+	uint8_t& ie;
 };
 
 struct Cpu : Component
 {
 	Cpu(CpuRegisters);
 
-	void reset() override;
+	void reset(bool) override;
 	void write8(uint16_t address, uint8_t value) {}
-	int tick(Component &mmu); // Returns # of cycles taken
-	int interrupts(uint8_t mask, Component &mmu);
+	int tick(Component& mmu); // Returns # of cycles taken
+	int interrupts(uint8_t mask, Component& mmu);
 	void enable_interrupts();
 	void disable_interrupts();
 	void halt();
@@ -45,10 +45,10 @@ struct Cpu : Component
 	void halt_bug();
 	void ei_bug();
 
-	HaltBug halt_bug_state { HaltBug::None };
-	EIBug ei_bug_state { EIBug::None };
+	HaltBug halt_bug_state{ HaltBug::None };
+	EIBug ei_bug_state{ EIBug::None };
 
-	bool debug { false };
+	bool debug{ false };
 
 	CpuRegisters registers;
 
@@ -61,8 +61,8 @@ struct Cpu : Component
 	union { uint16_t hl; struct { uint8_t l; uint8_t h; }; };
 
 private:
-	bool halted { false };
-	bool enabled { true };
+	bool halted{ false };
+	bool enabled{ true };
 
 	bool ime;
 

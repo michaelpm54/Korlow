@@ -20,6 +20,7 @@
 #include "gameboy.h"
 #include "memory_map.h"
 #include "types.h"
+#include "emu_types.h"
 
 class FTFont;
 class MainScene;
@@ -40,7 +41,7 @@ class Emulator : public QMainWindow
 {
 	Q_OBJECT
 public:
-	Emulator(QWidget *parent = nullptr);
+	Emulator(std::function <void (const std::vector<u8> &data, QMainWindow &main_window)> open_rom_callback, QWidget *parent = nullptr);
 
 	/* NOTE: Keep this destructor to make unique_ptr's work. */
 	~Emulator();
@@ -49,7 +50,6 @@ protected:
 	virtual void keyPressEvent(QKeyEvent *event) override;
 
 private:
-	void setup();
 	void setup_window();
 	void setup_menu_bar();
 	void setup_widgets();
@@ -95,6 +95,8 @@ private:
 	QAction *action_open;
 	QAction *action_close;
 	QAction *action_quit;
+
+	std::function<void (const std::vector<u8> &data, QMainWindow &main_window)> m_open_rom_callback;
 };
 
 #endif // EMULATOR_H

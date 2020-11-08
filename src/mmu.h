@@ -12,18 +12,18 @@
 
 struct Mmu : Component
 {
-	Mmu(Component& cpu, Component& ppu, uint8_t *memory);
+	Mmu(Component& cpu, Component& ppu, uint8_t* memory);
 
-	void reset() override {};
+	void reset(bool) override {};
 	uint8_t read8(uint16_t address) override;
 	uint16_t read16(uint16_t address) override;
 	void write8(uint16_t address, uint8_t value) override;
 	void write16(uint16_t address, uint16_t value) override;
 
+	uint8_t* memory;
 private:
-	Component &cpu;
-	Component &ppu;
-	uint8_t *memory;
+	Component& cpu;
+	Component& ppu;
 };
 
 #endif // MMU_H

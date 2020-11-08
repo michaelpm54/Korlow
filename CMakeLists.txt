@@ -74,6 +74,9 @@ set(KORLOW_SOURCES
 	src/rom_util.cpp
 	src/message_manager.cpp
 	src/gameboy.cpp
+	src/render/screen_texture.cpp
+	src/render/sdl.cpp
+	src/render/rect.cpp
 )
 
 set(KORLOW_HEADERS
@@ -97,6 +100,8 @@ set(KORLOW_HEADERS
 
 set(LIB_SRC
 	lib/glad/glad.cpp
+	lib/imgui/imgui_impl_opengl3.cpp
+	lib/imgui/imgui_impl_sdl.cpp
 )
 
 add_executable(app
@@ -105,7 +110,11 @@ add_executable(app
 	${LIB_SRC}
 )
 
-target_include_directories(app PUBLIC src include)
+target_include_directories(app PRIVATE
+	src
+	include
+	include/imgui # This one is required for the backends (imported by conan)
+)
 
 target_include_directories(app
 	INTERFACE
@@ -119,6 +128,11 @@ if (MSVC_VERSION GREATER_EQUAL "1900")
     target_compile_features(app PRIVATE cxx_std_17)
 endif()
 
+include(cmake/conan.cmake)
+conan_cmake_run(CONANFILE conanfile.txt
+                BASIC_SETUP CMAKE_TARGETS
+                BUILD missing)
+
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
@@ -129,6 +143,7 @@ target_link_libraries(
 	PRIVATE
 		${CONAN_LIBS}
 		Qt5::Core Qt5::Widgets Qt5::Gui
+		CONAN_PKG::zlib
 )
 
 add_custom_command(TARGET app PRE_BUILD

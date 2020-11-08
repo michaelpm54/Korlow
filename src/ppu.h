@@ -26,15 +26,15 @@ enum Mode
 
 struct PpuRegisters
 {
-	uint8_t &if_;
-	uint8_t &lcdc;
-	uint8_t &stat;
-	uint8_t &scx;
-	uint8_t &scy;
-	uint8_t &ly;
-	uint8_t &lyc;
-	uint8_t &wy;
-	uint8_t &wx;
+	uint8_t& if_;
+	uint8_t& lcdc;
+	uint8_t& stat;
+	uint8_t& scx;
+	uint8_t& scy;
+	uint8_t& ly;
+	uint8_t& lyc;
+	uint8_t& wy;
+	uint8_t& wx;
 };
 
 struct Ppu : Component
@@ -42,22 +42,22 @@ struct Ppu : Component
 	Ppu(PpuRegisters);
 
 	void refresh();
-	const uint8_t *get_pixels() const;
-	void reset() override;
+	const uint8_t* get_pixels() const;
+	void reset(bool) override;
 	void write8(uint16_t address, uint8_t value) override;
 	void tick(int cycles);
 
 	void set_pixel(int x, int y, uint8_t colour);
-	void draw_sprite(const sprite_t &sprite) {}
+	void draw_sprite(const sprite_t& sprite) {}
 	void draw_scanline(int line);
 
 	std::array<sprite_t, 40> sprites;
-	bool sprites_dirty { false };
+	bool sprites_dirty{ false };
 
 	PpuRegisters registers;
-	
-	int mode { MODE_OAM };
-	int mode_counter { 0 };
+
+	int mode{ MODE_OAM };
+	int mode_counter{ 0 };
 
 	uint8_t bg_palette[4];
 	uint8_t sprite_palette[2][4];
@@ -65,10 +65,10 @@ struct Ppu : Component
 	std::vector<uint8_t> memory;
 	std::vector<uint8_t> oam;
 
-	uint8_t *unsignedTiles { nullptr };
-	uint8_t *signedTiles { nullptr };
-	uint8_t *map0 { nullptr };
-	uint8_t *map1 { nullptr };
+	uint8_t* unsignedTiles{ nullptr };
+	uint8_t* signedTiles{ nullptr };
+	uint8_t* map0{ nullptr };
+	uint8_t* map1{ nullptr };
 
 	std::vector<uint8_t> pixels;
 };

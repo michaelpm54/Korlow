@@ -12,6 +12,7 @@ cmake
 [options]
 sdl2:sdl2main=False
 freetype:shared=True
+zlib:shared=False
 
 [imports]
 # Copy all DLL's to build/bin/ for easy copying by cmake to exe folder.

@@ -8,11 +8,6 @@ Gameboy::Gameboy()
 	: memory(0x10000)
 {}
 
-bool Gameboy::is_running() const
-{
-	return !quit;
-}
-
 void Gameboy::set_rom(const std::vector<uint8_t>& bytes)
 {
 	std::copy_n(bytes.data(), std::min(0xFFFF, static_cast<int>(bytes.size())), &memory[0]);
@@ -20,16 +15,14 @@ void Gameboy::set_rom(const std::vector<uint8_t>& bytes)
 
 int Gameboy::tick()
 {
-	int cycles = cpu->tick(*mmu);
-	ppu->tick(cycles);
-	return cycles;
+	return 0;
 }
 
-void Gameboy::reset()
+void Gameboy::reset(bool skip_bios)
 {
-	cpu->reset();
-	ppu->reset();
-	mmu->reset();
+	cpu->reset(skip_bios);
+	ppu->reset(skip_bios);
+	mmu->reset(skip_bios);
 
 	// Sound
 	mmu->write8(kNr10, 0x80);
@@ -67,7 +60,7 @@ void Gameboy::reset()
 	mmu->write8(kWx, 0x00);
 }
 
-uint8_t *Gameboy::get_memory()
+uint8_t* Gameboy::get_memory()
 {
 	return memory.data();
 }

@@ -63,15 +63,15 @@ void GPU::updateMap()
 }
 */
 
-PpuMapProxy::PpuMapProxy(Ppu &ppu)
+PpuMapProxy::PpuMapProxy(Ppu& ppu)
 	: ppu(ppu)
 	, map_pixels(0x800)
 {}
 
-void PpuMapProxy::reset()
+void PpuMapProxy::reset(bool sb)
 {
 	std::fill(std::begin(map_pixels), std::end(map_pixels), 0x12);
-	ppu.reset();
+	ppu.reset(sb);
 }
 
 void PpuMapProxy::write8(uint16_t address, uint8_t value)
@@ -81,7 +81,7 @@ void PpuMapProxy::write8(uint16_t address, uint8_t value)
 		uint16_t map_address = address - kMap0;
 		int x = map_address % 32;
 		int y = map_address / 32;
-		int px_index { y * 32 + x };
+		int px_index{ y * 32 + x };
 		map_pixels[px_index] = value;
 	}
 	else if (address == kScx)
@@ -152,12 +152,12 @@ void PpuMapProxy::write8(uint16_t address, uint8_t value)
 	ppu.write8(address, value);
 }
 
-const uint8_t *PpuMapProxy::get_pixels() const
+const uint8_t* PpuMapProxy::get_pixels() const
 {
 	return ppu.get_pixels();
 }
 
-const uint8_t *PpuMapProxy::get_map_pixels() const
+const uint8_t* PpuMapProxy::get_map_pixels() const
 {
 	return map_pixels.data();
 }
