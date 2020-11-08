@@ -36,7 +36,7 @@ void check_compile_error(GLuint handle)
     error << '\n';
 
     /* Just print the error */
-    fprintf(stderr, "Error: %s\n", error.str());
+    fprintf(stderr, "Error: %s\n", error.str().c_str());
 }
 
 void check_link_error(GLuint handle)
@@ -70,7 +70,7 @@ void check_link_error(GLuint handle)
     error << std::endl;
 
     /* Just print the error */
-    fprintf(stderr, "Error: %s\n", error.str());
+    fprintf(stderr, "Error: %s\n", error.str().c_str());
 }
 
 GLuint compile_shader(GLenum type, const std::string &shader_path)
