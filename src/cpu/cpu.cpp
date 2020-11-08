@@ -39,7 +39,7 @@ bool Cpu::is_enabled() const
     return enabled;
 }
 
-void Cpu::print_instruction(uint16_t op, uint8_t d8, uint16_t d16)
+void Cpu::print_instruction(u16 op, u8 d8, u16 d16)
 {
     /* Print info */
     printf("%04X: (%04X)  IME:%c  AF:%04X  BC:%04X  DE:%04X  HL:%04X  |%02X|  ",
@@ -111,9 +111,9 @@ int Cpu::tick(Component& mmu)
 {
     int cycles = 0;
 
-    uint16_t op {mmu.read8(pc)};
-    uint16_t d16 {mmu.read16(pc + 1)};
-    uint8_t d8 {static_cast<uint8_t>(d16)};
+    u16 op {mmu.read8(pc)};
+    u16 d16 {mmu.read16(pc + 1)};
+    u8 d8 {static_cast<u8>(d16)};
 
     if (ime) {
         int int_cycles = interrupt_handler(mmu);
@@ -157,13 +157,13 @@ void Cpu::halt()
         halt_bug_state = HaltBug::Triggered;
 }
 
-int Cpu::interrupts(uint8_t mask, Component& mmu)
+int Cpu::interrupts(u8 mask, Component& mmu)
 {
     ime = false;
     sp--;
     mmu.write8(sp, (pc & 0xFF00) >> 8);
 
-    uint8_t if_ = registers.if_ & registers.ie;
+    u8 if_ = registers.if_ & registers.ie;
 
     if (!if_)
         pc = 0;

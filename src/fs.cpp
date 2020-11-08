@@ -49,17 +49,17 @@ std::string readText(const std::string &path)
     return buf.str();
 }
 
-std::vector<std::uint8_t> read_bytes(const std::string &path)
+std::vector<u8> read_bytes(const std::string &path)
 {
     auto file {in_file(path, true)};
     file.seekg(0, std::ios::end);
-    std::vector<std::uint8_t> buf(file.tellg());
+    std::vector<u8> buf(file.tellg());
     file.seekg(0, std::ios::beg);
     file.read(reinterpret_cast<char *>(buf.data()), buf.size());
     return buf;
 }
 
-void write_bytes(const std::string &path, const uint8_t *bytes, int count)
+void write_bytes(const std::string &path, const u8 *bytes, int count)
 {
     auto file {out_file(path, true)};
     file.write(reinterpret_cast<const char *>(bytes), count);

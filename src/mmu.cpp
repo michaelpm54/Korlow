@@ -2,34 +2,34 @@
 
 #include "memory_map.h"
 
-bool is_ppu_address(uint16_t address)
+bool is_ppu_address(u16 address)
 {
     return (address >= kOam && address < kIo) || (address >= kTileRamUnsigned && address < kCartRam) || (address >= kLcdc && address < kZeroPage);
 }
 
-bool is_cpu_address(uint16_t address)
+bool is_cpu_address(u16 address)
 {
     return (address == kIo) || (address == kIe);
 }
 
-Mmu::Mmu(Component &cpu, Component &ppu, uint8_t *memory)
+Mmu::Mmu(Component &cpu, Component &ppu, u8 *memory)
     : cpu(cpu)
     , ppu(ppu)
     , memory(memory)
 {
 }
 
-uint8_t Mmu::read8(uint16_t address)
+u8 Mmu::read8(u16 address)
 {
     return memory[address];
 }
 
-uint16_t Mmu::read16(uint16_t address)
+u16 Mmu::read16(u16 address)
 {
-    return uint16_t(read8(address + 1) << 8) + read8(address);
+    return u16(read8(address + 1) << 8) + read8(address);
 }
 
-void Mmu::write8(uint16_t addr, uint8_t value)
+void Mmu::write8(u16 addr, u8 value)
 {
     if (addr == kIf) {
         value |= 0b1110'0000;
@@ -47,7 +47,7 @@ void Mmu::write8(uint16_t addr, uint8_t value)
     else if (is_ppu_address(addr)) {
         if (addr == kDmaStartAddr) {
             for (int i = 0; i < 0xA0; i++)
-                write8(kOam + i, read8((uint16_t(value) << 8) + i));
+                write8(kOam + i, read8((u16(value) << 8) + i));
         }
         else
             ppu.write8(addr, value);
@@ -60,8 +60,8 @@ void Mmu::write8(uint16_t addr, uint8_t value)
     memory[addr] = value;
 }
 
-void Mmu::write16(uint16_t address, uint16_t value)
+void Mmu::write16(u16 address, u16 value)
 {
-    write8(address, static_cast<uint8_t>(value));
+    write8(address, static_cast<u8>(value));
     write8(address + 1, (value & 0xFF00) >> 8);
 }

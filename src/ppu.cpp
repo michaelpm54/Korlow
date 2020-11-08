@@ -5,10 +5,10 @@
 #include "constants.h"
 #include "memory_map.h"
 
-constexpr uint8_t kShades[4] = {0x00, 0x3F, 0x7E, 0xFF};
+constexpr u8 kShades[4] = {0x00, 0x3F, 0x7E, 0xFF};
 
 /*
-uint8_t paletteIndex(uint8_t byte0, uint8_t byte1, uint8_t pxIndex)
+u8 paletteIndex(u8 byte0, u8 byte1, u8 pxIndex)
 {
 		return ((!!(byte1 & (0x80 >> pxIndex))) << 1) | (!!(byte0 & (0x80 >>
 pxIndex)));
@@ -16,17 +16,17 @@ pxIndex)));
 */
 
 /*
-void decodeTile(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
+void decodeTile(u8 *palette, u8 *tile, u8 *pixels)
 {
 		int b = 0;
 		for (int byte = 0; byte < 16; byte++)
 		{
 				for (int i = 0; i < 8; i++)
 				{
-						uint8_t mask = 0x80 >> i;
-						uint8_t upper = !!(tile[byte] & mask);
-						uint8_t lower = !!(tile[byte+1] & mask);
-						uint8_t combined = (lower << 1) | upper;
+						u8 mask = 0x80 >> i;
+						u8 upper = !!(tile[byte] & mask);
+						u8 lower = !!(tile[byte+1] & mask);
+						u8 combined = (lower << 1) | upper;
 						pixels[b++] = palette[combined];
 				}
 				byte++;
@@ -34,17 +34,17 @@ void decodeTile(uint8_t *palette, uint8_t *tile, uint8_t *pixels)
 }
 */
 
-uint8_t decodePixel(uint16_t row, int pixelIdx)
+u8 decodePixel(u16 row, int pixelIdx)
 {
-    uint8_t mask = 0x80 >> pixelIdx;
-    uint8_t lower = !!((row >> 8) & mask);
-    uint8_t upper = !!((row & 0xFF) & mask);
-    uint8_t paletteIdx = (upper << 1) | lower;
+    u8 mask = 0x80 >> pixelIdx;
+    u8 lower = !!((row >> 8) & mask);
+    u8 upper = !!((row & 0xFF) & mask);
+    u8 paletteIdx = (upper << 1) | lower;
     return paletteIdx;
 }
 
 /*
-std::array<std::array<uint8_t, 2>, 8> getTile(uint8_t *tiles, int patternNum,
+std::array<std::array<u8, 2>, 8> getTile(u8 *tiles, int patternNum,
 bool isSigned)
 {
 		if (isSigned)
@@ -52,7 +52,7 @@ bool isSigned)
 				patternNum = int8_t(patternNum);
 		}
 
-		std::array<std::array<uint8_t, 2>, 8> lines;
+		std::array<std::array<u8, 2>, 8> lines;
 		memcpy(lines.data(), tiles + (patternNum * 16), 16);
 		return lines;
 }
@@ -66,7 +66,7 @@ Ppu::Ppu(PpuRegisters registers)
 {
 }
 
-const uint8_t* Ppu::get_pixels() const
+const u8* Ppu::get_pixels() const
 {
     return pixels.data();
 }
@@ -78,13 +78,13 @@ void Ppu::draw_scanline(int line)
 
     bool isSigned = true;
 
-    uint8_t* tiles = signedTiles;
+    u8* tiles = signedTiles;
     if (registers.lcdc & 0x10) {
         tiles = unsignedTiles;
         isSigned = false;
     }
 
-    uint8_t* bgMap = registers.lcdc & 0x8 ? map1 : map0;
+    u8* bgMap = registers.lcdc & 0x8 ? map1 : map0;
 
     int y_abs = line + registers.scy;
     int y_map = y_abs / 8;
@@ -99,21 +99,21 @@ void Ppu::draw_scanline(int line)
         // Wrap around if it tries to draw past the end of a map
         int idx_offset_in_map = ((y_map * 32) + x_map) % 0x400;
 
-        uint8_t map_val = bgMap[idx_offset_in_map];
+        u8 map_val = bgMap[idx_offset_in_map];
         int idx = isSigned ? int8_t(map_val) : map_val;
 
         int tile_offset = idx * 16;
         int row_offset = tile_offset + (y_px_in_tile * 2);
 
-        uint16_t row = tiles[row_offset] << 8;
+        u16 row = tiles[row_offset] << 8;
         row |= tiles[row_offset + 1];
-        uint8_t colour = bg_palette[decodePixel(row, x_px_in_tile)];
+        u8 colour = bg_palette[decodePixel(row, x_px_in_tile)];
 
         set_pixel(x, line - 1, colour);
     }
 
     if (registers.lcdc & 0x20) {
-        uint8_t* windowMap = registers.lcdc & 0x40 ? map1 : map0;
+        u8* windowMap = registers.lcdc & 0x40 ? map1 : map0;
 
         // window
         for (int x = 0; x < 160; x++) {
@@ -123,16 +123,16 @@ void Ppu::draw_scanline(int line)
 
             // Wrap around if it tries to draw past the end of a map
             int idx_offset = ((y_map * 32) + x_map) % 0x400;
-            uint8_t map_val = windowMap[idx_offset];
+            u8 map_val = windowMap[idx_offset];
             int idx = isSigned ? int8_t(map_val) : map_val;
 
             int tile_offset = idx * 16;
             int row_offset = tile_offset + (y_px_in_tile * 2);
 
-            uint16_t row = tiles[row_offset];
+            u16 row = tiles[row_offset];
             row |= tiles[row_offset + 1];
 
-            uint8_t colour = bg_palette[decodePixel(row, x_px_in_tile)];
+            u8 colour = bg_palette[decodePixel(row, x_px_in_tile)];
 
             set_pixel(x, line - 1, colour);
         }
@@ -153,7 +153,7 @@ void Ppu::draw_scanline(int line)
     }
 }
 
-void Ppu::set_pixel(int x, int y, uint8_t colour)
+void Ppu::set_pixel(int x, int y, u8 colour)
 {
     pixels[(y * 160 + x) % (160 * 144)] = colour;
 }
@@ -174,7 +174,7 @@ void Ppu::reset(bool)
     map1 = &memory[0x1C00];
 }
 
-void Ppu::write8(uint16_t address, uint8_t value)
+void Ppu::write8(u16 address, u8 value)
 {
     if (address >= kTileRamUnsigned && address < kCartRam) {
         memory[address - kTileRamUnsigned] = value;

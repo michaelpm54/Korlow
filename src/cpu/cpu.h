@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "component.h"
+#include "emu_types.h"
 
 enum class HaltBug {
     None,
@@ -18,26 +19,26 @@ enum class EIBug {
 };
 
 struct CpuRegisters {
-    uint8_t& io;
-    uint8_t& if_;
-    uint8_t& ie;
+    u8& io;
+    u8& if_;
+    u8& ie;
 };
 
 struct Cpu : Component {
     Cpu(CpuRegisters);
 
     void reset(bool) override;
-    void write8(uint16_t address, uint8_t value)
+    void write8(u16 address, u8 value)
     {
     }
     int tick(Component& mmu);    // Returns # of cycles taken
-    int interrupts(uint8_t mask, Component& mmu);
+    int interrupts(u8 mask, Component& mmu);
     void enable_interrupts();
     void disable_interrupts();
     void halt();
     void set_enabled(bool value);
     bool is_enabled() const;
-    void print_instruction(uint16_t op, uint8_t d8, uint16_t d16);
+    void print_instruction(u16 op, u8 d8, u16 d16);
     int interrupt_handler(Component& mmu);
     void halt_bug();
     void ei_bug();
@@ -49,35 +50,35 @@ struct Cpu : Component {
 
     CpuRegisters registers;
 
-    uint16_t pc;
-    uint16_t sp;
+    u16 pc;
+    u16 sp;
 
     union {
-        uint16_t af;
+        u16 af;
         struct {
-            uint8_t f;
-            uint8_t a;
+            u8 f;
+            u8 a;
         };
     };
     union {
-        uint16_t bc;
+        u16 bc;
         struct {
-            uint8_t c;
-            uint8_t b;
+            u8 c;
+            u8 b;
         };
     };
     union {
-        uint16_t de;
+        u16 de;
         struct {
-            uint8_t e;
-            uint8_t d;
+            u8 e;
+            u8 d;
         };
     };
     union {
-        uint16_t hl;
+        u16 hl;
         struct {
-            uint8_t l;
-            uint8_t h;
+            u8 l;
+            u8 h;
         };
     };
 

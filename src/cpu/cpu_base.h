@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "emu_types.h"
+
 enum {
     FLAGS_ZERO = 0x80,
     FLAGS_SUBTRACT = 0x40,
@@ -11,41 +13,41 @@ enum {
 };
 
 class CPU;
-void RST(CPU *cpu, uint16_t addr);
+void RST(CPU *cpu, u16 addr);
 
 // Z00C
 // Sets LSB to carry
-void RL(uint8_t val, uint8_t *result, uint8_t *flags);
+void RL(u8 val, u8 *result, u8 *flags);
 
 // Z00C
 // Doesn't set LSB
-void RLC(uint8_t val, uint8_t *result, uint8_t *flags);
+void RLC(u8 val, u8 *result, u8 *flags);
 
 // Z00C
 // Sets LSB to carry
-void RR(uint8_t val, uint8_t *result, uint8_t *flags);
+void RR(u8 val, u8 *result, u8 *flags);
 
 // Z00C
 // Doesn't set LSB
-void RRC(uint8_t val, uint8_t *result, uint8_t *flags);
+void RRC(u8 val, u8 *result, u8 *flags);
 
 // Z0HC
-uint8_t ADD8(uint8_t a, uint8_t b, uint8_t &flags);
-void ADD16(uint16_t a, uint16_t b, uint16_t *result, uint8_t *flags);
+u8 ADD8(u8 a, u8 b, u8 &flags);
+void ADD16(u16 a, u16 b, u16 *result, u8 *flags);
 
 // Z1HC
-uint8_t SUB8(uint8_t a, uint8_t b, uint8_t &flags);
+u8 SUB8(u8 a, u8 b, u8 &flags);
 
 // Z0H-
-void INC8(uint8_t &r, uint8_t &f);
+void INC8(u8 &r, u8 &f);
 
 // Z1H-
-void DEC8(uint8_t &r, uint8_t &f);
+void DEC8(u8 &r, u8 &f);
 
 // Generalisations
 class CPU;
-void CP(uint8_t a, uint8_t r, uint8_t &f);
-void SUB(CPU *cpu, uint8_t r);
-void TestBit(uint8_t bit, uint8_t &f);
+void CP(u8 a, u8 r, u8 &f);
+void SUB(CPU *cpu, u8 r);
+void TestBit(u8 bit, u8 &f);
 
 #endif    // CPU_BASE_H

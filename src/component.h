@@ -1,6 +1,8 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 
+#include "emu_types.h"
+
 struct Component {
     Component()
     {
@@ -14,21 +16,21 @@ struct Component {
 
     virtual void reset(bool skip_bios) = 0;
 
-    virtual uint8_t read8(uint16_t address)
+    virtual u8 read8(u16 address)
     {
         return 0xFF;
     }
 
-    virtual uint16_t read16(uint16_t address)
+    virtual u16 read16(u16 address)
     {
         return 0xFFFF;
     }
 
-    virtual void write8(uint16_t address, uint8_t value)
+    virtual void write8(u16 address, u8 value)
     {
     }
 
-    virtual void write16(uint16_t address, uint16_t value)
+    virtual void write16(u16 address, u16 value)
     {
     }
 };

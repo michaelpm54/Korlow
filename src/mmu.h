@@ -9,15 +9,15 @@
 #include "component.h"
 
 struct Mmu : Component {
-    Mmu(Component& cpu, Component& ppu, uint8_t* memory);
+    Mmu(Component& cpu, Component& ppu, u8* memory);
 
     void reset(bool) override {};
-    uint8_t read8(uint16_t address) override;
-    uint16_t read16(uint16_t address) override;
-    void write8(uint16_t address, uint8_t value) override;
-    void write16(uint16_t address, uint16_t value) override;
+    u8 read8(u16 address) override;
+    u16 read16(u16 address) override;
+    void write8(u16 address, u8 value) override;
+    void write16(u16 address, u16 value) override;
 
-    uint8_t* memory;
+    u8* memory;
 
 private:
     Component& cpu;

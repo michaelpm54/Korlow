@@ -4,11 +4,13 @@
 #include <string>
 #include <vector>
 
+#include "emu_types.h"
+
 namespace FS {
 
 std::string readText(const std::string &path);
-std::vector<std::uint8_t> read_bytes(const std::string &path);
-void write_bytes(const std::string &path, const uint8_t *bytes, int count);
+std::vector<u8> read_bytes(const std::string &path);
+void write_bytes(const std::string &path, const u8 *bytes, int count);
 
 }    // namespace FS
 

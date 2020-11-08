@@ -3,26 +3,26 @@
 #include <cstdio>
 #include <map>
 
-void printRomInfo(const std::vector<std::uint8_t> &rom)
+void printRomInfo(const std::vector<u8> &rom)
 {
     struct RomHeader {
-        uint8_t logo[0x34];          // 0x00
-        char title[0xA];             // 0x34
-        char manufacturer[0x4];      // 0x3F
-        uint8_t p1;                  // 0x43
-        uint8_t newLicensee[0x2];    // 0x44
-        uint8_t p2;                  // 0x46
-        uint8_t cartType;            // 0x47
-        uint8_t romSize;             // 0x48
-        uint8_t ramSize;             // 0x49
-        uint8_t destCode;            // 0x4A
-        uint8_t oldLicensee;         // 0x4B
-        uint8_t romVer;              // 0x4C
-        uint8_t headerChecksum;      // 0x4D
-        uint16_t globalChecksum;     // 0x4E
+        u8 logo[0x34];              // 0x00
+        char title[0xA];            // 0x34
+        char manufacturer[0x4];     // 0x3F
+        u8 p1;                      // 0x43
+        u8 newLicensee[0x2];        // 0x44
+        u8 p2;                      // 0x46
+        u8 cartType;                // 0x47
+        u8 romSize;                 // 0x48
+        u8 ramSize;                 // 0x49
+        u8 destCode;                // 0x4A
+        u8 oldLicensee;             // 0x4B
+        u8 romVer;                  // 0x4C
+        u8 headerChecksum;          // 0x4D
+        uint16_t globalChecksum;    // 0x4E
     };
 
-    static std::map<uint8_t, const char *> kCartTypes =
+    static std::map<u8, const char *> kCartTypes =
         {
             {0x00, "ROM ONLY"},
             {0x01, "MBC1"},
@@ -63,11 +63,11 @@ void printRomInfo(const std::vector<std::uint8_t> &rom)
     printf("Cart type: %s\n", kCartTypes.at(romHeader.cartType));
 }
 
-std::vector<std::uint8_t> ghostRom()
+std::vector<u8> ghostRom()
 {
-    std::vector<std::uint8_t> rom(0x4E);
+    std::vector<u8> rom(0x4E);
 
-    static constexpr uint8_t logo[] =
+    static constexpr u8 logo[] =
         {
             0xCE,
             0xED,

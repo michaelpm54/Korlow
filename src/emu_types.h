@@ -66,6 +66,6 @@ struct instruction_t {
 
 struct Cpu;
 struct Component;
-using Instruction = void (*)(Cpu &cpu, Component &mmu, uint8_t d8, uint16_t d16, bool &extraCycles);
+using Instruction = void (*)(Cpu &cpu, Component &mmu, u8 d8, u16 d16, bool &extraCycles);
 
 #endif    // KORLOW_TYPES_H

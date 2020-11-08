@@ -17,7 +17,6 @@
 #include "render/screen_texture.h"
 #include "render/sdl.h"
 
-
 /* clang-format off */
 // Order matters here
 #include <imgui.h>
@@ -56,7 +55,7 @@ int main(int argc, char* argv[])
     file_dialog.SetTitle("Choose a ROM");
     bool file_dialog_open {false};
 
-    uint8_t* mem = new uint8_t[0x10000]();
+    u8* mem = new u8[0x10000]();
 
     Cpu cpu(CpuRegisters {
         /*.io  =*/mem[kIo],

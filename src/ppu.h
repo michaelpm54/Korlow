@@ -8,10 +8,10 @@
 #include "component.h"
 
 struct sprite_t {
-    uint8_t y;
-    uint8_t x;
-    uint8_t patternNum;
-    uint8_t flags;
+    u8 y;
+    u8 x;
+    u8 patternNum;
+    u8 flags;
 };
 
 enum Mode {
@@ -22,27 +22,27 @@ enum Mode {
 };
 
 struct PpuRegisters {
-    uint8_t& if_;
-    uint8_t& lcdc;
-    uint8_t& stat;
-    uint8_t& scx;
-    uint8_t& scy;
-    uint8_t& ly;
-    uint8_t& lyc;
-    uint8_t& wy;
-    uint8_t& wx;
+    u8& if_;
+    u8& lcdc;
+    u8& stat;
+    u8& scx;
+    u8& scy;
+    u8& ly;
+    u8& lyc;
+    u8& wy;
+    u8& wx;
 };
 
 struct Ppu : Component {
     Ppu(PpuRegisters);
 
     void refresh();
-    const uint8_t* get_pixels() const;
+    const u8* get_pixels() const;
     void reset(bool) override;
-    void write8(uint16_t address, uint8_t value) override;
+    void write8(u16 address, u8 value) override;
     void tick(int cycles);
 
-    void set_pixel(int x, int y, uint8_t colour);
+    void set_pixel(int x, int y, u8 colour);
     void draw_sprite(const sprite_t& sprite)
     {
     }
@@ -56,18 +56,18 @@ struct Ppu : Component {
     int mode {MODE_OAM};
     int mode_counter {0};
 
-    uint8_t bg_palette[4];
-    uint8_t sprite_palette[2][4];
+    u8 bg_palette[4];
+    u8 sprite_palette[2][4];
 
-    std::vector<uint8_t> memory;
-    std::vector<uint8_t> oam;
+    std::vector<u8> memory;
+    std::vector<u8> oam;
 
-    uint8_t* unsignedTiles {nullptr};
-    uint8_t* signedTiles {nullptr};
-    uint8_t* map0 {nullptr};
-    uint8_t* map1 {nullptr};
+    u8* unsignedTiles {nullptr};
+    u8* signedTiles {nullptr};
+    u8* map0 {nullptr};
+    u8* map1 {nullptr};
 
-    std::vector<uint8_t> pixels;
+    std::vector<u8> pixels;
 };
 
 #endif    // GPU_H
