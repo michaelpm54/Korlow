@@ -1782,7 +1782,7 @@ void RL_L(Cpu &cpu, Component &mmu, u8 d8, u16 d16, bool &extraCycles)
 
 void RL_AHL(Cpu &cpu, Component &mmu, u8 d8, u16 d16, bool &extraCycles)
 {
-    u8 flags = cpu.af & 0x10;
+    u8 flags = cpu.f & 0x10;
     u8 result = 0;
     RL(mmu.read8(cpu.hl), &result, &flags);
     mmu.write8(cpu.hl, result);

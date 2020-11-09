@@ -6,23 +6,17 @@ void RL(u8 val, u8 *result, u8 *flags)
 {
     // Z00C
 
-    u8 old_carry = !!(*flags & FLAGS_CARRY);
-    u8 new_carry = val & 1;
+    u8 old_carry = (*flags & FLAGS_CARRY) >> 4;
+    u8 new_carry = val & 0x80;
     u8 r = (val << 1) | old_carry;
+
+    *flags = 0;
 
     if (r == 0) {
         *flags |= FLAGS_ZERO;
     }
-    else {
-        *flags &= ~(FLAGS_ZERO);
-    }
 
-    if (new_carry) {
-        *flags |= FLAGS_CARRY;
-    }
-    else {
-        *flags &= ~(FLAGS_CARRY);
-    }
+    *flags |= new_carry >> 3;
 
     *result = r;
 }
