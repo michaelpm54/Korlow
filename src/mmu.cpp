@@ -38,7 +38,7 @@ u16 Mmu::read16(u16 address)
 void Mmu::write8(u16 addr, u8 value)
 {
     if (addr == kIf) {
-        value |= 0b1110'0000;
+        value &= 0b0001'1111;
         cpu.write8(kIf, value);
         ppu.write8(kIf, value);
     }
@@ -61,11 +61,16 @@ void Mmu::write8(u16 addr, u8 value)
             for (int i = 0; i < 0xA0; i++)
                 write8(kOam + i, read8((u16(value) << 8) + i));
         }
-        else
+        else {
             ppu.write8(addr, value);
+        }
     }
     else if (is_cpu_address(addr)) {
         cpu.write8(addr, value);
+    }
+
+    if (addr == kDiv) {
+        memory[kDiv] = 0;
     }
 
     // Let the other components do their thing, then write regardless.

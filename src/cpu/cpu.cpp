@@ -44,9 +44,10 @@ bool Cpu::is_enabled() const
 void Cpu::print_instruction(u16 op, u8 d8, u16 d16)
 {
     /* Print info */
-    printf("%04X: (%04X)  IME:%c  AF:%04X  BC:%04X  DE:%04X  HL:%04X  |%02X|  ",
+    printf("%04X: (%04X) IF:%02X IME:%c  AF:%04X  BC:%04X  DE:%04X  HL:%04X  |%02X|  ",
            pc,
            sp,
+           registers.if_,
            ime ? '1' : '.',
            af,
            bc,
@@ -66,17 +67,35 @@ void Cpu::print_instruction(u16 op, u8 d8, u16 d16)
         printf(kInstFmts[op], d16);
     }
 
-    puts("");
+    putchar('\n');
 }
 
-int Cpu::interrupt_handler(Component& mmu)
+bool cpu_interrupt(Cpu* cpu, Component* mmu, u8 interrupt_bit)
 {
-    int int_cycles = 0;
+    constexpr static u16 kInterruptVectors[] = {0x40, 0x48, 0x50, 0x58, 0x60};
 
-    while (auto mask = registers.ie & registers.if_)
-        int_cycles += interrupts(mask, mmu);
+    if (interrupt_bit > 5) {    // there is no interrupt past bit 5
+        fprintf(stderr, "Bad interrupt bit: %02x. Must be one of {0, 1, 2, 3, 4}\n", interrupt_bit);
+        return false;
+    }
 
-    return int_cycles;
+    cpu->ime = false;
+    cpu->registers.if_ &= ~(1u << interrupt_bit);
+    cpu->sp -= 2;
+    mmu->write16(cpu->sp, cpu->pc);
+
+    /* I can't remember why I originally had this. */
+    if (0 /* || alt_behaviour */) {
+        mmu->write8(--cpu->sp, (cpu->pc & 0xFF00) >> 8);
+        u8 new_if = cpu->registers.if_ & cpu->registers.ie;
+        if (new_if == 0)
+            cpu->pc = 0;
+        mmu->write8(--cpu->sp, cpu->pc & 0xFF);
+    }
+
+    cpu->pc = kInterruptVectors[interrupt_bit];
+
+    return true;
 }
 
 void Cpu::halt_bug()
@@ -109,19 +128,34 @@ void Cpu::ei_bug()
     }
 }
 
+bool cpu_process_interrupts(Cpu* cpu, Component* mmu)
+{
+    bool did_interrupt {false};
+
+    if (cpu->ime && (cpu->registers.ie & cpu->registers.if_)) {
+        for (int i = 0; i < 5; i++) {
+            if (cpu->registers.ie & (cpu->registers.if_ & (1u << i))) {
+                did_interrupt = cpu_interrupt(cpu, mmu, i);
+                break;
+            }
+        }
+    }
+
+    return did_interrupt;
+}
+
 int Cpu::tick(Component& mmu)
 {
     int cycles = 0;
 
+    if (cpu_process_interrupts(this, &mmu)) {
+        cycles += 4;
+        halted = false;
+    }
+
     u16 op {mmu.read8(pc)};
     u16 d16 {mmu.read16(pc + 1)};
     u8 d8 = d16 & 0xFF;
-
-    if (ime) {
-        int int_cycles = interrupt_handler(mmu);
-        if (int_cycles)
-            return int_cycles + cycles;
-    }
 
     if (op == 0xCB)
         op = d8 + 0x100;
@@ -161,52 +195,6 @@ void Cpu::halt()
         halted = true;
     else
         halt_bug_state = HaltBug::Triggered;
-}
-
-int Cpu::interrupts(u8 mask, Component& mmu)
-{
-    ime = false;
-    sp--;
-    mmu.write8(sp, (pc & 0xFF00) >> 8);
-
-    u8 if_ = registers.if_ & registers.ie;
-
-    if (!if_)
-        pc = 0;
-
-    sp--;
-    mmu.write8(sp, pc & 0xFF);
-
-    int cycles = 0;
-
-    if (if_ & 0b0000'0001) {
-        pc = 0x40;
-        if_ &= ~0b0000'0001;
-    }
-    if (if_ & 0b0000'0010) {
-        pc = 0x48;
-        if_ &= ~0b0000'0010;
-    }
-    if (if_ & 0b0000'0100) {
-        pc = 0x50;
-        if_ &= ~0b0000'0100;
-    }
-    if (if_ & 0b0000'1000) {
-        pc = 0x58;
-        if_ &= ~0b0000'1000;
-    }
-    if (if_ & 0b0001'0000) {
-        pc = 0x60;
-        if_ &= ~0b0001'0000;
-    }
-
-    if (registers.if_ != if_) {
-        cycles += 4;
-        halted = false;
-        mmu.write8(kIf, if_);
-    }
-
-    return cycles;
 }
 
 void Cpu::set_enabled(bool value)

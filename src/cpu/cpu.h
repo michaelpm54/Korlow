@@ -29,14 +29,12 @@ struct Cpu : Component {
 
     void reset(bool) override;
     int tick(Component& mmu);    // Returns # of cycles taken
-    int interrupts(u8 mask, Component& mmu);
     void enable_interrupts();
     void disable_interrupts();
     void halt();
     void set_enabled(bool value);
     bool is_enabled() const;
     void print_instruction(u16 op, u8 d8, u16 d16);
-    int interrupt_handler(Component& mmu);
     void halt_bug();
     void ei_bug();
 
@@ -81,10 +79,8 @@ struct Cpu : Component {
         };
     };
 
-private:
     bool halted {false};
     bool enabled {true};
-
     bool ime;
 };
 

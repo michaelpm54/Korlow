@@ -78,6 +78,7 @@ int main(int argc, char* argv[])
 
     bool skip_bios = true;
 
+    std::vector<u8> bios_data;
     std::vector<u8> rom_data = FS::read_bytes("C:/Dev/Korlow/roms/cpu_instrs/cpu_instrs.gb");
     std::vector<u8> rom_start(0x100);
 
@@ -96,8 +97,8 @@ int main(int argc, char* argv[])
         }
 
         // Load BIOS
-        auto data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
-        std::memcpy(mmu.memory, data.data(), data.size());
+        bios_data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+        std::memcpy(mmu.memory, bios_data.data(), bios_data.size());
     }
     else {
         // Copy the entire ROM to memory
@@ -168,6 +169,14 @@ int main(int argc, char* argv[])
 
     int total_instructions = 0;
 
+    // This is the base timer speed. It updates once every 16 cycles.
+    u32 timer_counter = 0;
+    u8& timer_clock = mem[kTima];
+
+    // This updates once every 256 cycles.
+    u32 divider_counter = 0;
+    u8& divider_clock = mem[kDiv];
+
     while (true) {
         bool quit = false;
         quit |= sdl_poll(&window);
@@ -205,11 +214,36 @@ int main(int argc, char* argv[])
         if (!paused) {
             bool redraw = true;
             int cycles = 0;
-            while (cycles < kMaxCyclesPerFrame && cpu.is_enabled()) {
+            auto cpu_start = SDL_GetTicks();
+            while (cycles < kMaxCyclesPerFrame && cpu.is_enabled() && (SDL_GetTicks() - cpu_start) < 16) {
                 int instruction_cycles = cpu.tick(mmu);
                 ppu.tick(instruction_cycles);
                 cycles += instruction_cycles;
                 total_instructions++;
+
+                divider_counter++;
+                if (divider_counter == 16) {
+                    divider_counter = 0;
+                    divider_clock++;
+                }
+                timer_counter++;
+                int divider = 1;
+                int tac = mem[kTac];
+                if (tac == 0)
+                    divider = 64;
+                else if (tac == 1)
+                    divider = 4;
+                else if (tac == 2)
+                    divider = 8;
+                else if (tac == 3)
+                    divider = 16;
+                if ((++timer_counter % divider) == 0) {
+                    timer_counter = 0;
+                    if (++timer_clock == 0) {
+                        timer_clock = mem[kTma];
+                        cpu.registers.if_ |= 0x4;
+                    }
+                }
             }
             if (redraw) {
                 texture_set_pixels(&screen, ppu.get_pixels());
@@ -229,32 +263,42 @@ int main(int argc, char* argv[])
                     ppu.reset(skip_bios);
 
                     // Load ROM
-                    rom_data = FS::read_bytes(selection.string());
-
-                    // Get first 0x100 bytes, which will replace the bootrom
-                    std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
-                    mmu.set_rom_start(rom_start.data());
-
-                    printf("Setting rom %s\n", selection.string().c_str());
-
-                    // If we want to see the boot screen, set it up
-                    if (!skip_bios) {
-                        std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
-                        mmu.set_rom_start(rom_start.data());
+                    if (std::filesystem::file_size(selection) > 0x10000) {
+                        fprintf(stderr, "Rom too large: %lld/%d\n", std::filesystem::file_size(selection), 0x10000);
                     }
-                    // Otherwise just copy the whole thing
                     else {
-                        std::memcpy(mem, rom_data.data(), rom_data.size());
+                        rom_data = FS::read_bytes(selection.string());
+
+                        // Get first 0x100 bytes, which will replace the bootrom
+                        std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
+                        mmu.set_rom_start(rom_start.data());
+
+                        printf("Setting rom %s\n", selection.string().c_str());
+
+                        // If we want to see the boot screen, set it up
+                        if (!skip_bios) {
+                            if (!bios_data.size()) {
+                                bios_data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+                            }
+                            std::memcpy(mem, bios_data.data(), 0x100);
+                            std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
+                            mmu.set_rom_start(rom_start.data());
+                        }
+                        // Otherwise just copy the whole thing
+                        else {
+                            std::memcpy(mem, rom_data.data(), rom_data.size());
+                        }
                     }
+
                     file_dialog.ClearSelected();
                     file_dialog.Close();
                     file_dialog_open = false;
-                    paused = false;
                 }
             }
         }
-        else {
-            ImGui::Begin("Debug");
+
+        if (!file_dialog.IsOpened()) {
+            ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
             ImGui::Checkbox("Paused", &paused);
             ImGui::Checkbox("Debug", &cpu.debug);
             ImGui::End();

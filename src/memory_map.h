@@ -17,6 +17,10 @@ constexpr inline u16 kEchoRam = 0xE000;
 constexpr inline u16 kOam = 0xFE00;
 //
 constexpr inline u16 kIo = 0xFF00;
+constexpr inline u16 kDiv = 0xFF04;
+constexpr inline u16 kTima = 0xFF05;
+constexpr inline u16 kTma = 0xFF06;
+constexpr inline u16 kTac = 0xFF07;
 constexpr inline u16 kIf = 0xFF0F;
 // SND
 constexpr inline u16 kNr10 = 0xFF10;

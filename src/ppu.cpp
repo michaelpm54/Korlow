@@ -236,6 +236,10 @@ void Ppu::write8(u16 address, u8 value)
 
 void Ppu::tick(int cycles)
 {
+    if (!(registers.lcdc & 0x80)) {
+        return;
+    }
+
     mode_counter += cycles;
 
     if (mode == MODE_OAM) {
