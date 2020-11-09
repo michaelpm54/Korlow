@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
     cpu.debug = false;
 
-    bool skip_bios = false;
+    bool skip_bios = true;
 
     std::vector<u8> rom_data = FS::read_bytes("C:/Dev/Korlow/roms/cpu_instrs/cpu_instrs.gb");
     std::vector<u8> rom_start(0x100);

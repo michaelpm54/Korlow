@@ -115,7 +115,7 @@ int Cpu::tick(Component& mmu)
 
     u16 op {mmu.read8(pc)};
     u16 d16 {mmu.read16(pc + 1)};
-    u8 d8 {static_cast<u8>(d16)};
+    u8 d8 = d16 & 0xFF;
 
     if (ime) {
         int int_cycles = interrupt_handler(mmu);
@@ -126,8 +126,9 @@ int Cpu::tick(Component& mmu)
     if (op == 0xCB)
         op = d8 + 0x100;
 
-    if (debug)
+    if (debug) {
         print_instruction(op, d8, d16);
+    }
 
     pc += kInstSizes[op];
 
