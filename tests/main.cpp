@@ -44,13 +44,13 @@ TEST_CASE("Base operations")
         CHECK(output == 0);
         CHECK(flags == FLAGS_ZERO);
 
-        /* Carry bit gets set */
+        /* MSB goes into carry bit */
         /* Left shift works on overflow */
         flags = 0;
-        input = 0xFF;
+        input = 0x80;
         RL(input, &output, &flags);
-        CHECK(output == 0xFE);    // 0x1FE & 0xFF
-        CHECK(flags == FLAGS_CARRY);
+        CHECK(output == 0x00);    // 0x100 & 0xFF
+        CHECK(flags == (FLAGS_ZERO | FLAGS_CARRY));
     }
 
     SUBCASE("Rotate left through carry")
