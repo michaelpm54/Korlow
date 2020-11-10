@@ -7,33 +7,6 @@
 
 constexpr u8 kShades[4] = {0x00, 0x3F, 0x7E, 0xFF};
 
-/*
-u8 paletteIndex(u8 byte0, u8 byte1, u8 pxIndex)
-{
-		return ((!!(byte1 & (0x80 >> pxIndex))) << 1) | (!!(byte0 & (0x80 >>
-pxIndex)));
-}
-*/
-
-/*
-void decodeTile(u8 *palette, u8 *tile, u8 *pixels)
-{
-		int b = 0;
-		for (int byte = 0; byte < 16; byte++)
-		{
-				for (int i = 0; i < 8; i++)
-				{
-						u8 mask = 0x80 >> i;
-						u8 upper = !!(tile[byte] & mask);
-						u8 lower = !!(tile[byte+1] & mask);
-						u8 combined = (lower << 1) | upper;
-						pixels[b++] = palette[combined];
-				}
-				byte++;
-		}
-}
-*/
-
 u8 decodePixel(u16 row, int pixelIdx)
 {
     u8 mask = 0x80 >> pixelIdx;
@@ -42,21 +15,6 @@ u8 decodePixel(u16 row, int pixelIdx)
     u8 paletteIdx = (upper << 1) | lower;
     return paletteIdx;
 }
-
-/*
-std::array<std::array<u8, 2>, 8> getTile(u8 *tiles, int patternNum,
-bool isSigned)
-{
-		if (isSigned)
-		{
-				patternNum = int8_t(patternNum);
-		}
-
-		std::array<std::array<u8, 2>, 8> lines;
-		memcpy(lines.data(), tiles + (patternNum * 16), 16);
-		return lines;
-}
-*/
 
 Ppu::Ppu(PpuRegisters registers)
     : registers(registers)
