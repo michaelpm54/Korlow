@@ -26,9 +26,72 @@
 
 #include "buttons.h"
 
+struct Rom {
+    std::filesystem::path path;
+    std::vector<u8> data;
+};
+
+struct Cartridge {
+    Rom rom;
+    Rom bios;
+};
+
+void cartridge_load_bios(Cartridge* cart, const std::filesystem::path& file_path)
+{
+    assert(std::filesystem::file_size(file_path) == 0x100);
+
+    cart->bios.path = std::filesystem::absolute(file_path);
+    cart->bios.data = FS::read_bytes(file_path.string());
+
+    fprintf(stdout, "Loaded BIOS '%s'\n", file_path.string().c_str());
+}
+
+void cartridge_load_rom(Cartridge* cart, const std::filesystem::path& file_path)
+{
+    static constexpr int kMaxRomSize {0x10000};
+
+    const auto rom_size {std::filesystem::file_size(file_path)};
+
+    if (rom_size > kMaxRomSize) {
+        throw std::runtime_error("Rom too large: " + std::to_string(rom_size) + "/" + std::to_string(kMaxRomSize));
+    }
+
+    cart->rom.path = std::filesystem::absolute(file_path);
+    cart->rom.data = FS::read_bytes(file_path.string());
+
+    fprintf(stdout, "Loaded ROM '%s'\n", file_path.string().c_str());
+}
+
+void mmu_set_cartridge(Mmu* mmu, Cartridge* cart, bool skip_bios)
+{
+    assert(cart->rom.data.size());
+    assert(cart->bios.data.size());
+
+    if (skip_bios) {
+        std::copy(cart->rom.data.begin(), cart->rom.data.end(), mmu->memory);
+    }
+    else {
+        std::copy_n(cart->rom.data.begin() + 0x100, cart->rom.data.size() - 0x100, mmu->memory + 0x100);
+        std::copy(cart->bios.data.begin(), cart->bios.data.end(), mmu->memory);
+        mmu->set_rom_start(cart->rom.data.data());
+    }
+}
+
 void run()
 {
     sdl_init();
+
+    if (!std::filesystem::exists("./bios.gb")) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
+                                 "Missing BIOS",
+                                 // clang-format off
+                                 "Please place your legally dumped Game Boy boot ROM (BIOS) \n\
+next to the executable and name it bios.gb",
+                                 // clang-format on
+                                 nullptr);
+        sdl_free();
+        return;
+    }
 
     Window window;
 
@@ -79,32 +142,10 @@ void run()
 
     bool skip_bios = true;
 
-    std::vector<u8> bios_data;
-    std::vector<u8> rom_data;
-    std::vector<u8> rom_start(0x100);
-
     cpu.reset(skip_bios);
     ppu.reset(skip_bios);
 
-    if (!skip_bios) {
-        if (rom_data.size()) {
-            // Copy from 0x100-N to memory
-            std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
-
-            // Copy from 0-0x100 to temporary area
-            // This gets swapped to actual memory when BIOS exits
-            std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
-            mmu.set_rom_start(rom_start.data());
-        }
-
-        // Load BIOS
-        bios_data = FS::read_bytes("./bios.gb");
-        std::memcpy(mmu.memory, bios_data.data(), bios_data.size());
-    }
-    else {
-        // Copy the entire ROM to memory
-        std::memcpy(mem, rom_data.data(), rom_data.size());
-
+    if (skip_bios) {
         // Sound
         mmu.write8(kNr10, 0x80);
         mmu.write8(kNr11, 0xBF);
@@ -141,6 +182,9 @@ void run()
         mmu.write8(kWx, 0x00);
     }
 
+    Cartridge cart;
+    cartridge_load_bios(&cart, {"./bios.gb"});
+
     Texture screen;
     texture_init(&screen, kLcdWidth, kLcdHeight, 1);
 
@@ -162,11 +206,7 @@ void run()
     bool paused {true};
     bool file_dialog_open {true};
 
-    if (rom_data.empty()) {
-        paused = true;
-        file_dialog_open = true;
-        file_dialog.Open();
-    }
+    file_dialog.Open();
 
     int total_instructions = 0;
 
@@ -269,32 +309,12 @@ void run()
                     mmu.reset(skip_bios);
                     ppu.reset(skip_bios);
 
-                    // Load ROM
-                    if (std::filesystem::file_size(selection) > 0x10000) {
-                        fprintf(stderr, "Rom too large: %lld/%d\n", std::filesystem::file_size(selection), 0x10000);
+                    try {
+                        cartridge_load_rom(&cart, selection);
+                        mmu_set_cartridge(&mmu, &cart, skip_bios);
                     }
-                    else {
-                        rom_data = FS::read_bytes(selection.string());
-
-                        // Get first 0x100 bytes, which will replace the bootrom
-                        std::copy_n(rom_data.begin(), 0x100, rom_start.begin());
-                        mmu.set_rom_start(rom_start.data());
-
-                        printf("Setting rom %s\n", selection.string().c_str());
-
-                        // If we want to see the boot screen, set it up
-                        if (!skip_bios) {
-                            if (!bios_data.size()) {
-                                bios_data = FS::read_bytes("./bios.gb");
-                            }
-                            std::memcpy(mem, bios_data.data(), 0x100);
-                            std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
-                            mmu.set_rom_start(rom_start.data());
-                        }
-                        // Otherwise just copy the whole thing
-                        else {
-                            std::memcpy(mem, rom_data.data(), rom_data.size());
-                        }
+                    catch (const std::runtime_error& e) {
+                        fprintf(stderr, "ROM failed to load: %s\n", e.what());
                     }
 
                     file_dialog.ClearSelected();
