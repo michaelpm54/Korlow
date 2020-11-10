@@ -2,10 +2,11 @@
 #define KORLOW_BUTTONS_H
 
 enum ButtonId {
-	ButtonQuit,
-	ButtonOpenFile,
-	ButtonCloseDialog,
-	ButtonToggleMap,
+    ButtonQuit,
+    ButtonOpenFile,
+    ButtonCloseDialog,
+    ButtonToggleMap,
+    ButtonDumpVRAM,
 };
 
-#endif // KORLOW_BUTTONS_H
+#endif    // KORLOW_BUTTONS_H

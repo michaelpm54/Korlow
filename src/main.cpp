@@ -1,8 +1,10 @@
+#include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "constants.h"
 #include "cpu/cpu.h"
@@ -77,6 +79,28 @@ void mmu_set_cartridge(Mmu* mmu, Cartridge* cart, bool skip_bios)
     }
 }
 
+std::string get_time_as_string()
+{
+    time_t time_now = time(0);
+    struct tm new_time;
+    localtime_s(&new_time, &time_now);
+    char buffer[80];
+    strftime(buffer, 80, "%Y%m%d%H%M%S", &new_time);
+    return std::string {buffer};
+}
+
+void dump_vram(const std::string& path, u8* memory)
+{
+    FILE* s {fopen(path.c_str(), "w+")};
+
+    if (!s) {
+        throw std::runtime_error("Failed to create VRAM dump " + path);
+    }
+
+    fwrite(&memory[0x8000], 0x2000, 1, s);
+    fclose(s);
+}
+
 void run()
 {
     sdl_init();
@@ -105,6 +129,7 @@ next to the executable and name it bios.gb",
     sdl_bind(&window, SDL_SCANCODE_O, ButtonOpenFile);
     sdl_bind(&window, SDL_SCANCODE_BACKSPACE, ButtonCloseDialog);
     sdl_bind(&window, SDL_SCANCODE_M, ButtonToggleMap);
+    sdl_bind(&window, SDL_SCANCODE_D, ButtonDumpVRAM);
 
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -218,6 +243,13 @@ next to the executable and name it bios.gb",
     u32 divider_counter = 0;
     u8& divider_clock = mem[kDiv];
 
+    struct Message {
+        std::string str;
+        std::chrono::time_point<std::chrono::steady_clock> expire;
+    };
+
+    std::vector<Message> messages;
+
     while (true) {
         bool quit = false;
         quit |= sdl_poll(&window);
@@ -246,11 +278,42 @@ next to the executable and name it bios.gb",
             paused = !paused;
         }
 
+        if (sdl_get_action(&window, ButtonDumpVRAM, false)) {
+            if (!cart.rom.data.empty()) {
+                const auto dump_path = cart.rom.path.string() + "." + get_time_as_string() + ".vram_dump";
+                dump_vram(dump_path, mmu.memory);
+                messages.push_back({"Dumped VRAM to '" + dump_path + "'\n", std::chrono::steady_clock::now() + std::chrono::seconds(4)});
+            }
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame(window.handle);
         ImGui::NewFrame();
 
         glClear(GL_COLOR_BUFFER_BIT);
+
+        if (!messages.empty()) {
+            const auto now = std::chrono::steady_clock::now();
+
+            messages.erase(
+                std::remove_if(
+                    messages.begin(),
+                    messages.end(),
+                    [&now](const Message& message) {
+                        return now > message.expire;
+                    }),
+                messages.end());
+
+            if (!messages.empty()) {
+                ImGui::SetNextWindowPos({500, 40});
+                ImGui::SetNextWindowSize({260, 0});
+                ImGui::Begin("Messages", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing);
+                for (auto const& message : messages) {
+                    ImGui::TextWrapped("%s", message.str.c_str());
+                }
+                ImGui::End();
+            }
+        }
 
         if (!paused) {
             bool redraw = false;
