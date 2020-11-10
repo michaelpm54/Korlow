@@ -26,7 +26,7 @@
 
 #include "buttons.h"
 
-int main(int argc, char* argv[])
+void run()
 {
     sdl_init();
 
@@ -34,7 +34,8 @@ int main(int argc, char* argv[])
 
     if (!sdl_open(&window)) {
         fprintf(stderr, "Failed to open SDL window\n");
-        return 1;
+        sdl_free();
+        return;
     }
 
     sdl_bind(&window, SDL_SCANCODE_Q, ButtonQuit);
@@ -79,7 +80,7 @@ int main(int argc, char* argv[])
     bool skip_bios = true;
 
     std::vector<u8> bios_data;
-    std::vector<u8> rom_data = FS::read_bytes("C:/Dev/Korlow/roms/cpu_instrs/cpu_instrs.gb");
+    std::vector<u8> rom_data;
     std::vector<u8> rom_start(0x100);
 
     cpu.reset(skip_bios);
@@ -97,7 +98,7 @@ int main(int argc, char* argv[])
         }
 
         // Load BIOS
-        bios_data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+        bios_data = FS::read_bytes("./bios.gb");
         std::memcpy(mmu.memory, bios_data.data(), bios_data.size());
     }
     else {
@@ -158,8 +159,8 @@ int main(int argc, char* argv[])
     glClearColor(0.0f, 0.2f, 0.6f, 1.0f);
 
     bool map_visible {false};
-    bool paused {false};
-    bool file_dialog_open {false};
+    bool paused {true};
+    bool file_dialog_open {true};
 
     if (rom_data.empty()) {
         paused = true;
@@ -284,7 +285,7 @@ int main(int argc, char* argv[])
                         // If we want to see the boot screen, set it up
                         if (!skip_bios) {
                             if (!bios_data.size()) {
-                                bios_data = FS::read_bytes("E:/Projects/Emulators/GB/Korlow/roms/bios.gb");
+                                bios_data = FS::read_bytes("./bios.gb");
                             }
                             std::memcpy(mem, bios_data.data(), 0x100);
                             std::memcpy(&mem[0x100], rom_data.data() + 0x100, rom_data.size() - 0x100);
@@ -334,6 +335,19 @@ int main(int argc, char* argv[])
     sdl_close(&window);
 
     sdl_free();
+}
+
+int main(int argc, char* argv[])
+{
+    try {
+        run();
+    }
+    catch (const std::runtime_error& e) {
+        fprintf(stderr, "Caught exception: %s\n", e.what());
+    }
+    catch (...) {
+        fprintf(stderr, "Caught exception\n");
+    }
 
     return 0;
 }
