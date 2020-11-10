@@ -212,12 +212,18 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT);
 
         if (!paused) {
-            bool redraw = true;
+            bool redraw = false;
             int cycles = 0;
             auto cpu_start = SDL_GetTicks();
             while (cycles < kMaxCyclesPerFrame && cpu.is_enabled() && (SDL_GetTicks() - cpu_start) < 16) {
                 int instruction_cycles = cpu.tick(mmu);
-                ppu.tick(instruction_cycles);
+
+                int sync_ticks = 0;
+                while (sync_ticks != instruction_cycles) {
+                    ppu.tick(redraw);
+                    sync_ticks++;
+                }
+
                 cycles += instruction_cycles;
                 total_instructions++;
 

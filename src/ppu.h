@@ -40,7 +40,7 @@ struct Ppu : Component {
     const u8* get_pixels() const;
     void reset(bool) override;
     void write8(u16 address, u8 value) override;
-    void tick(int cycles);
+    void tick(bool& redraw);
 
     void set_pixel(int x, int y, u8 colour);
     void draw_sprite(const sprite_t& sprite)
@@ -68,6 +68,9 @@ struct Ppu : Component {
     u8* map1 {nullptr};
 
     std::vector<u8> pixels;
+
+    int cycles {0};
+    int prev_line {0};
 };
 
 #endif    // GPU_H

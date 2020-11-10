@@ -73,7 +73,7 @@ const u8* Ppu::get_pixels() const
 
 void Ppu::draw_scanline(int line)
 {
-    if (!(registers.lcdc & 0x80))
+    if (!(registers.lcdc & 0x80) || line >= kLcdHeight)
         return;
 
     bool isSigned = true;
@@ -109,7 +109,7 @@ void Ppu::draw_scanline(int line)
         row |= tiles[row_offset + 1];
         u8 colour = bg_palette[decodePixel(row, x_px_in_tile)];
 
-        set_pixel(x, line - 1, colour);
+        set_pixel(x, line, colour);
     }
 
     if (registers.lcdc & 0x20) {
@@ -134,7 +134,7 @@ void Ppu::draw_scanline(int line)
 
             u8 colour = bg_palette[decodePixel(row, x_px_in_tile)];
 
-            set_pixel(x, line - 1, colour);
+            set_pixel(x, line, colour);
         }
     }
 
@@ -234,55 +234,34 @@ void Ppu::write8(u16 address, u8 value)
     }
 }
 
-void Ppu::tick(int cycles)
+static constexpr int kCyclesPerLine = 456;
+static constexpr int kLinesPerVblank = 10;
+static constexpr int kMaxLines = kLcdHeight + kLinesPerVblank;
+static constexpr int kCyclesPerVblank = kCyclesPerLine * kMaxLines;
+
+void Ppu::tick(bool& redraw)
 {
-    if (!(registers.lcdc & 0x80)) {
-        return;
+    int frame_progress = cycles % kCyclesPerVblank;
+    int line = frame_progress / kCyclesPerLine;
+
+    registers.ly = line;
+
+    if ((registers.lcdc & 0x80) && line != prev_line && line == registers.lyc && (registers.stat & 0x40)) {
+        registers.if_ |= 0x2;
+        registers.stat |= 0x4;
     }
 
-    mode_counter += cycles;
-
-    if (mode == MODE_OAM) {
-        if (mode_counter >= 83) {
-            mode = MODE_OAM_VRAM;
-            mode_counter = 0;
-        }
-    }
-    else if (mode == MODE_OAM_VRAM) {
-        if (mode_counter >= 175) {
-            mode = MODE_HBLANK;
-            mode_counter = 0;
-        }
-    }
-    else if (mode == MODE_HBLANK) {
-        if (mode_counter >= 207) {
-            if (registers.ly > 0x99) {
-                mode = MODE_VBLANK;
-                draw_scanline(registers.ly);
-                registers.ly = 0;
-                mode_counter = 0;
-                registers.if_ |= 0x1;
-            }
-            else {
-                mode = MODE_OAM;
-                registers.ly++;
-                if (registers.ly == registers.lyc) {
-                    registers.stat |= 0x4;
-                    registers.if_ |= 0x2;
-                }
-                draw_scanline(registers.ly);
-                mode_counter = 0;
-            }
-        }
-    }
-    else if (mode == MODE_VBLANK) {
-        if (mode_counter >= 4560) {
-            mode = MODE_OAM;
-            mode_counter = 0;
-        }
+    if ((registers.lcdc & 0x80) && line != prev_line && (registers.lcdc & 0x80)) {
+        draw_scanline(line);
     }
 
-    registers.stat = (registers.stat & 0b1111'1100) | mode;
+    if (line == 144 && prev_line == 143) {
+        redraw = true;
+        registers.if_ |= 0x1;
+    }
+
+    prev_line = line;
+    cycles++;
 }
 
 void Ppu::refresh()
