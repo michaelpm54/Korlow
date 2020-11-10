@@ -45,11 +45,11 @@ target_include_directories(app PRIVATE
 	include
 
 	# Includes from external projects
-	include/lib
+	include
 
 	# Need to include this one specifically because the files there use `#include <file.h>` and not
 	# `include <imgui/file.h>`
-	include/lib/imgui
+	include/imgui
 )
 
 target_include_directories(app
