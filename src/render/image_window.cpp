@@ -14,3 +14,18 @@ ImageWindow::~ImageWindow()
 {
     texture_free(&m_texture);
 }
+
+bool ImageWindow::visible() const
+{
+    return m_visible;
+}
+
+void ImageWindow::hide()
+{
+    m_visible = false;
+}
+
+void ImageWindow::show()
+{
+    m_visible = true;
+}

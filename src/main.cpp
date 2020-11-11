@@ -111,7 +111,6 @@ void run(Window& window)
     sdl_bind(&window, SDL_SCANCODE_Q, ButtonQuit);
     sdl_bind(&window, SDL_SCANCODE_O, ButtonOpenFile);
     sdl_bind(&window, SDL_SCANCODE_BACKSPACE, ButtonCloseDialog);
-    sdl_bind(&window, SDL_SCANCODE_M, ButtonToggleMap);
     sdl_bind(&window, SDL_SCANCODE_D, ButtonDumpVRAM);
 
     ImGui::CreateContext();
@@ -207,8 +206,6 @@ void run(Window& window)
 
     glClearColor(0.0f, 0.2f, 0.6f, 1.0f);
 
-    bool map_visible {false};
-    bool tiles_visible {false};
     bool paused {true};
     bool file_dialog_open {true};
 
@@ -250,10 +247,6 @@ void run(Window& window)
                 file_dialog.Close();
                 file_dialog_open = false;
             }
-        }
-
-        if (sdl_get_action(&window, ButtonToggleMap, false)) {
-            map_visible = !map_visible;
         }
 
         if (sdl_get_action(&window, ButtonDumpVRAM, false)) {
@@ -349,27 +342,32 @@ void run(Window& window)
             ImGui::Checkbox("Paused", &paused);
             ImGui::Checkbox("Debug", &cpu.debug);
 
-            if (tiles_visible) {
+            if (tiles_window.visible()) {
                 if (ImGui::Button("Hide tiles"))
-                    tiles_visible = false;
+                    tiles_window.hide();
+
                 ImGui::SameLine();
                 if (ImGui::Button("Refresh"))
                     tiles_window.update();
             }
             else {
                 if (ImGui::Button("Show tiles")) {
-                    tiles_visible = true;
+                    tiles_window.show();
                     tiles_window.update();
                 }
             }
 
-            if (map_visible) {
+            if (map_window.visible()) {
                 if (ImGui::Button("Hide map"))
-                    map_visible = false;
+                    map_window.hide();
+
+                ImGui::SameLine();
+                if (ImGui::Button("Refresh"))
+                    map_window.update();
             }
             else {
                 if (ImGui::Button("Show map")) {
-                    map_visible = true;
+                    map_window.show();
                     map_window.update();
                 }
             }
@@ -377,11 +375,11 @@ void run(Window& window)
             ImGui::End();
         }
 
-        if (map_visible) {
+        if (map_window.visible()) {
             map_window.draw("Map");
         }
 
-        if (tiles_visible) {
+        if (tiles_window.visible()) {
             tiles_window.draw("Tiles");
         }
 

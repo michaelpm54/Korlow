@@ -5,7 +5,6 @@ enum ButtonId {
     ButtonQuit,
     ButtonOpenFile,
     ButtonCloseDialog,
-    ButtonToggleMap,
     ButtonDumpVRAM,
 };
 
