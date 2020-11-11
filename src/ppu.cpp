@@ -29,20 +29,36 @@ const u8* Ppu::get_pixels() const
     return pixels.data();
 }
 
+std::array<u8, 8> get_row_colors(u8* row, u8* palette)
+{
+    std::array<u8, 8> arr {0};
+    for (int i = 0; i < 8; i++) {
+        const u8 mask = 0x80 >> i;
+        arr[i] = palette[!!(row[0] & mask) | !!(row[1] & mask) << 1];
+    }
+    return arr;
+}
+
+u8 get_tile_index(int lcd_x, int lcd_y, u8* map)
+{
+    return map[(lcd_x / 8 + (lcd_y / 8) * kMapWidth) % 0x400];
+}
+
 void Ppu::draw_scanline(int line)
 {
     if (!(registers.lcdc & 0x80) || line >= kLcdHeight)
         return;
 
-    bool isSigned = true;
+    bool is_signed = true;
 
     u8* tiles = signedTiles;
+
     if (registers.lcdc & 0x10) {
         tiles = unsignedTiles;
-        isSigned = false;
+        is_signed = false;
     }
 
-    u8* bgMap = registers.lcdc & 0x8 ? map1 : map0;
+    u8* bg_map = registers.lcdc & 0x8 ? map1 : map0;
 
     int y_abs = line + registers.scy;
     int y_map = y_abs / 8;
@@ -50,24 +66,24 @@ void Ppu::draw_scanline(int line)
 
     // background
     for (int x = 0; x < kLcdWidth; x++) {
-        int x_abs = x + registers.scx;
-        int x_map = x_abs / 8;
-        int x_px_in_tile = x_abs % 8;
+        /* Offset x pixel by x-scroll */
+        const int x_abs = x + registers.scx;
 
-        // Wrap around if it tries to draw past the end of a map
-        int idx_offset_in_map = ((y_map * kMapWidth) + x_map) % 0x400;
+        const int x_px_in_tile = x_abs % 8;
 
-        u8 map_val = bgMap[idx_offset_in_map];
-        int idx = isSigned ? int8_t(map_val) : map_val;
+        /* Tile at this point in the [x+x-scroll, y+y-scroll] in the 2D map */
+        const u8 map_val = get_tile_index(x_abs, y_abs, bg_map);
+        const int tile_idx = is_signed ? int8_t(map_val) : map_val;
 
-        int tile_offset = idx * 16;
-        int row_offset = tile_offset + (y_px_in_tile * 2);
+        /* Each tile takes 16 bytes; 2 bytes per row */
+        const int row_offset = (tile_idx * 16) + (y_px_in_tile * 2);
 
-        u16 row = tiles[row_offset] << 8;
-        row |= tiles[row_offset + 1];
-        u8 colour = bg_palette[decodePixel(row, x_px_in_tile)];
+        /* Each row is 8 pixels long. Each bit-pair in the byte-pair provides 1 bit depth.
+			Combined they provide 2 bit depth. 0-3. The 2nd byte provides the MSB bit. */
+        const u8* row = &tiles[row_offset];
+        const u8 mask = 0x80 >> x_px_in_tile;
 
-        set_pixel(x, line, colour);
+        set_pixel(x, line, bg_palette[!!(row[0] & mask) | !!(row[1] & mask) << 1]);
     }
 
     if (registers.lcdc & 0x20) {
@@ -82,7 +98,7 @@ void Ppu::draw_scanline(int line)
             // Wrap around if it tries to draw past the end of a map
             int idx_offset = ((y_map * kMapWidth) + x_map) % 0x400;
             u8 map_val = windowMap[idx_offset];
-            int idx = isSigned ? int8_t(map_val) : map_val;
+            int idx = is_signed ? int8_t(map_val) : map_val;
 
             int tile_offset = idx * 16;
             int row_offset = tile_offset + (y_px_in_tile * 2);
