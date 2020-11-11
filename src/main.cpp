@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+using namespace std::literals;
+
 #include "constants.h"
 #include "cpu/cpu.h"
 #include "fs.h"
@@ -27,6 +29,7 @@
 /* clang-format on */
 
 #include "buttons.h"
+#include "render/message_queue.h"
 
 void update_tiles_texture(Texture* texture, u8* mem, u8* palette);
 
@@ -249,12 +252,7 @@ next to the executable and name it bios.gb",
     u32 divider_counter = 0;
     u8& divider_clock = mem[kDiv];
 
-    struct Message {
-        std::string str;
-        std::chrono::time_point<std::chrono::steady_clock> expire;
-    };
-
-    std::vector<Message> messages;
+    MessageQueue message_queue;
 
     while (true) {
         bool quit = false;
@@ -287,7 +285,8 @@ next to the executable and name it bios.gb",
             if (!cart.rom.data.empty()) {
                 const auto dump_path = cart.rom.path.string() + "." + get_time_as_string() + ".vram_dump";
                 dump_vram(dump_path, mmu.memory);
-                messages.push_back({"Dumped VRAM to '" + dump_path + "'\n", std::chrono::steady_clock::now() + std::chrono::seconds(4)});
+                const auto msg = "Dumped VRAM to '" + dump_path + "'\n";
+                message_queue.push(msg, 4s);
             }
         }
 
@@ -297,28 +296,7 @@ next to the executable and name it bios.gb",
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (!messages.empty()) {
-            const auto now = std::chrono::steady_clock::now();
-
-            messages.erase(
-                std::remove_if(
-                    messages.begin(),
-                    messages.end(),
-                    [&now](const Message& message) {
-                        return now > message.expire;
-                    }),
-                messages.end());
-
-            if (!messages.empty()) {
-                ImGui::SetNextWindowPos({500, 40});
-                ImGui::SetNextWindowSize({260, 0});
-                ImGui::Begin("Messages", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing);
-                for (auto const& message : messages) {
-                    ImGui::TextWrapped("%s", message.str.c_str());
-                }
-                ImGui::End();
-            }
-        }
+        message_queue.update();
 
         if (!paused) {
             bool redraw = false;
@@ -441,6 +419,8 @@ next to the executable and name it bios.gb",
             ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(tiles_texture.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
             ImGui::End();
         }
+
+        message_queue.draw();
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
