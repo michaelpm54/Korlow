@@ -28,6 +28,7 @@ set(KORLOW_SRC_SOURCES
 	src/render/message_queue.cpp
 	src/render/image_window.cpp
 	src/render/tiles_window.cpp
+	src/render/map_window.cpp
 )
 
 set(KORLOW_LIB_SOURCES

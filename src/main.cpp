@@ -18,6 +18,7 @@ using namespace std::literals;
 #include "render/gl_rect.h"
 #include "render/gl_shader.h"
 #include "render/gl_texture.h"
+#include "render/map_window.h"
 #include "render/sdl.h"
 #include "render/tiles_window.h"
 
@@ -217,9 +218,6 @@ next to the executable and name it bios.gb",
     Texture screen;
     texture_init(&screen, kLcdWidth, kLcdHeight, 1);
 
-    Texture map;
-    texture_init(&map, kMapWidth, kMapHeight * 2, 4);
-
     Rect rect;
     rect_init(&rect);
     const auto screen_transform {glm::mat4(1.0f)};
@@ -251,6 +249,7 @@ next to the executable and name it bios.gb",
     MessageQueue message_queue;
 
     TilesWindow tiles_window(mem, ppu.bg_palette);
+    MapWindow map_window(&ppu_proxy);
 
     while (true) {
         bool quit = false;
@@ -393,7 +392,7 @@ next to the executable and name it bios.gb",
             else {
                 if (ImGui::Button("Show map")) {
                     map_visible = true;
-                    texture_set_pixels(&map, ppu_proxy.get_map_pixels());
+                    map_window.update();
                 }
             }
 
@@ -401,10 +400,7 @@ next to the executable and name it bios.gb",
         }
 
         if (map_visible) {
-            ImGui::SetNextWindowSize({0.0f, 0.0f});
-            ImGui::Begin("Map", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
-            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(map.handle)), ImVec2(400.0f, 400.0f));
-            ImGui::End();
+            map_window.draw("Map");
         }
 
         if (tiles_visible) {
@@ -422,7 +418,6 @@ next to the executable and name it bios.gb",
     delete[] mem;
 
     rect_free(&rect);
-    texture_free(&map);
     texture_free(&screen);
     glDeleteProgram(rect_program);
     sdl_close(&window);
