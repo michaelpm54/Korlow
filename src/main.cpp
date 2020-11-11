@@ -405,18 +405,14 @@ next to the executable and name it bios.gb",
         if (map_visible) {
             ImGui::SetNextWindowSize({0.0f, 0.0f});
             ImGui::Begin("Map", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
-            ImVec2 uv_min {0.0f, 0.0f};
-            ImVec2 uv_max {1.0f, 1.0f};
-            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(map.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
+            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(map.handle)), ImVec2(400.0f, 400.0f));
             ImGui::End();
         }
 
         if (tiles_visible) {
             ImGui::SetNextWindowSize({0.0f, 0.0f});
             ImGui::Begin("Tiles", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
-            ImVec2 uv_min {0.0f, 0.0f};
-            ImVec2 uv_max {1.0f, 1.0f};
-            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(tiles_texture.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
+            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(tiles_texture.handle)), ImVec2(400.0f, 400.0f));
             ImGui::End();
         }
 
