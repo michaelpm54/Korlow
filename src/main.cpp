@@ -106,30 +106,8 @@ void dump_vram(const std::string& path, u8* memory)
     fclose(s);
 }
 
-void run()
+void run(Window& window)
 {
-    sdl_init();
-
-    if (!std::filesystem::exists("./bios.gb")) {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
-                                 "Missing BIOS",
-                                 // clang-format off
-                                 "Please place your legally dumped Game Boy boot ROM (BIOS) \n\
-next to the executable and name it bios.gb",
-                                 // clang-format on
-                                 nullptr);
-        sdl_free();
-        return;
-    }
-
-    Window window;
-
-    if (!sdl_open(&window)) {
-        fprintf(stderr, "Failed to open SDL window\n");
-        sdl_free();
-        return;
-    }
-
     sdl_bind(&window, SDL_SCANCODE_Q, ButtonQuit);
     sdl_bind(&window, SDL_SCANCODE_O, ButtonOpenFile);
     sdl_bind(&window, SDL_SCANCODE_BACKSPACE, ButtonCloseDialog);
@@ -420,15 +398,37 @@ next to the executable and name it bios.gb",
     rect_free(&rect);
     texture_free(&screen);
     glDeleteProgram(rect_program);
-    sdl_close(&window);
-
-    sdl_free();
 }
 
 int main(int argc, char* argv[])
 {
     try {
-        run();
+        sdl_init();
+
+        if (!std::filesystem::exists("./bios.gb")) {
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION,
+                                     "Missing BIOS",
+                                     // clang-format off
+                                 "Please place your legally dumped Game Boy boot ROM (BIOS) \n\
+next to the executable and name it bios.gb",
+                                     // clang-format on
+                                     nullptr);
+            sdl_free();
+            return 1;
+        }
+
+        Window window;
+
+        if (!sdl_open(&window)) {
+            fprintf(stderr, "Failed to open SDL window\n");
+            sdl_free();
+            return 1;
+        }
+
+        run(window);
+
+        sdl_close(&window);
+        sdl_free();
     }
     catch (const std::runtime_error& e) {
         fprintf(stderr, "Caught exception: %s\n", e.what());
