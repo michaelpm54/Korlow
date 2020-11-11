@@ -28,6 +28,8 @@
 
 #include "buttons.h"
 
+void update_tiles_texture(Texture* texture, u8* mem, u8* palette);
+
 struct Rom {
     std::filesystem::path path;
     std::vector<u8> data;
@@ -216,6 +218,9 @@ next to the executable and name it bios.gb",
     Texture map;
     texture_init(&map, kMapWidth, kMapHeight * 2, 4);
 
+    Texture tiles_texture;
+    texture_init(&tiles_texture, 24 * 8, 16 * 8, 4);
+
     Rect rect;
     rect_init(&rect);
     const auto screen_transform {glm::mat4(1.0f)};
@@ -228,6 +233,7 @@ next to the executable and name it bios.gb",
     glClearColor(0.0f, 0.2f, 0.6f, 1.0f);
 
     bool map_visible {false};
+    bool tiles_visible {false};
     bool paused {true};
     bool file_dialog_open {true};
 
@@ -275,7 +281,6 @@ next to the executable and name it bios.gb",
 
         if (sdl_get_action(&window, ButtonToggleMap, false)) {
             map_visible = !map_visible;
-            paused = !paused;
         }
 
         if (sdl_get_action(&window, ButtonDumpVRAM, false)) {
@@ -357,7 +362,6 @@ next to the executable and name it bios.gb",
             }
             if (redraw) {
                 texture_set_pixels(&screen, ppu.get_pixels());
-                texture_set_pixels(&map, ppu_proxy.get_map_pixels());
             }
         }
 
@@ -388,18 +392,53 @@ next to the executable and name it bios.gb",
         }
 
         if (!file_dialog.IsOpened()) {
-            ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+            ImGui::Begin("Debug");
             ImGui::Checkbox("Paused", &paused);
             ImGui::Checkbox("Debug", &cpu.debug);
+
+            if (tiles_visible) {
+                if (ImGui::Button("Hide tiles"))
+                    tiles_visible = false;
+                ImGui::SameLine();
+                if (ImGui::Button("Refresh"))
+                    update_tiles_texture(&tiles_texture, mem, ppu.bg_palette);
+            }
+            else {
+                if (ImGui::Button("Show tiles")) {
+                    tiles_visible = true;
+                    update_tiles_texture(&tiles_texture, mem, ppu.bg_palette);
+                }
+            }
+
+            if (map_visible) {
+                if (ImGui::Button("Hide map"))
+                    map_visible = false;
+            }
+            else {
+                if (ImGui::Button("Show map")) {
+                    map_visible = true;
+                    texture_set_pixels(&map, ppu_proxy.get_map_pixels());
+                }
+            }
+
             ImGui::End();
         }
 
         if (map_visible) {
             ImGui::SetNextWindowSize({0.0f, 0.0f});
-            ImGui::Begin("Map", nullptr, ImGuiWindowFlags_NoResize);
+            ImGui::Begin("Map", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
             ImVec2 uv_min {0.0f, 0.0f};
             ImVec2 uv_max {1.0f, 1.0f};
             ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(map.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
+            ImGui::End();
+        }
+
+        if (tiles_visible) {
+            ImGui::SetNextWindowSize({0.0f, 0.0f});
+            ImGui::Begin("Tiles", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
+            ImVec2 uv_min {0.0f, 0.0f};
+            ImVec2 uv_max {1.0f, 1.0f};
+            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(tiles_texture.handle)), ImVec2(400.0f, 400.0f), uv_min, uv_max);
             ImGui::End();
         }
 
@@ -418,6 +457,37 @@ next to the executable and name it bios.gb",
     sdl_close(&window);
 
     sdl_free();
+}
+
+void update_tiles_texture(Texture* texture, u8* mem, u8* palette)
+{
+    u8* map = &mem[0x9800];
+    u8* tiles = &mem[0x8000];
+
+    const int tiles_w = 24;
+    const int tiles_h = 16;
+    const int tex_w = tiles_w * 8;
+    const int tex_h = tiles_h * 8;
+    const int n_pixels = tex_w * tex_h;
+
+    std::array<u32, n_pixels> pixels {0};
+
+    for (int y = 0; y < tex_h; y++) {
+        for (int x = 0; x < tex_w; x++) {
+            int tile_x = x / 8;
+            int tile_y = y / 8;
+            int tile_idx = tile_y * tiles_w + tile_x;
+            int row_addr = (tile_idx * 16) + ((y % 8) * 2);
+            u8* row = &tiles[row_addr];
+            u8 mask = 0x80 >> (x % 8);
+            u8 pal_idx = !!(row[0] & mask) | !!(row[1] & mask) << 1;
+            u8 pc = palette[pal_idx];
+            u32 c = 0xFF000000 | (pc << 16) | (pc << 8) | pc;
+            pixels[y * tex_w + x] = c;
+        }
+    }
+
+    texture_set_pixels(texture, reinterpret_cast<const u8*>(pixels.data()));
 }
 
 int main(int argc, char* argv[])
