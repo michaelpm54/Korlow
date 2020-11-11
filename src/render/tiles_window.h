@@ -6,7 +6,7 @@
 class TilesWindow : public ImageWindow {
 public:
     TilesWindow(u8 *mem, u8 *palette);
-    virtual void update() override;
+    void update() override;
 
 private:
     u8 *m_mem;
