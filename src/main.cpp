@@ -14,7 +14,6 @@ using namespace std::literals;
 #include "memory_map.h"
 #include "mmu.h"
 #include "ppu.h"
-#include "ppu_map_proxy.h"
 #include "render/gl_rect.h"
 #include "render/gl_shader.h"
 #include "render/gl_texture.h"
@@ -142,8 +141,7 @@ void run(Window& window)
         .wy = mem[kWy],
         .wx = mem[kWx],
     });
-    PpuMapProxy ppu_proxy(ppu);
-    Mmu mmu(cpu, ppu_proxy, mem);
+    Mmu mmu(cpu, ppu, mem);
 
     cpu.debug = false;
 
@@ -224,7 +222,7 @@ void run(Window& window)
     MessageQueue message_queue;
 
     TilesWindow tiles_window(mem, ppu.bg_palette);
-    MapWindow map_window(&ppu_proxy);
+    MapWindow map_window(&ppu);
 
     while (true) {
         bool quit = false;
@@ -362,8 +360,9 @@ void run(Window& window)
                     map_window.hide();
 
                 ImGui::SameLine();
-                if (ImGui::Button("Refresh"))
+                if (ImGui::Button("Refresh")) {
                     map_window.update();
+                }
             }
             else {
                 if (ImGui::Button("Show map")) {

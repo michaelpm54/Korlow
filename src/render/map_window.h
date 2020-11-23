@@ -3,15 +3,15 @@
 
 #include "render/image_window.h"
 
-struct PpuMapProxy;
+struct Ppu;
 
 class MapWindow : public ImageWindow {
 public:
-    MapWindow(PpuMapProxy *proxy);
+    MapWindow(Ppu *ppu);
     void update() override;
 
 private:
-    PpuMapProxy *m_proxy;
+    Ppu *m_ppu;
 };
 
 #endif    // KORLOW_MAP_WINDOW_H

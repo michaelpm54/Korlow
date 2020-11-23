@@ -15,7 +15,6 @@ set(KORLOW_SRC_SOURCES
 	src/fs.cpp
 	src/mmu.cpp
 	src/ppu.cpp
-	src/ppu_map_proxy.cpp
 	src/rom_util.cpp
 	src/cpu/cpu.cpp
 	src/cpu/cpu_base.cpp
