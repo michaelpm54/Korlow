@@ -41,6 +41,10 @@ add_executable(app
 	${KORLOW_LIB_SOURCES}
 )
 
+target_compile_definitions(app PRIVATE
+	_CRT_SECURE_NO_WARNINGS
+)
+
 target_include_directories(app PRIVATE
 	src
 
