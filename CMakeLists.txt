@@ -47,9 +47,6 @@ target_include_directories(app PRIVATE
 	# My includes
 	include
 
-	# Includes from external projects
-	include
-
 	# Need to include this one specifically because the files there use `#include <file.h>` and not
 	# `include <imgui/file.h>`
 	include/imgui
