@@ -229,7 +229,7 @@ void Ppu::tick(bool& redraw)
     }
 
     prev_line = line;
-    cycles++;
+    cycles += 4;
 }
 
 void Ppu::refresh()
