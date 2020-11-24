@@ -85,7 +85,11 @@ void Ppu::draw_scanline(int line)
         const u8* row = &tiles[row_offset];
         const u8 mask = 0x80 >> x_px_in_tile;
 
-        set_pixel(x, line, bg_palette[!!(row[0] & mask) | !!(row[1] & mask) << 1]);
+        u8 hi_bit = !!(row[1] & mask);
+        u8 lo_bit = !!(row[0] & mask);
+        u8 pal_id = (hi_bit << 1) | lo_bit;
+
+        set_pixel(x, line, bg_palette[pal_id]);
     }
 
     if (registers.lcdc & 0x20) {
@@ -162,38 +166,26 @@ void Ppu::write8(u16 address, u8 value)
     }
 
     switch (address) {
-        case kIf:
-            registers.if_ = value;
-            break;
-        case kLcdc:
-            registers.lcdc = value;
-            break;
-        case kStat:
-            registers.stat = value;
-            break;
-        case kScy:
-            registers.scy = value;
-            break;
-        case kScx:
-            registers.scx = value;
-            break;
-        case kLy:
-            registers.ly = 0;
-            break;
-        case kLyc:
-            registers.lyc = value;
-            break;
-        case kWy:
-            registers.wy = value;
-            break;
-        case kWx:
-            registers.wx = value;
-            break;
+        /* Palettes are two bits per colour. */
+
+        /* Examples:
+		 * write 0x00 [0]
+		 * colours become 0, 0, 0, 0 because shade 0 is 0
+		 * write 0x01 [01] = [1]
+		 * colours become 0x3F, 0, 0, 0 because shade 1 is 0x3F
+		 * write 0x09 [10, 01] = [2, 1]
+		 * colours become 0x3F, 0x7F, 0, 0 because shade 1 is 0x3F and shade 2 is 0x7F
+		 * write 0xF9 [11, 11, 10, 01] = [3, 3, 2, 1]
+		 * colours become 0xFF, 0xFF, 0x7F, 0x3F
+		 * 
+		 * It makes some sense to have high numbers be dark shades, so [11, 10, 01, 00] or 0xE4 is
+		 * common(?)
+		*/
         case kBgPalette:
-            bg_palette[0] = kShades[value & 0x3];
-            bg_palette[1] = kShades[(value & 0xC) >> 2];
-            bg_palette[2] = kShades[(value & 0x30) >> 4];
-            bg_palette[3] = kShades[(value & 0xC0) >> 6];
+            bg_palette[0] = kShades[value & 0b0000'0011];
+            bg_palette[1] = kShades[(value & 0b0000'1100) >> 2];
+            bg_palette[2] = kShades[(value & 0b0011'0000) >> 4];
+            bg_palette[3] = kShades[(value & 0b1100'0000) >> 6];
             break;
         case kObj0Palette:
             sprite_palette[0][1] = kShades[(value & 0xC) >> 2];
