@@ -109,6 +109,7 @@ if (DO_TESTS)
 		src/mmu.cpp
 		src/ppu.cpp
 		tests/main.cpp
+		tests/ppu.cpp
 		#tests/rotation.cpp
 		#tests/addition.cpp
 		#tests/subtraction.cpp
