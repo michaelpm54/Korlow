@@ -70,7 +70,7 @@ struct Ppu : Component {
     std::vector<u8> pixels;
 
     int cycles {0};
-    int prev_line {0};
+    int prev_line {-1};
 };
 
 #endif    // GPU_H
