@@ -4,7 +4,7 @@
 
 bool is_ppu_address(u16 address)
 {
-    return (address >= kOam && address < kIo) || (address >= kTileRamUnsigned && address < kCartRam) || (address >= kLcdc && address < kZeroPage);
+    return (address >= kOam && address < kIo) || (address >= kTileRamUnsigned && address < kCartRam) || (address >= kDmaStartAddr && address < kZeroPage);
 }
 
 bool is_cpu_address(u16 address)
@@ -40,7 +40,6 @@ void Mmu::write8(u16 addr, u8 value)
     if (addr == kIf) {
         value &= 0b0001'1111;
         cpu.write8(kIf, value);
-        ppu.write8(kIf, value);
     }
     else if (addr == kIo)    // P1/JOYP
     {
@@ -60,6 +59,9 @@ void Mmu::write8(u16 addr, u8 value)
         if (addr == kDmaStartAddr) {
             for (int i = 0; i < 0xA0; i++)
                 write8(kOam + i, read8((u16(value) << 8) + i));
+        }
+        else if (addr == kLy) {
+            memory[kLy] = 0;
         }
         else {
             ppu.write8(addr, value);
