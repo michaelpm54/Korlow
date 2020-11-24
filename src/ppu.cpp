@@ -40,9 +40,9 @@ std::array<u8, 8> get_row_colors(u8* row, u8* palette)
     return arr;
 }
 
-u8 get_tile_index(int lcd_x, int lcd_y, u8* map)
+u16 get_tile_index(int lcd_x, int lcd_y)
 {
-    return map[(lcd_x / 8 + (lcd_y / 8) * kMapWidth) % 0x400];
+    return lcd_x / 8 + (lcd_y / 8) * kMapWidth;
 }
 
 void Ppu::draw_scanline(int line)
@@ -74,7 +74,7 @@ void Ppu::draw_scanline(int line)
         const int x_px_in_tile = x_abs % 8;
 
         /* Tile at this point in the [x+xscroll, y+yscroll] in the 2D map */
-        const u8 map_val = get_tile_index(x_abs, y_abs, bg_map);
+        const u8 map_val = bg_map[get_tile_index(x_abs, y_abs)];
         const int tile_idx = is_signed ? int8_t(map_val) : map_val;
 
         /* Each tile takes 16 bytes; 2 bytes per row */
