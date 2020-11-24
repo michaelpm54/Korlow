@@ -46,8 +46,9 @@ u8 get_tile_index(int lcd_x, int lcd_y, u8* map)
 
 void Ppu::draw_scanline(int line)
 {
-    if (!(registers.lcdc & 0x80) || line >= kLcdHeight)
+    if (!(registers.lcdc & 0x80) || line >= kLcdHeight) {
         return;
+    }
 
     bool is_signed = true;
 
@@ -66,12 +67,12 @@ void Ppu::draw_scanline(int line)
 
     // background
     for (int x = 0; x < kLcdWidth; x++) {
-        /* Offset x pixel by x-scroll */
+        /* Offset x pixel by xscroll */
         const int x_abs = x + registers.scx;
 
         const int x_px_in_tile = x_abs % 8;
 
-        /* Tile at this point in the [x+x-scroll, y+y-scroll] in the 2D map */
+        /* Tile at this point in the [x+xscroll, y+yscroll] in the 2D map */
         const u8 map_val = get_tile_index(x_abs, y_abs, bg_map);
         const int tile_idx = is_signed ? int8_t(map_val) : map_val;
 

@@ -75,7 +75,6 @@ void Mmu::write8(u16 addr, u8 value)
         memory[kDiv] = 0;
     }
 
-    // Let the other components do their thing, then write regardless.
     memory[addr] = value;
 }
 
