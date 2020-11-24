@@ -95,13 +95,13 @@ std::string get_time_as_string()
 
 void dump_vram(const std::string& path, u8* memory)
 {
-    FILE* s {fopen(path.c_str(), "w+")};
+    FILE* s {fopen(path.c_str(), "wb+")};
 
     if (!s) {
         throw std::runtime_error("Failed to create VRAM dump " + path);
     }
 
-    fwrite(&memory[0x8000], 0x2000, 1, s);
+    fwrite(memory, 1, 0x2000, s);
     fclose(s);
 }
 
@@ -250,7 +250,7 @@ void run(Window& window)
         if (sdl_get_action(&window, ButtonDumpVRAM, false)) {
             if (!cart.rom.data.empty()) {
                 const auto dump_path = cart.rom.path.string() + "." + get_time_as_string() + ".vram_dump";
-                dump_vram(dump_path, mmu.memory);
+                dump_vram(dump_path, ppu.memory.data());
                 const auto msg = "Dumped VRAM to '" + dump_path + "'\n";
                 message_queue.push(msg, 4s);
             }
