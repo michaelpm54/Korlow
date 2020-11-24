@@ -22,6 +22,7 @@ Ppu::Ppu(PpuRegisters registers)
     , oam(0x100)
     , pixels(kLcdWidth * kLcdHeight)
 {
+    reset(true);
 }
 
 const u8* Ppu::get_pixels() const
